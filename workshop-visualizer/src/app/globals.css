@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0a0a1a;
+  --foreground: #e2e8f0;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+}
+
+/* Subtle grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(74, 158, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74, 158, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f0f2a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a4a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a5a;
+}
+
+/* React Flow overrides */
+.react-flow__background {
+  background: transparent !important;
+}
+
+.react-flow__controls {
+  display: none !important;
+}
+
+/* Glow animation */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Code highlight animation */
+@keyframes highlight-flash {
+  0% { background-color: rgba(74, 158, 255, 0.3); }
+  100% { background-color: rgba(74, 158, 255, 0.1); }
+}
+
+.code-highlight {
+  animation: highlight-flash 0.5s ease-out forwards;
+  background-color: rgba(74, 158, 255, 0.1);
+}
+
+/* Neural network wave animations */
+@keyframes nodeWave {
+  0%, 100% { fill-opacity: 0.12; stroke-opacity: 0.25; r: 8; }
+  50% { fill-opacity: 0.7; stroke-opacity: 1; r: 10; }
+}
+@keyframes connectionWave {
+  0%, 100% { stroke-opacity: 0.06; }
+  50% { stroke-opacity: 0.3; }
+}
+
+/* Dashed line flow animation */
+@keyframes dashFlow {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -20; }
+}
