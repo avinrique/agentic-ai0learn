@@ -2,6 +2,8 @@
 export {
   basicApiTrace,
   systemPromptsTrace,
+  conversationLoopTrace,
+  conversationLoopVariants,
   jsonOutputTrace,
   fewShotTrace,
   challengeTrace,

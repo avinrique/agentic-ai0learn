@@ -1,7 +1,7 @@
 'use client';
 import LessonLayout from '@/components/layout/LessonLayout';
 import TracerPanel from '@/components/tracer/TracerPanel';
-import AgentLoopDiagram from '@/components/animations/AgentLoopDiagram';
+import AgentDataFlow from '@/components/animations/AgentDataFlow';
 import ToolSelectionAnim from '@/components/animations/ToolSelectionAnim';
 import { studyBuddyProCode } from '@/data/code-snippets';
 import { studyBuddyProTrace } from '@/data/traces';
@@ -13,9 +13,9 @@ export default function StudyBuddyProPage() {
       description="An advanced agent with 7 tools including percentage and simple interest."
       animationPanel={
         <div className="h-full flex flex-col">
-          <div className="flex-1"><AgentLoopDiagram /></div>
+          <div className="flex-1"><AgentDataFlow accentColor="#22d3ee" agentName="Study Buddy Pro" /></div>
           <div className="border-t border-white/10 py-4">
-            <ToolSelectionAnim tools={[
+            <ToolSelectionAnim layout="grid" tools={[
               { name: 'add', icon: '+', color: '#4a9eff' },
               { name: 'subtract', icon: '-', color: '#f87171' },
               { name: 'multiply', icon: '×', color: '#fbbf24' },
@@ -28,6 +28,7 @@ export default function StudyBuddyProPage() {
         </div>
       }
       steps={studyBuddyProTrace}
+      lessonId="study-buddy-pro"
     >
       <TracerPanel code={studyBuddyProCode} />
     </LessonLayout>

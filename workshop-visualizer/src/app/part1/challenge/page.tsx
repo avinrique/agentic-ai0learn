@@ -18,6 +18,7 @@ export default function ChallengePage() {
         </div>
       }
       steps={challengeTrace}
+      lessonId="challenge"
     >
       <TracerPanel code={challengeCode} />
     </LessonLayout>

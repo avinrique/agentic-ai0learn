@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import StepControls from './StepControls';
 import ResizableHandle from './ResizableHandle';
 import { useTracerStore, TraceStep, TraceVariant } from '@/stores/tracerStore';
+import { useProgressStore } from '@/stores/progressStore';
 import { useFullscreen } from '@/hooks/useFullscreen';
 
 interface LessonLayoutProps {
@@ -13,6 +14,7 @@ interface LessonLayoutProps {
   animationPanel: ReactNode;
   steps: TraceStep[];
   variants?: TraceVariant[];
+  lessonId: string;
 }
 
 export default function LessonLayout({
@@ -22,8 +24,10 @@ export default function LessonLayout({
   animationPanel,
   steps,
   variants,
+  lessonId,
 }: LessonLayoutProps) {
   const { setSteps, setVariants, currentStep, steps: currentSteps } = useTracerStore();
+  const updateStep = useProgressStore((s) => s.updateStep);
   const { isFullscreen, toggleFullscreen, containerRef } = useFullscreen();
   const mainRef = useRef<HTMLDivElement>(null);
   const [tracerWidthPx, setTracerWidthPx] = useState(520);
@@ -34,6 +38,12 @@ export default function LessonLayout({
       setVariants(variants);
     }
   }, [steps, variants, setSteps, setVariants]);
+
+  useEffect(() => {
+    if (currentSteps.length > 0) {
+      updateStep(lessonId, currentStep, currentSteps.length);
+    }
+  }, [lessonId, currentStep, currentSteps.length, updateStep]);
 
   const currentTraceStep = currentSteps[currentStep];
 
@@ -91,7 +101,7 @@ export default function LessonLayout({
         </div>
 
         {/* Step Controls */}
-        <StepControls />
+        <StepControls lessonId={lessonId} />
       </div>
     </div>
   );

@@ -43,9 +43,9 @@ export default function FewShotAnim() {
         transition={{ ...spring }}
         className="flex items-center gap-2"
       >
-        <div className="text-[9px] text-white/20 w-16 text-right flex-shrink-0">Example {idx + 1}</div>
+        <div className="text-xs text-white/20 w-16 text-right flex-shrink-0">Example {idx + 1}</div>
         <div className="flex-1 bg-accent-blue/10 border border-accent-blue/25 rounded-lg px-3 py-2">
-          <div className="text-[9px] text-accent-blue font-bold uppercase">user</div>
+          <div className="text-xs text-accent-blue font-bold uppercase">user</div>
           <div className="text-white/70 text-xs font-mono">&quot;{ex.input}&quot;</div>
         </div>
         <motion.div
@@ -63,7 +63,7 @@ export default function FewShotAnim() {
             borderColor: showAsst ? `${ex.outputColor}40` : 'rgba(255,255,255,0.05)',
           }}
         >
-          <div className="text-[9px] font-bold uppercase" style={{ color: showAsst ? ex.outputColor : 'rgba(255,255,255,0.2)' }}>
+          <div className="text-xs font-bold uppercase" style={{ color: showAsst ? ex.outputColor : 'rgba(255,255,255,0.2)' }}>
             assistant
           </div>
           <div className="text-xs font-bold" style={{ color: showAsst ? ex.outputColor : 'rgba(255,255,255,0.15)' }}>
@@ -76,7 +76,7 @@ export default function FewShotAnim() {
 
   return (
     <div className="h-full flex flex-col items-center p-6 overflow-auto">
-      <div className="text-[10px] text-white/20 uppercase tracking-widest mb-4">Few-Shot Learning: Teaching by Example</div>
+      <div className="text-sm text-white/20 uppercase tracking-widest mb-4">Few-Shot Learning: Teaching by Example</div>
 
       <div className="w-full max-w-lg space-y-3">
         {/* System message */}
@@ -88,7 +88,7 @@ export default function FewShotAnim() {
               transition={spring}
               className="bg-accent-purple/10 border border-accent-purple/25 rounded-lg px-3 py-2"
             >
-              <div className="text-[9px] text-accent-purple font-bold uppercase">system</div>
+              <div className="text-xs text-accent-purple font-bold uppercase">system</div>
               <div className="text-white/60 text-xs font-mono">&quot;You are a sentiment classifier. Respond with only Positive, Negative, or Neutral.&quot;</div>
             </motion.div>
           )}
@@ -96,7 +96,7 @@ export default function FewShotAnim() {
 
         {/* Divider */}
         {showEx1User && (
-          <div className="text-[9px] text-white/15 uppercase tracking-wider text-center">Examples (teaching the pattern)</div>
+          <div className="text-xs text-white/15 uppercase tracking-wider text-center">Examples (teaching the pattern)</div>
         )}
 
         {/* Example pairs */}
@@ -125,7 +125,7 @@ export default function FewShotAnim() {
 
         {/* Divider */}
         {showRealInput && (
-          <div className="text-[9px] text-white/15 uppercase tracking-wider text-center">Now the real question</div>
+          <div className="text-xs text-white/15 uppercase tracking-wider text-center">Now the real question</div>
         )}
 
         {/* Real input + prediction */}
@@ -137,9 +137,9 @@ export default function FewShotAnim() {
               transition={spring}
               className="flex items-center gap-2"
             >
-              <div className="text-[9px] text-accent-gold w-16 text-right flex-shrink-0 font-bold">NEW</div>
+              <div className="text-xs text-accent-gold w-16 text-right flex-shrink-0 font-bold">NEW</div>
               <div className="flex-1 bg-accent-blue/15 border-2 border-accent-blue/40 rounded-lg px-3 py-2 shadow-glow-blue">
-                <div className="text-[9px] text-accent-blue font-bold uppercase">user</div>
+                <div className="text-xs text-accent-blue font-bold uppercase">user</div>
                 <div className="text-white text-xs font-mono">&quot;{realInput}&quot;</div>
               </div>
               <div className="w-6 border-t-2 border-dashed border-accent-gold/30 flex-shrink-0" />
@@ -157,7 +157,7 @@ export default function FewShotAnim() {
                     : 'bg-white/3 border-white/10 border-dashed'
                 }`}
               >
-                <div className="text-[9px] font-bold uppercase text-accent-gold">
+                <div className="text-xs font-bold uppercase text-accent-gold">
                   {showPrediction ? 'result' : 'prediction'}
                 </div>
                 {isSending ? (

@@ -1,4 +1,4 @@
-import { TraceStep } from '@/stores/tracerStore';
+import { TraceStep, TraceVariant } from '@/stores/tracerStore';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Lesson 1 – basicApiTrace (13 steps)
@@ -292,7 +292,279 @@ export const systemPromptsTrace: TraceStep[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Lesson 3 – jsonOutputTrace (14 steps)
+// Lesson 3 – conversationLoopTrace (16 steps)
+// ─────────────────────────────────────────────────────────────────────────────
+export const conversationLoopTrace: TraceStep[] = [
+  {
+    lineNumber: 1,
+    variables: [],
+    output: '',
+    explanation: "Comment line — we're building a multi-turn chatbot that remembers context.",
+  },
+  {
+    lineNumber: 2,
+    variables: [{ name: 'module', value: 'openai', isNew: true }],
+    output: '',
+    animationTrigger: 'import',
+    explanation: 'Importing the OpenAI library — same as before.',
+  },
+  {
+    lineNumber: 3,
+    variables: [
+      { name: 'module', value: 'openai' },
+      { name: 'client', value: 'OpenAI(api_key=sk-...)', isNew: true },
+    ],
+    output: '',
+    animationTrigger: 'createClient',
+    explanation: 'Creating the OpenAI client.',
+  },
+  {
+    lineNumber: 5,
+    variables: [
+      { name: 'module', value: 'openai' },
+      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
+      {
+        name: 'messages',
+        value: '[{"role":"system","content":"You are a helpful assistant."}]',
+        isNew: true,
+      },
+    ],
+    output: '',
+    animationTrigger: 'initMessages',
+    explanation: 'KEY LINE: We create a messages list with just the system prompt. This list will GROW as the conversation continues — it IS the memory.',
+  },
+  {
+    lineNumber: 7,
+    variables: [
+      { name: 'module', value: 'openai' },
+      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
+      {
+        name: 'messages',
+        value: '[{"role":"system","content":"You are a helpful assistant."}]',
+      },
+    ],
+    output: 'Chat started! Type \'quit\' to exit.\n',
+    explanation: 'Status print to the user.',
+  },
+  {
+    lineNumber: 9,
+    variables: [
+      { name: 'module', value: 'openai' },
+      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
+      {
+        name: 'messages',
+        value: '[{"role":"system","content":"You are a helpful assistant."}]',
+      },
+    ],
+    output: '',
+    animationTrigger: 'loopStart',
+    explanation: 'The while True loop starts. This is the CONVERSATION LOOP — it runs forever until the user types "quit".',
+  },
+  {
+    lineNumber: 10,
+    variables: [
+      { name: 'module', value: 'openai' },
+      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
+      {
+        name: 'messages',
+        value: '[{"role":"system","content":"You are a helpful assistant."}]',
+      },
+      { name: 'user_input', value: '"What is Python?"', isNew: true },
+    ],
+    output: '',
+    animationTrigger: 'userInput1',
+    explanation: 'input() pauses and waits for the user to type. They type "What is Python?" and press Enter.',
+  },
+  {
+    lineNumber: 14,
+    variables: [
+      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
+      { name: 'user_input', value: '"What is Python?"' },
+      {
+        name: 'messages',
+        value: '[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"What is Python?"}]',
+        isChanged: true,
+      },
+    ],
+    output: '',
+    animationTrigger: 'appendUser1',
+    explanation: 'We APPEND the user message to our messages list. The list now has 2 items: system prompt + this user message.',
+  },
+  {
+    lineNumber: 16,
+    variables: [
+      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
+      {
+        name: 'messages',
+        value: '[{"role":"system",...},{"role":"user","content":"What is Python?"}]',
+      },
+    ],
+    output: '',
+    animationTrigger: 'apiCall1',
+    explanation: 'API call #1: We send the ENTIRE messages list (2 messages) to OpenAI. The model sees the system prompt and the user question.',
+  },
+  {
+    lineNumber: 16,
+    variables: [
+      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
+      {
+        name: 'messages',
+        value: '[{"role":"system",...},{"role":"user","content":"What is Python?"}]',
+      },
+      { name: 'response', value: '<ChatCompletion>', isNew: true },
+    ],
+    output: '',
+    animationTrigger: 'apiResponse1',
+    explanation: 'Response received! The model generated an answer about Python.',
+  },
+  {
+    lineNumber: 21,
+    variables: [
+      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
+      { name: 'assistant_msg', value: '"Python is a high-level programming language..."', isNew: true },
+      {
+        name: 'messages',
+        value: '[{"role":"system",...},{"role":"user","content":"What is Python?"},{"role":"assistant","content":"Python is a high-level programming language..."}]',
+        isChanged: true,
+      },
+    ],
+    output: '',
+    animationTrigger: 'appendAssistant1',
+    explanation: 'We extract the response AND APPEND IT to messages. Now the list has 3 items. This is the KEY trick — we save the AI\'s response so it can "remember" it next turn.',
+  },
+  {
+    lineNumber: 23,
+    variables: [
+      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
+      { name: 'assistant_msg', value: '"Python is a high-level programming language..."' },
+      {
+        name: 'messages',
+        value: '[sys, user1, asst1] — 3 messages, ~127 tokens',
+      },
+    ],
+    output: 'AI: Python is a high-level programming language...\n',
+    animationTrigger: 'printResponse1',
+    explanation: 'Print the response. Turn 1 complete! Now the loop goes back to the top.',
+  },
+  {
+    lineNumber: 10,
+    variables: [
+      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
+      { name: 'user_input', value: '"How is it different from Java?"', isChanged: true },
+      {
+        name: 'messages',
+        value: '[sys, user1, asst1] — 3 messages',
+      },
+    ],
+    output: '',
+    animationTrigger: 'userInput2',
+    explanation: 'Turn 2: The user types "How is it different from Java?" — notice they don\'t mention Python. Will the AI know what they mean?',
+  },
+  {
+    lineNumber: 14,
+    variables: [
+      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
+      { name: 'user_input', value: '"How is it different from Java?"' },
+      {
+        name: 'messages',
+        value: '[sys, user1, asst1, {"role":"user","content":"How is it different from Java?"}] — 4 messages',
+        isChanged: true,
+      },
+    ],
+    output: '',
+    animationTrigger: 'appendUser2',
+    explanation: 'Append user message #2. The messages list now has 4 items. When we send this, the model sees the ENTIRE conversation history.',
+  },
+  {
+    lineNumber: 16,
+    variables: [
+      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
+      {
+        name: 'messages',
+        value: '[sys, user1, asst1, user2] — 4 messages, ~384 tokens',
+      },
+      { name: 'tokens_used', value: '~384 (growing!)', isNew: true },
+    ],
+    output: '',
+    animationTrigger: 'apiCall2',
+    explanation: 'API call #2: We send ALL 4 messages. The model sees the prior Q&A about Python, so it understands "it" means Python and "different from Java" is a comparison request.',
+  },
+  {
+    lineNumber: 21,
+    variables: [
+      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
+      { name: 'assistant_msg', value: '"Python uses dynamic typing while Java uses static typing..."', isChanged: true },
+      {
+        name: 'messages',
+        value: '[sys, user1, asst1, user2, asst2] — 5 messages, ~500 tokens',
+        isChanged: true,
+      },
+    ],
+    output: 'AI: Python uses dynamic typing while Java uses static typing...\n',
+    animationTrigger: 'appendAssistant2',
+    explanation: 'It worked! The AI compared Python to Java because it SAW the entire conversation. We append this response too — the list keeps growing. This is how "memory" works: replay everything, every time.',
+  },
+];
+
+// Conversation Loop Variants
+export const conversationLoopVariants: TraceVariant[] = [
+  {
+    id: 'default',
+    label: 'How is it different from Java?',
+    inputValue: 'How is it different from Java?',
+    steps: conversationLoopTrace,
+  },
+  {
+    id: 'context-break',
+    label: 'Tell me about dogs',
+    inputValue: 'Tell me about dogs',
+    steps: conversationLoopTrace.map((step) => {
+      // Override only the turn-2 steps to show a context break
+      if (step.animationTrigger === 'userInput2') {
+        return {
+          ...step,
+          variables: step.variables.map(v =>
+            v.name === 'user_input' ? { ...v, value: '"Tell me about dogs"', isChanged: true } : v
+          ),
+          explanation: 'Turn 2: The user types "Tell me about dogs" — a topic change! The AI still has the Python history in context.',
+        };
+      }
+      if (step.animationTrigger === 'appendUser2') {
+        return {
+          ...step,
+          variables: step.variables.map(v =>
+            v.name === 'messages'
+              ? { ...v, value: '[sys, user1, asst1, {"role":"user","content":"Tell me about dogs"}] — 4 messages', isChanged: true }
+              : v
+          ),
+          explanation: 'Append "Tell me about dogs". The messages list now has 4 items including the full Python conversation.',
+        };
+      }
+      if (step.animationTrigger === 'apiCall2') {
+        return {
+          ...step,
+          explanation: 'API call #2: All 4 messages sent. The AI sees the Python discussion AND the new topic request. It has full context to handle the topic switch.',
+        };
+      }
+      if (step.animationTrigger === 'appendAssistant2') {
+        return {
+          ...step,
+          variables: step.variables.map(v => {
+            if (v.name === 'assistant_msg') return { ...v, value: '"Dogs are wonderful companions known for their loyalty..."', isChanged: true };
+            if (v.name === 'messages') return { ...v, value: '[sys, user1, asst1, user2, asst2] — 5 messages, ~500 tokens', isChanged: true };
+            return v;
+          }),
+          output: 'AI: Dogs are wonderful companions known for their loyalty...\n',
+          explanation: 'The AI answers about dogs — it handled the topic switch while still having the Python context in memory. The messages array grows regardless of topic!',
+        };
+      }
+      return step;
+    }),
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Lesson 4 – jsonOutputTrace (14 steps)
 // ─────────────────────────────────────────────────────────────────────────────
 export const jsonOutputTrace: TraceStep[] = [
   {

@@ -10,6 +10,7 @@ export default function TemperaturePage() {
       description="How one number controls whether the AI is a robot or a poet."
       steps={temperatureSteps}
       animationPanel={<TemperatureAnim />}
+      lessonId="temperature"
     />
   );
 }

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
 import ConceptStepControls from './ConceptStepControls';
 import { useConceptStore, ConceptStep } from '@/stores/conceptStore';
+import { useProgressStore } from '@/stores/progressStore';
 import { useFullscreen } from '@/hooks/useFullscreen';
 
 interface ConceptLayoutProps {
@@ -11,6 +12,7 @@ interface ConceptLayoutProps {
   description: string;
   steps: ConceptStep[];
   animationPanel: ReactNode;
+  lessonId: string;
 }
 
 export default function ConceptLayout({
@@ -18,13 +20,21 @@ export default function ConceptLayout({
   description,
   steps,
   animationPanel,
+  lessonId,
 }: ConceptLayoutProps) {
   const { setSteps, currentStep, steps: currentSteps } = useConceptStore();
+  const updateStep = useProgressStore((s) => s.updateStep);
   const { isFullscreen, toggleFullscreen, containerRef } = useFullscreen();
 
   useEffect(() => {
     setSteps(steps);
   }, [steps, setSteps]);
+
+  useEffect(() => {
+    if (currentSteps.length > 0) {
+      updateStep(lessonId, currentStep, currentSteps.length);
+    }
+  }, [lessonId, currentStep, currentSteps.length, updateStep]);
 
   const currentConceptStep = currentSteps[currentStep];
 
@@ -109,7 +119,7 @@ export default function ConceptLayout({
         </div>
 
         {/* Step Controls */}
-        <ConceptStepControls />
+        <ConceptStepControls lessonId={lessonId} />
       </div>
     </div>
   );

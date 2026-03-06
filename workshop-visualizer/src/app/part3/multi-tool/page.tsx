@@ -1,7 +1,7 @@
 'use client';
 import LessonLayout from '@/components/layout/LessonLayout';
 import TracerPanel from '@/components/tracer/TracerPanel';
-import AgentLoopDiagram from '@/components/animations/AgentLoopDiagram';
+import AgentDataFlow from '@/components/animations/AgentDataFlow';
 import ToolSelectionAnim from '@/components/animations/ToolSelectionAnim';
 import { multiToolCode } from '@/data/code-snippets';
 import { multiToolTrace } from '@/data/traces';
@@ -13,7 +13,7 @@ export default function MultiToolPage() {
       description="An agent with calculator + knowledge lookup tools."
       animationPanel={
         <div className="h-full flex flex-col">
-          <div className="flex-1"><AgentLoopDiagram /></div>
+          <div className="flex-1"><AgentDataFlow accentColor="#a78bfa" agentName="Study Buddy Agent" /></div>
           <div className="border-t border-white/10 py-4">
             <ToolSelectionAnim tools={[
               { name: 'add', icon: '+', color: '#4a9eff' },
@@ -23,6 +23,7 @@ export default function MultiToolPage() {
         </div>
       }
       steps={multiToolTrace}
+      lessonId="multi-tool"
     >
       <TracerPanel code={multiToolCode} />
     </LessonLayout>

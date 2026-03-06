@@ -1,16 +1,54 @@
 'use client';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { lessons, partLabels } from '@/data/lessons';
+import { lessons, partLabels, partColors } from '@/data/lessons';
+import { useOverallProgress, usePartProgress } from '@/stores/progressStore';
+import ProgressRing from '@/components/ui/ProgressRing';
+import LessonStatusBadge from '@/components/ui/LessonStatusBadge';
 
 const springConfig = { type: 'spring' as const, damping: 20, stiffness: 100 };
 
-const partColors: Record<number, string> = {
-  0: '#f472b6',
-  1: '#4a9eff',
-  2: '#fbbf24',
-  3: '#a78bfa',
-};
+function OverallProgressHero() {
+  const { completed, total, pct } = useOverallProgress();
+  if (completed === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={springConfig}
+      className="w-full max-w-6xl mb-8 px-6 py-4 rounded-2xl border border-white/10 bg-navy-800/50"
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm text-white/60">Overall Progress</span>
+        <span className="text-sm font-mono text-white/40">
+          {completed}/{total} lessons ({pct}%)
+        </span>
+      </div>
+      <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+        <motion.div
+          className="h-full rounded-full bg-gradient-to-r from-accent-blue via-accent-purple to-accent-gold"
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+        />
+      </div>
+    </motion.div>
+  );
+}
+
+function PartCompletionRing({ part }: { part: number }) {
+  const { completed, total } = usePartProgress(part);
+  if (completed === 0) return null;
+  const color = partColors[part];
+  const pct = total > 0 ? completed / total : 0;
+
+  return (
+    <ProgressRing size={48} strokeWidth={3} progress={pct} color={color}>
+      <span className="text-xs font-bold text-white/60">{completed}/{total}</span>
+    </ProgressRing>
+  );
+}
 
 export default function HomePage() {
   const parts = [0, 1, 2, 3];
@@ -35,6 +73,8 @@ export default function HomePage() {
         </p>
       </motion.div>
 
+      <OverallProgressHero />
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl w-full">
         {parts.map((part, partIdx) => {
           const partLessons = lessons.filter((l) => l.part === part);
@@ -45,9 +85,14 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...springConfig, delay: partIdx * 0.15 }}
-              className="rounded-2xl border-2 p-6 bg-navy-800/50"
+              className="rounded-2xl border-2 p-6 bg-navy-800/50 relative"
               style={{ borderColor: `${color}30` }}
             >
+              {/* Part completion ring */}
+              <div className="absolute top-4 right-4">
+                <PartCompletionRing part={part} />
+              </div>
+
               <div
                 className="text-xs font-bold uppercase tracking-wider mb-1"
                 style={{ color }}
@@ -66,12 +111,12 @@ export default function HomePage() {
                         href={lesson.route}
                         className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-white/5 transition-all group"
                       >
-                        <span
-                          className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-navy-900 flex-shrink-0"
-                          style={{ backgroundColor: color }}
-                        >
-                          {globalIdx}
-                        </span>
+                        <LessonStatusBadge
+                          lessonId={lesson.id}
+                          globalIndex={globalIdx}
+                          isActive={false}
+                          color={color}
+                        />
                         <div className="flex-1 min-w-0">
                           <div className="text-white/80 group-hover:text-white transition-colors">
                             {lesson.title}

@@ -10,6 +10,7 @@ export default function WhatIsLLMPage() {
       description="How Large Language Models predict the next token."
       steps={whatIsLLMSteps}
       animationPanel={<LLMPipelineAnim />}
+      lessonId="what-is-llm"
     />
   );
 }

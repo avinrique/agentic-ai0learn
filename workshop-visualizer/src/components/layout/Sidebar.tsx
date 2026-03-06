@@ -2,8 +2,33 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { lessons, partLabels } from '@/data/lessons';
+import { lessons, partLabels, partColors } from '@/data/lessons';
 import { useUIStore } from '@/stores/uiStore';
+import { usePartProgress } from '@/stores/progressStore';
+import LessonStatusBadge from '@/components/ui/LessonStatusBadge';
+
+function PartProgressBar({ part }: { part: number }) {
+  const { completed, total } = usePartProgress(part);
+  const color = partColors[part];
+  const pct = total > 0 ? (completed / total) * 100 : 0;
+
+  return (
+    <div className="px-3 pb-2 flex items-center gap-2">
+      <div className="flex-1 h-1 rounded-full bg-white/5 overflow-hidden">
+        <motion.div
+          className="h-full rounded-full"
+          style={{ backgroundColor: color }}
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+        />
+      </div>
+      <span className="text-[10px] text-white/30 font-mono whitespace-nowrap">
+        {completed}/{total}
+      </span>
+    </div>
+  );
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -52,9 +77,12 @@ export default function Sidebar() {
           return (
             <div key={part} className="mb-4">
               {!sidebarCollapsed && (
-                <h2 className="text-xs font-semibold text-white/30 uppercase tracking-wider px-3 py-2 whitespace-nowrap">
-                  {part === 0 ? 'Foundations' : `Part ${part}: ${partLabels[part]}`}
-                </h2>
+                <>
+                  <h2 className="text-xs font-semibold text-white/30 uppercase tracking-wider px-3 py-2 whitespace-nowrap">
+                    {part === 0 ? 'Foundations' : `Part ${part}: ${partLabels[part]}`}
+                  </h2>
+                  <PartProgressBar part={part} />
+                </>
               )}
               {sidebarCollapsed && (
                 <div className="h-px bg-white/10 mx-2 my-2" />
@@ -74,11 +102,12 @@ export default function Sidebar() {
                         } ${sidebarCollapsed ? 'justify-center px-0' : ''}`}
                         title={sidebarCollapsed ? lesson.shortTitle : undefined}
                       >
-                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                          isActive ? 'bg-accent-blue text-navy-900' : 'bg-white/10 text-white/40'
-                        }`}>
-                          {globalIdx}
-                        </span>
+                        <LessonStatusBadge
+                          lessonId={lesson.id}
+                          globalIndex={globalIdx}
+                          isActive={isActive}
+                          color={partColors[lesson.part]}
+                        />
                         {!sidebarCollapsed && (
                           <span className="truncate">{lesson.shortTitle}</span>
                         )}

@@ -19,13 +19,6 @@ const confidenceExamples = [
   { text: 'Humans use only 10% of their brain.', isTrue: false, confidence: 93 },
 ];
 
-const reductionStrategies = [
-  { icon: '📄', label: 'Use RAG', desc: 'Ground answers in real documents', color: '#4a9eff' },
-  { icon: '🌡️', label: 'Lower temperature', desc: 'Reduce randomness, increase accuracy', color: '#fbbf24' },
-  { icon: '🛑', label: '"Say I don\'t know"', desc: 'Add to system prompt: admit uncertainty', color: '#ef4444' },
-  { icon: '🔍', label: 'Verify sources', desc: 'Ask for citations, then fact-check them', color: '#a78bfa' },
-  { icon: '📝', label: 'Draft, not truth', desc: 'Use AI for drafting, humans for verification', color: '#4ade80' },
-];
 
 export default function HallucinationAnim() {
   const { currentStep } = useConceptStore();
@@ -74,17 +67,6 @@ export default function HallucinationAnim() {
     }
   }, [s]);
 
-  // Strategy reveal for step 6
-  const [strategyRevealed, setStrategyRevealed] = useState(-1);
-  useEffect(() => {
-    if (s === 6) {
-      setStrategyRevealed(-1);
-      const timers = reductionStrategies.map((_, i) =>
-        setTimeout(() => setStrategyRevealed(i), 300 + i * 500)
-      );
-      return () => timers.forEach(clearTimeout);
-    }
-  }, [s]);
 
   return (
     <div
@@ -219,7 +201,7 @@ export default function HallucinationAnim() {
                     </span>
                     {patternIdx === i && (
                       <motion.span
-                        className="text-[10px]"
+                        className="text-sm"
                         style={{ color: item.isWrong ? '#ef444480' : '#4ade8080' }}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -289,7 +271,7 @@ export default function HallucinationAnim() {
               {/* AI claim */}
               <div className="px-4 py-3 border border-white/10 bg-white/5 rounded-t-xl">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-accent-green/20 text-accent-green">AI</span>
+                  <span className="text-sm font-bold uppercase px-1.5 py-0.5 rounded bg-accent-green/20 text-accent-green">AI</span>
                   <span className="text-sm text-white/70">{item.claim}</span>
                 </div>
               </div>
@@ -301,7 +283,7 @@ export default function HallucinationAnim() {
                 transition={{ ...smooth, delay: 0.8 + i * 0.25 }}
               >
                 <span className="text-xs text-red-400">{item.truth}</span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-red-400/15 text-red-400/70">{item.diff}</span>
+                <span className="text-sm px-2 py-0.5 rounded bg-red-400/15 text-red-400/70">{item.diff}</span>
               </motion.div>
             </motion.div>
           ))}
@@ -355,7 +337,7 @@ export default function HallucinationAnim() {
               >
                 <p className="text-xs text-white/70 font-bold">{cite.author}</p>
                 <p className="text-xs text-accent-blue/80 italic mt-0.5">&quot;{cite.title}&quot;</p>
-                <p className="text-[10px] text-white/40 mt-0.5">{cite.journal}, {cite.year}</p>
+                <p className="text-sm text-white/40 mt-0.5">{cite.journal}, {cite.year}</p>
 
                 {/* FAKE stamp */}
                 <AnimatePresence>
@@ -366,7 +348,7 @@ export default function HallucinationAnim() {
                       animate={{ scale: 1, rotate: -5 }}
                       transition={spring}
                     >
-                      <span className="text-red-400 font-bold text-[10px]">DOESN&apos;T EXIST</span>
+                      <span className="text-red-400 font-bold text-sm">DOESN&apos;T EXIST</span>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -552,7 +534,7 @@ export default function HallucinationAnim() {
                 </div>
                 {/* Confidence bar — looks identical for true and false */}
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-white/30 w-16">Confidence:</span>
+                  <span className="text-sm text-white/30 w-16">Confidence:</span>
                   <div className="flex-1 h-4 bg-white/5 rounded-full overflow-hidden">
                     <motion.div
                       className="h-full rounded-full bg-accent-green/40"
@@ -560,7 +542,7 @@ export default function HallucinationAnim() {
                       transition={{ ...smooth, delay: 0.5 + i * 0.1 }}
                     />
                   </div>
-                  <span className="text-[10px] text-accent-green font-mono">{ex.confidence}%</span>
+                  <span className="text-sm text-accent-green font-mono">{ex.confidence}%</span>
                 </div>
               </motion.div>
             ))}
@@ -578,101 +560,457 @@ export default function HallucinationAnim() {
         </div>
       </motion.div>
 
-      {/* Step 6: "How to Reduce Hallucination" */}
+      {/* Step 6: "Fix 1: Use RAG" */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center pointer-events-none px-6"
         animate={{ opacity: s === 6 ? 1 : 0 }}
         transition={spring}
       >
-        <div className="max-w-lg w-full">
+        <div className="max-w-2xl w-full">
           <motion.p
-            className="text-sm text-white/40 mb-5 text-center"
-            animate={{ opacity: s === 6 ? 1 : 0 }}
+            className="text-base font-semibold text-white/70 mb-5 text-center"
+            animate={{ opacity: s === 6 ? 1 : 0, y: s === 6 ? 0 : -10 }}
             transition={spring}
           >
-            5 strategies to fight hallucination
+            Fix 1: Use RAG
           </motion.p>
 
-          <div className="space-y-3">
-            {reductionStrategies.map((strat, i) => (
-              <motion.div
-                key={strat.label}
-                className="rounded-xl border p-4 flex items-center gap-4"
-                style={{
-                  borderColor: strategyRevealed >= i ? `${strat.color}40` : 'rgba(255,255,255,0.05)',
-                  backgroundColor: strategyRevealed >= i ? `${strat.color}08` : 'transparent',
-                }}
-                animate={{
-                  opacity: s === 6 ? (strategyRevealed >= i ? 1 : 0.3) : 0,
-                  x: s === 6 ? 0 : -15,
-                }}
-                transition={{ ...spring, delay: 0.1 + i * 0.08 }}
-              >
-                <motion.span
-                  className="text-2xl"
-                  animate={{
-                    scale: strategyRevealed === i ? [1, 1.3, 1] : 1,
-                  }}
-                  transition={{ duration: 0.4 }}
-                >
-                  {strat.icon}
-                </motion.span>
-                <div>
-                  <p className="text-sm font-bold" style={{ color: strat.color }}>{strat.label}</p>
-                  <p className="text-xs text-white/50">{strat.desc}</p>
+          <div className="grid grid-cols-2 gap-5">
+            {/* Without RAG */}
+            <motion.div
+              className="rounded-xl border-2 p-4"
+              style={{ borderColor: '#ef444460', backgroundColor: '#ef444408' }}
+              animate={{ opacity: s === 6 ? 1 : 0, x: s === 6 ? 0 : -20 }}
+              transition={{ ...spring, delay: 0.2 }}
+            >
+              <p className="text-xs font-bold text-red-400 uppercase mb-3">Without RAG</p>
+              <div className="rounded-lg bg-white/5 border border-white/10 p-3 mb-2">
+                <p className="text-sm text-white/40 mb-1">Question:</p>
+                <p className="text-xs text-accent-blue">&quot;What were Q3 sales?&quot;</p>
+              </div>
+              <div className="rounded-lg bg-red-400/5 border border-red-400/20 p-3 relative">
+                <p className="text-sm text-white/40 mb-1">Answer:</p>
+                <p className="text-xs text-white/60 italic">&quot;Revenue was approximately $3M&quot;</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-red-400 text-sm font-bold">&#10005;</span>
+                  <span className="text-sm px-2 py-0.5 rounded bg-red-500/20 border border-red-500/40 text-red-400 font-bold">HALLUCINATED</span>
                 </div>
-                {strategyRevealed >= i && (
-                  <motion.span
-                    className="ml-auto text-xs font-bold px-2 py-0.5 rounded"
-                    style={{ color: strat.color, backgroundColor: `${strat.color}15` }}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={spring}
-                  >
-                    #{i + 1}
-                  </motion.span>
-                )}
-              </motion.div>
-            ))}
+              </div>
+            </motion.div>
+
+            {/* With RAG */}
+            <motion.div
+              className="rounded-xl border-2 p-4"
+              style={{ borderColor: '#4ade8060', backgroundColor: '#4ade8008' }}
+              animate={{ opacity: s === 6 ? 1 : 0, x: s === 6 ? 0 : 20 }}
+              transition={{ ...spring, delay: 0.4 }}
+            >
+              <p className="text-xs font-bold text-accent-green uppercase mb-3">With RAG</p>
+              <div className="rounded-lg bg-white/5 border border-white/10 p-3 mb-2">
+                <p className="text-sm text-white/40 mb-1">Question:</p>
+                <p className="text-xs text-accent-blue">&quot;What were Q3 sales?&quot;</p>
+              </div>
+              <div className="rounded-lg bg-accent-green/5 border border-accent-green/20 p-3 relative">
+                <p className="text-sm text-white/40 mb-1">Answer:</p>
+                <p className="text-xs text-white/60 italic">&quot;$4.2M, up 18% YoY <span className="text-accent-blue">[Source: Q3 Report]</span>&quot;</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-accent-green text-sm font-bold">&#10003;</span>
+                  <span className="text-sm px-2 py-0.5 rounded bg-accent-green/20 border border-accent-green/40 text-accent-green font-bold">GROUNDED</span>
+                </div>
+              </div>
+            </motion.div>
           </div>
+
+          <motion.p
+            className="text-xs text-accent-blue text-center mt-4"
+            animate={{ opacity: s === 6 ? 1 : 0 }}
+            transition={{ ...spring, delay: 0.8 }}
+          >
+            Ground the model in YOUR data.
+          </motion.p>
         </div>
       </motion.div>
 
-      {/* Step 7: "Key Takeaways" */}
+      {/* Step 7: "Fix 2: Lower Temperature" */}
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none px-6"
+        animate={{ opacity: s === 7 ? 1 : 0 }}
+        transition={spring}
+      >
+        <div className="max-w-2xl w-full">
+          <motion.p
+            className="text-base font-semibold text-white/70 mb-5 text-center"
+            animate={{ opacity: s === 7 ? 1 : 0, y: s === 7 ? 0 : -10 }}
+            transition={spring}
+          >
+            Fix 2: Lower Temperature
+          </motion.p>
+
+          <div className="grid grid-cols-2 gap-5">
+            {/* High temperature */}
+            <motion.div
+              className="rounded-xl border-2 p-4"
+              style={{ borderColor: '#ef444460', backgroundColor: '#ef444408' }}
+              animate={{ opacity: s === 7 ? 1 : 0, x: s === 7 ? 0 : -20 }}
+              transition={{ ...spring, delay: 0.2 }}
+            >
+              <p className="text-xs font-bold text-red-400 uppercase mb-3">T = 1.5</p>
+              <div className="rounded-lg bg-red-400/5 border border-red-400/20 p-3">
+                <p className="text-sm text-white/40 mb-1">Q: &quot;What is the boiling point of water?&quot;</p>
+                <p className="text-xs text-white/60 italic mt-2">&quot;Water boils at roughly 96°C depending on the quantum resonance of the molecular structure and atmospheric vibrations...&quot;</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-red-400 text-sm font-bold">&#10005;</span>
+                  <span className="text-sm text-red-400/70">Creative but wrong</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Low temperature */}
+            <motion.div
+              className="rounded-xl border-2 p-4"
+              style={{ borderColor: '#4ade8060', backgroundColor: '#4ade8008' }}
+              animate={{ opacity: s === 7 ? 1 : 0, x: s === 7 ? 0 : 20 }}
+              transition={{ ...spring, delay: 0.4 }}
+            >
+              <p className="text-xs font-bold text-accent-green uppercase mb-3">T = 0</p>
+              <div className="rounded-lg bg-accent-green/5 border border-accent-green/20 p-3">
+                <p className="text-sm text-white/40 mb-1">Q: &quot;What is the boiling point of water?&quot;</p>
+                <p className="text-xs text-white/60 italic mt-2">&quot;Water boils at 100°C (212°F) at standard atmospheric pressure (1 atm).&quot;</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-accent-green text-sm font-bold">&#10003;</span>
+                  <span className="text-sm text-accent-green/70">Correct and precise</span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          <motion.p
+            className="text-xs text-accent-gold text-center mt-4"
+            animate={{ opacity: s === 7 ? 1 : 0 }}
+            transition={{ ...spring, delay: 0.8 }}
+          >
+            For facts, boring is good.
+          </motion.p>
+        </div>
+      </motion.div>
+
+      {/* Step 8: "Fix 3: Say I Don't Know" */}
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none px-6"
+        animate={{ opacity: s === 8 ? 1 : 0 }}
+        transition={spring}
+      >
+        <div className="max-w-2xl w-full">
+          <motion.p
+            className="text-base font-semibold text-white/70 mb-5 text-center"
+            animate={{ opacity: s === 8 ? 1 : 0, y: s === 8 ? 0 : -10 }}
+            transition={spring}
+          >
+            Fix 3: Say &quot;I Don&apos;t Know&quot;
+          </motion.p>
+
+          <div className="grid grid-cols-2 gap-5">
+            {/* Before */}
+            <motion.div
+              className="rounded-xl border-2 p-4"
+              style={{ borderColor: '#ef444460', backgroundColor: '#ef444408' }}
+              animate={{ opacity: s === 8 ? 1 : 0, x: s === 8 ? 0 : -20 }}
+              transition={{ ...spring, delay: 0.2 }}
+            >
+              <p className="text-xs font-bold text-red-400 uppercase mb-3">Before</p>
+              <div className="rounded-lg bg-white/5 border border-white/10 p-3 mb-2">
+                <p className="text-sm text-white/40 mb-1">System prompt:</p>
+                <p className="text-xs text-white/50 font-mono">&quot;You are a helpful assistant.&quot;</p>
+              </div>
+              <div className="rounded-lg bg-red-400/5 border border-red-400/20 p-3">
+                <p className="text-sm text-white/40 mb-1">LLM response:</p>
+                <p className="text-xs text-white/60 italic">&quot;The company was founded in 1987 by Dr. James Wilson and initially focused on biotech research...&quot;</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-red-400 text-sm font-bold">&#10005;</span>
+                  <span className="text-sm text-red-400/70">Makes up an answer</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* After */}
+            <motion.div
+              className="rounded-xl border-2 p-4"
+              style={{ borderColor: '#4ade8060', backgroundColor: '#4ade8008' }}
+              animate={{ opacity: s === 8 ? 1 : 0, x: s === 8 ? 0 : 20 }}
+              transition={{ ...spring, delay: 0.4 }}
+            >
+              <p className="text-xs font-bold text-accent-green uppercase mb-3">After</p>
+              <div className="rounded-lg bg-white/5 border border-white/10 p-3 mb-2">
+                <p className="text-sm text-white/40 mb-1">System prompt:</p>
+                <p className="text-xs text-white/50 font-mono">&quot;You are a helpful assistant. <span className="text-accent-green">If you don&apos;t have specific data, say &apos;I don&apos;t have enough information&apos;</span>&quot;</p>
+              </div>
+              <motion.div
+                className="rounded-lg bg-accent-green/5 border border-accent-green/20 p-3"
+                animate={{
+                  boxShadow: s === 8 ? ['0 0 0px #4ade8000', '0 0 15px #4ade8030', '0 0 0px #4ade8000'] : '0 0 0px #4ade8000',
+                }}
+                transition={{ duration: 2, repeat: Infinity, delay: 1 }}
+              >
+                <p className="text-sm text-white/40 mb-1">LLM response:</p>
+                <p className="text-xs text-accent-green italic">&quot;I don&apos;t have enough information about that specific topic.&quot;</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-accent-green text-sm font-bold">&#10003;</span>
+                  <span className="text-sm text-accent-green/70">Honest and safe</span>
+                </div>
+              </motion.div>
+            </motion.div>
+          </div>
+
+          <motion.p
+            className="text-xs text-accent-purple text-center mt-4"
+            style={{ color: '#a78bfa' }}
+            animate={{ opacity: s === 8 ? 1 : 0 }}
+            transition={{ ...spring, delay: 0.8 }}
+          >
+            The best answer is sometimes &quot;I don&apos;t know.&quot;
+          </motion.p>
+        </div>
+      </motion.div>
+
+      {/* Step 9: "Fix 4: Verify Sources" */}
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none px-6"
+        animate={{ opacity: s === 9 ? 1 : 0 }}
+        transition={spring}
+      >
+        <div className="max-w-lg w-full">
+          <motion.p
+            className="text-base font-semibold text-white/70 mb-5 text-center"
+            animate={{ opacity: s === 9 ? 1 : 0, y: s === 9 ? 0 : -10 }}
+            transition={spring}
+          >
+            Fix 4: Verify Sources
+          </motion.p>
+
+          {/* Step 1: Ask AI */}
+          <motion.div
+            className="rounded-xl border border-white/10 bg-white/5 p-4 mb-3"
+            animate={{ opacity: s === 9 ? 1 : 0, y: s === 9 ? 0 : 15 }}
+            transition={{ ...spring, delay: 0.2 }}
+          >
+            <p className="text-xs text-accent-blue mb-2">Ask AI a question &rarr; AI responds with 3 citations:</p>
+            <div className="space-y-2">
+              {[
+                { cite: '[1] Smith et al., "Neural Networks in Practice", Nature 2023', real: true },
+                { cite: '[2] Johnson, R., "Advanced AI Metrics", arXiv:2305.1847', real: false },
+                { cite: '[3] Park & Lee, "Scaling LLM Performance", ICML 2024', real: false },
+              ].map((item, i) => (
+                <motion.div
+                  key={i}
+                  className="flex items-center justify-between px-3 py-2 rounded-lg border"
+                  style={{
+                    borderColor: item.real ? '#4ade8040' : '#ef444440',
+                    backgroundColor: item.real ? '#4ade8008' : '#ef444408',
+                  }}
+                  animate={{ opacity: s === 9 ? 1 : 0, x: s === 9 ? 0 : -10 }}
+                  transition={{ ...spring, delay: 0.5 + i * 0.2 }}
+                >
+                  <span className="text-xs text-white/60 font-mono">{item.cite}</span>
+                  <span className="text-xs font-bold" style={{ color: item.real ? '#4ade80' : '#ef4444' }}>
+                    {item.real ? '&#10003; Real' : '&#10005; Fake'}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Google verification */}
+          <motion.div
+            className="rounded-xl border border-accent-gold/20 bg-accent-gold/5 p-3 mb-3"
+            animate={{ opacity: s === 9 ? 1 : 0, y: s === 9 ? 0 : 10 }}
+            transition={{ ...spring, delay: 1.2 }}
+          >
+            <p className="text-xs text-accent-gold text-center">Google the citations &rarr; <span className="text-red-400 font-bold">2 out of 3 are fabricated</span></p>
+          </motion.div>
+
+          <motion.p
+            className="text-xs text-pink-400 text-center mt-4"
+            style={{ color: '#f472b6' }}
+            animate={{ opacity: s === 9 ? 1 : 0 }}
+            transition={{ ...spring, delay: 1.5 }}
+          >
+            Always verify. NEVER trust citations blindly.
+          </motion.p>
+        </div>
+      </motion.div>
+
+      {/* Step 10: "Fix 5: Draft, Not Truth" */}
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none px-6"
+        animate={{ opacity: s === 10 ? 1 : 0 }}
+        transition={spring}
+      >
+        <div className="max-w-2xl w-full">
+          <motion.p
+            className="text-base font-semibold text-white/70 mb-5 text-center"
+            animate={{ opacity: s === 10 ? 1 : 0, y: s === 10 ? 0 : -10 }}
+            transition={spring}
+          >
+            Fix 5: Draft, Not Truth
+          </motion.p>
+
+          <div className="grid grid-cols-2 gap-5">
+            {/* Use AI for */}
+            <motion.div
+              className="rounded-xl border-2 p-4"
+              style={{ borderColor: '#4ade8060', backgroundColor: '#4ade8008' }}
+              animate={{ opacity: s === 10 ? 1 : 0, x: s === 10 ? 0 : -20 }}
+              transition={{ ...spring, delay: 0.2 }}
+            >
+              <p className="text-xs font-bold text-accent-green uppercase mb-3">Use AI For</p>
+              <div className="space-y-2">
+                {['Brainstorming', 'First drafts', 'Code scaffolding', 'Summaries'].map((item, i) => (
+                  <motion.div
+                    key={i}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent-green/5 border border-accent-green/20"
+                    animate={{ opacity: s === 10 ? 1 : 0, x: s === 10 ? 0 : -10 }}
+                    transition={{ ...spring, delay: 0.4 + i * 0.1 }}
+                  >
+                    <span className="text-accent-green text-sm font-bold">&#10003;</span>
+                    <span className="text-xs text-white/70">{item}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Don't use AI for */}
+            <motion.div
+              className="rounded-xl border-2 p-4"
+              style={{ borderColor: '#ef444460', backgroundColor: '#ef444408' }}
+              animate={{ opacity: s === 10 ? 1 : 0, x: s === 10 ? 0 : 20 }}
+              transition={{ ...spring, delay: 0.3 }}
+            >
+              <p className="text-xs font-bold text-red-400 uppercase mb-3">Don&apos;t Use AI For</p>
+              <div className="space-y-2">
+                {['Legal advice', 'Medical diagnosis', 'Financial decisions', 'Citing specific facts'].map((item, i) => (
+                  <motion.div
+                    key={i}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-400/5 border border-red-400/20"
+                    animate={{ opacity: s === 10 ? 1 : 0, x: s === 10 ? 0 : 10 }}
+                    transition={{ ...spring, delay: 0.5 + i * 0.1 }}
+                  >
+                    <span className="text-red-400 text-sm font-bold">&#10005;</span>
+                    <span className="text-xs text-white/70">{item}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+
+          <motion.p
+            className="text-xs text-accent-green text-center mt-4"
+            animate={{ opacity: s === 10 ? 1 : 0 }}
+            transition={{ ...spring, delay: 1 }}
+          >
+            Treat AI output as a draft, not gospel.
+          </motion.p>
+        </div>
+      </motion.div>
+
+      {/* Step 11: "When Hallucination is OK" */}
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none px-6"
+        animate={{ opacity: s === 11 ? 1 : 0 }}
+        transition={spring}
+      >
+        <div className="max-w-2xl w-full">
+          <motion.p
+            className="text-base font-semibold text-white/70 mb-5 text-center"
+            animate={{ opacity: s === 11 ? 1 : 0, y: s === 11 ? 0 : -10 }}
+            transition={spring}
+          >
+            When Hallucination is OK
+          </motion.p>
+
+          <div className="grid grid-cols-3 gap-4">
+            {/* Creative Writing */}
+            <motion.div
+              className="rounded-xl border-2 p-4 text-center"
+              style={{ borderColor: '#a78bfa60', backgroundColor: '#a78bfa10' }}
+              animate={{ opacity: s === 11 ? 1 : 0, y: s === 11 ? 0 : 20 }}
+              transition={{ ...spring, delay: 0.2 }}
+            >
+              <span className="text-3xl block mb-2">&#9997;&#65039;</span>
+              <p className="text-sm font-bold" style={{ color: '#a78bfa' }}>Creative Writing</p>
+              <p className="text-xs text-white/50 mt-1">Hallucination IS the feature</p>
+            </motion.div>
+
+            {/* Brainstorming */}
+            <motion.div
+              className="rounded-xl border-2 p-4 text-center"
+              style={{ borderColor: '#4a9eff60', backgroundColor: '#4a9eff10' }}
+              animate={{ opacity: s === 11 ? 1 : 0, y: s === 11 ? 0 : 20 }}
+              transition={{ ...spring, delay: 0.4 }}
+            >
+              <span className="text-3xl block mb-2">&#128161;</span>
+              <p className="text-sm font-bold" style={{ color: '#4a9eff' }}>Brainstorming</p>
+              <p className="text-xs text-white/50 mt-1">You WANT unexpected ideas</p>
+            </motion.div>
+
+            {/* First Drafts */}
+            <motion.div
+              className="rounded-xl border-2 p-4 text-center"
+              style={{ borderColor: '#fbbf2460', backgroundColor: '#fbbf2410' }}
+              animate={{ opacity: s === 11 ? 1 : 0, y: s === 11 ? 0 : 20 }}
+              transition={{ ...spring, delay: 0.6 }}
+            >
+              <span className="text-3xl block mb-2">&#128221;</span>
+              <p className="text-sm font-bold" style={{ color: '#fbbf24' }}>First Drafts</p>
+              <p className="text-xs text-white/50 mt-1">Speed &gt; accuracy at this stage</p>
+            </motion.div>
+          </div>
+
+          <motion.p
+            className="text-xs text-white/40 text-center mt-5"
+            animate={{ opacity: s === 11 ? 1 : 0 }}
+            transition={{ ...spring, delay: 1 }}
+          >
+            The key: know when accuracy matters.
+          </motion.p>
+        </div>
+      </motion.div>
+
+      {/* Step 12: "Key Takeaways" */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        animate={{ opacity: s === 7 ? 1 : 0 }}
+        animate={{ opacity: s === 12 ? 1 : 0 }}
         transition={spring}
       >
         <div className="text-center max-w-xl w-full px-6">
           <motion.h2
-            className="text-3xl font-bold text-white mb-6"
-            animate={{ opacity: s === 7 ? 1 : 0, y: s === 7 ? 0 : 20 }}
+            className="text-5xl font-bold text-white mb-6"
+            animate={{ opacity: s === 12 ? 1 : 0, y: s === 12 ? 0 : 20 }}
             transition={spring}
           >
             Key Takeaways
           </motion.h2>
           {[
-            { icon: '🎭', text: 'Hallucination = confident wrong answers that sound right', color: '#ef4444' },
-            { icon: '🧠', text: 'LLMs predict patterns, not truth — plausible ≠ correct', color: '#fbbf24' },
-            { icon: '📚', text: 'Fake citations are extremely common — always verify', color: '#a78bfa' },
-            { icon: '📊', text: 'Right and wrong answers sound equally confident', color: '#4a9eff' },
-            { icon: '🛡️', text: 'Use RAG, lower temp, and human verification to reduce risk', color: '#4ade80' },
+            { text: 'LLMs hallucinate because they predict plausible text, not truth', color: '#ef4444' },
+            { text: 'Use RAG to ground responses in real data', color: '#4a9eff' },
+            { text: 'Lower temperature for factual tasks', color: '#fbbf24' },
+            { text: 'Add "say I don\'t know" to your system prompt', color: '#a78bfa' },
+            { text: 'Always verify AI citations \u2014 many are fabricated', color: '#f472b6' },
+            { text: 'Treat AI output as a draft, not gospel', color: '#4ade80' },
           ].map((item, i) => (
             <motion.div
               key={i}
               className="flex items-center gap-4 mb-3 px-5 py-3 rounded-xl bg-white/5 border text-left"
               style={{ borderColor: `${item.color}30` }}
-              animate={{ opacity: s === 7 ? 1 : 0, y: s === 7 ? 0 : 20 }}
+              animate={{ opacity: s === 12 ? 1 : 0, y: s === 12 ? 0 : 20 }}
               transition={{ ...spring, delay: i * 0.12 }}
             >
-              <span className="text-2xl">{item.icon}</span>
-              <span className="text-white/80 text-sm">{item.text}</span>
+              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+              <span className="text-white/80 text-base font-medium">{item.text}</span>
             </motion.div>
           ))}
           <motion.p
             className="text-sm text-accent-gold mt-4"
-            animate={{ opacity: s === 7 ? 1 : 0 }}
+            animate={{ opacity: s === 12 ? 1 : 0 }}
             transition={{ ...spring, delay: 0.8 }}
           >
             Trust but verify — the #1 rule of working with AI!

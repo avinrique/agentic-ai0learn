@@ -10,7 +10,7 @@ export interface Lesson {
 }
 
 export const lessons: Lesson[] = [
-  // PART 0: Foundations (concept lessons)
+  // PART 0: Foundations (7 concept lessons)
   {
     id: 'what-is-llm',
     title: 'What is an LLM?',
@@ -19,16 +19,6 @@ export const lessons: Lesson[] = [
     part: 0,
     description: 'How Large Language Models predict the next token.',
     animations: ['LLMPipelineAnim'],
-    type: 'concept',
-  },
-  {
-    id: 'context-memory',
-    title: 'Context & Memory',
-    shortTitle: 'Context & Memory',
-    route: '/part0/context-memory',
-    part: 0,
-    description: "LLMs don't remember — and the system prompt is just message[0].",
-    animations: ['ContextMemoryAnim'],
     type: 'concept',
   },
   {
@@ -42,6 +32,26 @@ export const lessons: Lesson[] = [
     type: 'concept',
   },
   {
+    id: 'context-memory',
+    title: 'Context & Memory',
+    shortTitle: 'Context & Memory',
+    route: '/part0/context-memory',
+    part: 0,
+    description: "LLMs don't remember — you replay the whole conversation every call.",
+    animations: ['ContextMemoryAnim'],
+    type: 'concept',
+  },
+  {
+    id: 'system-prompts',
+    title: 'System Prompts',
+    shortTitle: 'System Prompts',
+    route: '/part0/system-prompts',
+    part: 0,
+    description: 'How messages[0] shapes the entire personality of your AI.',
+    animations: ['SystemPromptsAnim'],
+    type: 'concept',
+  },
+  {
     id: 'hallucination',
     title: 'Hallucination',
     shortTitle: 'Hallucination',
@@ -52,16 +62,26 @@ export const lessons: Lesson[] = [
     type: 'concept',
   },
   {
-    id: 'rag-and-agents',
-    title: 'RAG & Agents',
-    shortTitle: 'RAG & Agents',
-    route: '/part0/rag-and-agents',
+    id: 'rag',
+    title: 'RAG (Retrieval-Augmented Generation)',
+    shortTitle: 'RAG',
+    route: '/part0/rag',
     part: 0,
-    description: 'Two patterns that make LLMs truly powerful.',
-    animations: ['RagAgentsAnim'],
+    description: 'Give your LLM access to private data by injecting documents into the prompt.',
+    animations: ['RagAnim'],
     type: 'concept',
   },
-  // PART 1: API Basics (tracer lessons)
+  {
+    id: 'agents',
+    title: 'Agents & Tools',
+    shortTitle: 'Agents & Tools',
+    route: '/part0/agents',
+    part: 0,
+    description: 'When LLMs can DO things — not just talk about them.',
+    animations: ['AgentsAnim'],
+    type: 'concept',
+  },
+  // PART 1: API Basics (6 tracer lessons)
   {
     id: 'basic-api',
     title: 'Basic API Call',
@@ -73,12 +93,22 @@ export const lessons: Lesson[] = [
     type: 'tracer',
   },
   {
-    id: 'system-prompts',
+    id: 'system-prompts-tracer',
     title: 'System Prompts & Role Playing',
     shortTitle: 'System Prompts',
     route: '/part1/system-prompts',
     part: 1,
     description: 'Use system messages to control the AI\'s personality and behavior.',
+    animations: ['MessageArrayBuilder'],
+    type: 'tracer',
+  },
+  {
+    id: 'conversation-loop',
+    title: 'Conversation Loop',
+    shortTitle: 'Conv. Loop',
+    route: '/part1/conversation-loop',
+    part: 1,
+    description: 'Build a multi-turn chatbot that remembers context across messages.',
     animations: ['MessageArrayBuilder'],
     type: 'tracer',
   },
@@ -171,4 +201,11 @@ export const partLabels: Record<number, string> = {
   1: 'API Basics',
   2: 'Agents',
   3: 'Advanced Agents',
+};
+
+export const partColors: Record<number, string> = {
+  0: '#f472b6',
+  1: '#4a9eff',
+  2: '#fbbf24',
+  3: '#a78bfa',
 };

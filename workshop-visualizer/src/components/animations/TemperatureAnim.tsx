@@ -94,9 +94,19 @@ export default function TemperatureAnim() {
   // Cycling for side-by-side step
   const [sideIdx, setSideIdx] = useState(0);
   useEffect(() => {
-    if (s === 5) {
+    if (s === 6) {
       setSideIdx(0);
       const timer = setInterval(() => setSideIdx((p) => (p + 1) % 3), 3000);
+      return () => clearInterval(timer);
+    }
+  }, [s]);
+
+  // Cycling for guess-the-temperature step
+  const [guessReveal, setGuessReveal] = useState(0);
+  useEffect(() => {
+    if (s === 9) {
+      setGuessReveal(0);
+      const timer = setInterval(() => setGuessReveal((p) => (p + 1) % 3), 2000);
       return () => clearInterval(timer);
     }
   }, [s]);
@@ -269,9 +279,129 @@ export default function TemperatureAnim() {
         </div>
       </motion.div>
 
-      {/* Steps 2-4: Individual temperature visualizations */}
-      {[2, 3, 4].map((stepNum) => {
-        const configIdx = stepNum - 2;
+      {/* Step 2: "The Math: Softmax Scaling" */}
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none px-6"
+        animate={{ opacity: s === 2 ? 1 : 0 }}
+        transition={spring}
+      >
+        <div className="max-w-2xl w-full">
+          <motion.p
+            className="text-sm text-white/40 mb-2 text-center"
+            animate={{ opacity: s === 2 ? 1 : 0 }}
+            transition={spring}
+          >
+            The Math: Softmax Scaling
+          </motion.p>
+
+          {/* Equation */}
+          <motion.div
+            className="text-center mb-6 py-3 px-4 rounded-xl bg-white/5 border border-white/10"
+            animate={{ opacity: s === 2 ? 1 : 0, y: s === 2 ? 0 : 15 }}
+            transition={{ ...spring, delay: 0.2 }}
+          >
+            <span className="font-mono text-sm text-white/80">
+              P(token) = <span style={{ color: '#4ade80' }}>exp</span>(logit / <span style={{ color: '#fbbf24' }}>T</span>) / <span style={{ color: '#a78bfa' }}>&Sigma;</span> <span style={{ color: '#4ade80' }}>exp</span>(logits / <span style={{ color: '#fbbf24' }}>T</span>)
+            </span>
+          </motion.div>
+
+          {/* Two mini bar charts side by side */}
+          <div className="grid grid-cols-2 gap-6">
+            {/* LEFT: T = 0.1 */}
+            <motion.div
+              className="rounded-xl border-2 p-4"
+              style={{ borderColor: '#4a9eff30', backgroundColor: '#4a9eff05' }}
+              animate={{ opacity: s === 2 ? 1 : 0, x: s === 2 ? 0 : -20 }}
+              transition={{ ...spring, delay: 0.3 }}
+            >
+              <p className="text-sm font-mono font-bold text-center mb-3" style={{ color: '#4a9eff' }}>
+                T = 0.1
+              </p>
+              <div className="space-y-1.5">
+                {[
+                  { label: 'Paris', pct: 99.99, color: '#4ade80' },
+                  { label: 'Lyon', pct: 0.005, color: '#fbbf24' },
+                  { label: 'Marseille', pct: 0.003, color: '#f472b6' },
+                  { label: 'the', pct: 0.001, color: '#a78bfa' },
+                  { label: 'known', pct: 0.001, color: '#4a9eff' },
+                ].map((p, i) => (
+                  <div key={p.label} className="flex items-center gap-2">
+                    <span className="w-16 text-right text-sm font-mono text-white/60">{p.label}</span>
+                    <div className="flex-1 bg-white/5 rounded-full h-5 overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full flex items-center px-1"
+                        style={{ backgroundColor: `${p.color}25` }}
+                        animate={{ width: s === 2 ? `${Math.max(p.pct, 1)}%` : '0%' }}
+                        transition={{ ...smooth, delay: 0.5 + i * 0.06 }}
+                      >
+                        <span className="text-xs font-bold" style={{ color: p.color }}>
+                          {p.pct}%
+                        </span>
+                      </motion.div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm text-center mt-2 italic" style={{ color: '#4a9eff80' }}>
+                Extremely peaked
+              </p>
+            </motion.div>
+
+            {/* RIGHT: T = 2.0 */}
+            <motion.div
+              className="rounded-xl border-2 p-4"
+              style={{ borderColor: '#ef444430', backgroundColor: '#ef444405' }}
+              animate={{ opacity: s === 2 ? 1 : 0, x: s === 2 ? 0 : 20 }}
+              transition={{ ...spring, delay: 0.4 }}
+            >
+              <p className="text-sm font-mono font-bold text-center mb-3" style={{ color: '#ef4444' }}>
+                T = 2.0
+              </p>
+              <div className="space-y-1.5">
+                {[
+                  { label: 'Paris', pct: 30, color: '#4ade80' },
+                  { label: 'Lyon', pct: 22, color: '#fbbf24' },
+                  { label: 'Marseille', pct: 20, color: '#f472b6' },
+                  { label: 'the', pct: 15, color: '#a78bfa' },
+                  { label: 'known', pct: 13, color: '#4a9eff' },
+                ].map((p, i) => (
+                  <div key={p.label} className="flex items-center gap-2">
+                    <span className="w-16 text-right text-sm font-mono text-white/60">{p.label}</span>
+                    <div className="flex-1 bg-white/5 rounded-full h-5 overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full flex items-center px-1"
+                        style={{ backgroundColor: `${p.color}25` }}
+                        animate={{ width: s === 2 ? `${Math.max(p.pct, 1)}%` : '0%' }}
+                        transition={{ ...smooth, delay: 0.6 + i * 0.06 }}
+                      >
+                        <span className="text-xs font-bold" style={{ color: p.color }}>
+                          {p.pct}%
+                        </span>
+                      </motion.div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm text-center mt-2 italic" style={{ color: '#ef444480' }}>
+                Nearly flat
+              </p>
+            </motion.div>
+          </div>
+
+          <motion.p
+            className="text-xs text-center mt-4"
+            style={{ color: '#a78bfa' }}
+            animate={{ opacity: s === 2 ? 1 : 0 }}
+            transition={{ ...spring, delay: 0.8 }}
+          >
+            Lower T &rarr; sharper peaks. Higher T &rarr; flatter distribution.
+          </motion.p>
+        </div>
+      </motion.div>
+
+      {/* Steps 3-5: Individual temperature visualizations */}
+      {[3, 4, 5].map((stepNum) => {
+        const configIdx = stepNum - 3;
         const config = tempConfigs[configIdx];
         return (
           <motion.div
@@ -330,7 +460,7 @@ export default function TemperatureAnim() {
                           transition={{ ...smooth, delay: 0.4 + i * 0.08 }}
                         >
                           {config.bars[i] > 0 && (
-                            <span className="text-[10px] font-bold" style={{ color: p.color }}>
+                            <span className="text-sm font-bold" style={{ color: p.color }}>
                               {config.bars[i]}%
                             </span>
                           )}
@@ -365,22 +495,22 @@ export default function TemperatureAnim() {
         );
       })}
 
-      {/* Step 5: "Side-by-Side Comparison" */}
+      {/* Step 6: "Side-by-Side Comparison" */}
       <motion.div
         className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-6"
-        animate={{ opacity: s === 5 ? 1 : 0 }}
+        animate={{ opacity: s === 6 ? 1 : 0 }}
         transition={spring}
       >
         <motion.p
           className="text-sm text-white/40 mb-1"
-          animate={{ opacity: s === 5 ? 1 : 0 }}
+          animate={{ opacity: s === 6 ? 1 : 0 }}
           transition={spring}
         >
           Prompt: &quot;How do I sort a list in Python?&quot;
         </motion.p>
         <motion.p
           className="text-xs text-white/30 mb-5"
-          animate={{ opacity: s === 5 ? 1 : 0 }}
+          animate={{ opacity: s === 6 ? 1 : 0 }}
           transition={{ ...spring, delay: 0.2 }}
         >
           Same model, same prompt — three temperatures:
@@ -396,8 +526,8 @@ export default function TemperatureAnim() {
                 backgroundColor: sideIdx === i ? `${item.color}10` : `${item.color}05`,
               }}
               animate={{
-                opacity: s === 5 ? 1 : 0,
-                y: s === 5 ? 0 : 20,
+                opacity: s === 6 ? 1 : 0,
+                y: s === 6 ? 0 : 20,
                 scale: sideIdx === i ? 1.02 : 1,
               }}
               transition={{ ...spring, delay: i * 0.15 }}
@@ -419,7 +549,7 @@ export default function TemperatureAnim() {
                 className={`text-xs leading-relaxed flex-1 ${item.isCode ? 'font-mono bg-black/30 rounded p-2' : ''}`}
                 style={{ color: item.isCode ? '#4ade80' : 'rgba(255,255,255,0.6)' }}
                 animate={{
-                  opacity: s === 5 ? (sideIdx === i ? 1 : 0.4) : 0,
+                  opacity: s === 6 ? (sideIdx === i ? 1 : 0.4) : 0,
                 }}
                 transition={smooth}
               >
@@ -428,7 +558,7 @@ export default function TemperatureAnim() {
                   : <>&quot;{item.response}&quot;</>
                 }
               </motion.div>
-              <p className="text-[10px] mt-3 italic" style={{ color: `${item.color}80` }}>
+              <p className="text-sm mt-3 italic" style={{ color: `${item.color}80` }}>
                 {item.style}
               </p>
             </motion.div>
@@ -436,15 +566,397 @@ export default function TemperatureAnim() {
         </div>
       </motion.div>
 
-      {/* Step 6: "When to Use Which" */}
+      {/* Step 7: "Top-P (Nucleus) Sampling" */}
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none px-6"
+        animate={{ opacity: s === 7 ? 1 : 0 }}
+        transition={spring}
+      >
+        <div className="max-w-lg w-full">
+          <motion.p
+            className="text-sm text-white/40 mb-2 text-center"
+            animate={{ opacity: s === 7 ? 1 : 0 }}
+            transition={spring}
+          >
+            Top-P (Nucleus) Sampling
+          </motion.p>
+          <motion.p
+            className="text-xs text-white/30 mb-4 text-center"
+            animate={{ opacity: s === 7 ? 1 : 0 }}
+            transition={{ ...spring, delay: 0.2 }}
+          >
+            top_p = 0.9 — Only consider tokens whose cumulative probability &le; 90%
+          </motion.p>
+
+          <div className="space-y-2.5 relative">
+            {probWords.map((p, i) => {
+              const cumulative = probWords.slice(0, i + 1).reduce((sum, w) => sum + w.pct, 0);
+              const included = cumulative <= 92;
+              return (
+                <motion.div
+                  key={p.label}
+                  className="flex items-center gap-3"
+                  animate={{
+                    opacity: s === 7 ? 1 : 0,
+                    x: s === 7 ? 0 : -20,
+                  }}
+                  transition={{ ...spring, delay: 0.3 + i * 0.1 }}
+                >
+                  <span className="w-20 text-right text-sm font-mono font-bold" style={{ color: included ? p.color : 'rgba(255,255,255,0.2)' }}>
+                    {p.label}
+                  </span>
+                  <div className="flex-1 bg-white/5 rounded-full h-8 overflow-hidden relative border border-white/5">
+                    <motion.div
+                      className="h-full rounded-full flex items-center px-3"
+                      style={{ backgroundColor: included ? `${p.color}25` : 'rgba(255,255,255,0.03)' }}
+                      animate={{
+                        width: s === 7 ? `${p.pct}%` : '0%',
+                      }}
+                      transition={{ ...smooth, delay: 0.4 + i * 0.1 }}
+                    >
+                      <span className="text-xs font-bold" style={{ color: included ? p.color : 'rgba(255,255,255,0.2)' }}>
+                        {p.pct}%
+                      </span>
+                    </motion.div>
+                  </div>
+                  {included ? (
+                    <motion.span
+                      className="text-xs px-2 py-0.5 rounded-full border font-bold"
+                      style={{ color: '#4ade80', borderColor: '#4ade8040', backgroundColor: '#4ade8015' }}
+                      animate={{ opacity: s === 7 ? 1 : 0 }}
+                      transition={{ ...spring, delay: 0.7 }}
+                    >
+                      IN
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      className="text-xs px-2 py-0.5 rounded-full border font-bold"
+                      style={{ color: '#ef4444', borderColor: '#ef444440', backgroundColor: '#ef444415' }}
+                      animate={{ opacity: s === 7 ? 1 : 0 }}
+                      transition={{ ...spring, delay: 0.7 }}
+                    >
+                      CUT
+                    </motion.span>
+                  )}
+                </motion.div>
+              );
+            })}
+
+            {/* Red cutoff line */}
+            <motion.div
+              className="absolute left-24 right-12 border-t-2 border-dashed"
+              style={{ borderColor: '#ef4444', top: '40px' }}
+              animate={{ opacity: s === 7 ? 0.6 : 0 }}
+              transition={{ ...smooth, delay: 0.8 }}
+            />
+          </div>
+
+          {/* Comparison */}
+          <motion.div
+            className="mt-5 grid grid-cols-2 gap-3"
+            animate={{ opacity: s === 7 ? 1 : 0, y: s === 7 ? 0 : 10 }}
+            transition={{ ...spring, delay: 0.9 }}
+          >
+            <div className="rounded-lg border p-3 text-center" style={{ borderColor: '#fbbf2430', backgroundColor: '#fbbf2405' }}>
+              <p className="text-sm text-white/40 mb-1">Temperature</p>
+              <p className="text-xs font-bold" style={{ color: '#fbbf24' }}>Flatten the curve</p>
+            </div>
+            <div className="rounded-lg border p-3 text-center" style={{ borderColor: '#ef444430', backgroundColor: '#ef444405' }}>
+              <p className="text-sm text-white/40 mb-1">Top-P</p>
+              <p className="text-xs font-bold" style={{ color: '#ef4444' }}>Cut the tail</p>
+            </div>
+          </motion.div>
+
+          <motion.p
+            className="text-xs text-center mt-3"
+            style={{ color: '#f472b6' }}
+            animate={{ opacity: s === 7 ? 1 : 0 }}
+            transition={{ ...spring, delay: 1 }}
+          >
+            Alternative to temperature: cut off low-probability tokens entirely.
+          </motion.p>
+        </div>
+      </motion.div>
+
+      {/* Step 8: "Temperature ≠ Quality" */}
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none px-6"
+        animate={{ opacity: s === 8 ? 1 : 0 }}
+        transition={spring}
+      >
+        <div className="max-w-lg w-full">
+          <motion.p
+            className="text-sm text-white/40 mb-4 text-center"
+            animate={{ opacity: s === 8 ? 1 : 0 }}
+            transition={spring}
+          >
+            Temperature &ne; Quality
+          </motion.p>
+
+          {/* Column headers */}
+          <div className="grid grid-cols-3 gap-3 mb-2">
+            <div />
+            <motion.p
+              className="text-xs font-mono font-bold text-center"
+              style={{ color: '#4a9eff' }}
+              animate={{ opacity: s === 8 ? 1 : 0 }}
+              transition={{ ...spring, delay: 0.2 }}
+            >
+              Low Temp (0)
+            </motion.p>
+            <motion.p
+              className="text-xs font-mono font-bold text-center"
+              style={{ color: '#ef4444' }}
+              animate={{ opacity: s === 8 ? 1 : 0 }}
+              transition={{ ...spring, delay: 0.3 }}
+            >
+              High Temp (1.5)
+            </motion.p>
+          </div>
+
+          {/* Row 1: Good Prompt */}
+          <div className="grid grid-cols-3 gap-3 mb-3">
+            <motion.p
+              className="text-xs font-bold flex items-center justify-end"
+              style={{ color: '#4ade80' }}
+              animate={{ opacity: s === 8 ? 1 : 0 }}
+              transition={{ ...spring, delay: 0.3 }}
+            >
+              Good Prompt
+            </motion.p>
+            <motion.div
+              className="rounded-xl border-2 p-3 text-center"
+              style={{ borderColor: '#4ade8060', backgroundColor: '#4ade8010' }}
+              animate={{ opacity: s === 8 ? 1 : 0, scale: s === 8 ? 1 : 0.9 }}
+              transition={{ ...spring, delay: 0.4 }}
+            >
+              <p className="text-sm text-white/60 mb-1">Correct, concise answer</p>
+              <span className="text-lg">&#10003;</span>
+            </motion.div>
+            <motion.div
+              className="rounded-xl border-2 p-3 text-center"
+              style={{ borderColor: '#fbbf2460', backgroundColor: '#fbbf2410' }}
+              animate={{ opacity: s === 8 ? 1 : 0, scale: s === 8 ? 1 : 0.9 }}
+              transition={{ ...spring, delay: 0.5 }}
+            >
+              <p className="text-sm text-white/60 mb-1">Creative, still useful</p>
+              <span className="text-lg">&#10003;</span>
+            </motion.div>
+          </div>
+
+          {/* Row 2: Bad Prompt */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <motion.p
+              className="text-xs font-bold flex items-center justify-end"
+              style={{ color: '#ef4444' }}
+              animate={{ opacity: s === 8 ? 1 : 0 }}
+              transition={{ ...spring, delay: 0.5 }}
+            >
+              Bad Prompt
+            </motion.p>
+            <motion.div
+              className="rounded-xl border-2 p-3 text-center"
+              style={{ borderColor: '#ef444460', backgroundColor: '#ef444410' }}
+              animate={{ opacity: s === 8 ? 1 : 0, scale: s === 8 ? 1 : 0.9 }}
+              transition={{ ...spring, delay: 0.6 }}
+            >
+              <p className="text-sm text-white/60 mb-1">Confidently wrong</p>
+              <span className="text-lg">&#10005;</span>
+            </motion.div>
+            <motion.div
+              className="rounded-xl border-2 p-3 text-center"
+              style={{ borderColor: '#ef444460', backgroundColor: '#ef444410' }}
+              animate={{ opacity: s === 8 ? 1 : 0, scale: s === 8 ? 1 : 0.9 }}
+              transition={{ ...spring, delay: 0.7 }}
+            >
+              <p className="text-sm text-white/60 mb-1">Creatively wrong</p>
+              <span className="text-lg">&#10005;</span>
+            </motion.div>
+          </div>
+
+          <motion.p
+            className="text-xs font-bold text-center"
+            style={{ color: '#fbbf24' }}
+            animate={{ opacity: s === 8 ? 1 : 0 }}
+            transition={{ ...spring, delay: 0.9 }}
+          >
+            Prompt quality matters MORE than temperature
+          </motion.p>
+        </div>
+      </motion.div>
+
+      {/* Step 9: "Guess the Temperature" */}
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none px-6"
+        animate={{ opacity: s === 9 ? 1 : 0 }}
+        transition={spring}
+      >
+        <div className="max-w-3xl w-full">
+          <motion.p
+            className="text-sm text-white/40 mb-2 text-center"
+            animate={{ opacity: s === 9 ? 1 : 0 }}
+            transition={spring}
+          >
+            Guess the Temperature
+          </motion.p>
+          <motion.p
+            className="text-xs text-white/30 mb-5 text-center"
+            animate={{ opacity: s === 9 ? 1 : 0 }}
+            transition={{ ...spring, delay: 0.2 }}
+          >
+            Prompt: &quot;Write a haiku about coding&quot;
+          </motion.p>
+
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              {
+                label: 'Response A',
+                text: 'Code compiles and runs\nOutput matches expected\nShip to production',
+                temp: 'T=0',
+                color: '#4a9eff',
+                revealAt: 0,
+              },
+              {
+                label: 'Response B',
+                text: 'Fingers dance on keys\nLogic weaves through lines of code\nBugs become features',
+                temp: 'T=0.7',
+                color: '#fbbf24',
+                revealAt: 1,
+              },
+              {
+                label: 'Response C',
+                text: 'Electric whispers\nThrough silicon dreams we float\nMoonlight types itself',
+                temp: 'T=1.5',
+                color: '#ef4444',
+                revealAt: 2,
+              },
+            ].map((item, i) => (
+              <motion.div
+                key={item.label}
+                className="rounded-xl border-2 p-4 flex flex-col"
+                style={{
+                  borderColor: `${item.color}30`,
+                  backgroundColor: `${item.color}05`,
+                }}
+                animate={{
+                  opacity: s === 9 ? 1 : 0,
+                  y: s === 9 ? 0 : 20,
+                }}
+                transition={{ ...spring, delay: 0.3 + i * 0.15 }}
+              >
+                <p className="text-sm font-bold text-center mb-3" style={{ color: item.color }}>
+                  {item.label}
+                </p>
+                <div className="text-xs leading-relaxed text-white/60 font-mono bg-black/30 rounded p-3 flex-1">
+                  {item.text.split('\n').map((line, li) => (
+                    <div key={li}>{line}</div>
+                  ))}
+                </div>
+                <motion.div
+                  className="mt-3 text-center"
+                  animate={{ opacity: guessReveal >= item.revealAt ? 1 : 0, y: guessReveal >= item.revealAt ? 0 : 10 }}
+                  transition={spring}
+                >
+                  <span
+                    className="text-xs font-mono font-bold px-3 py-1 rounded-full border"
+                    style={{ color: item.color, borderColor: `${item.color}40`, backgroundColor: `${item.color}15` }}
+                  >
+                    {item.temp}
+                  </span>
+                </motion.div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Step 10: "API Differences" */}
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none px-6"
+        animate={{ opacity: s === 10 ? 1 : 0 }}
+        transition={spring}
+      >
+        <div className="max-w-md w-full">
+          <motion.p
+            className="text-sm text-white/40 mb-5 text-center"
+            animate={{ opacity: s === 10 ? 1 : 0 }}
+            transition={spring}
+          >
+            API Differences
+          </motion.p>
+
+          <div className="rounded-xl border border-white/10 overflow-hidden">
+            {/* Header */}
+            <div className="grid grid-cols-3 bg-white/5 border-b border-white/10">
+              <motion.p
+                className="text-xs font-bold text-white/60 p-3"
+                animate={{ opacity: s === 10 ? 1 : 0 }}
+                transition={{ ...spring, delay: 0.2 }}
+              >
+                Provider
+              </motion.p>
+              <motion.p
+                className="text-xs font-bold text-white/60 p-3 text-center"
+                animate={{ opacity: s === 10 ? 1 : 0 }}
+                transition={{ ...spring, delay: 0.3 }}
+              >
+                Range
+              </motion.p>
+              <motion.p
+                className="text-xs font-bold text-white/60 p-3 text-center"
+                animate={{ opacity: s === 10 ? 1 : 0 }}
+                transition={{ ...spring, delay: 0.4 }}
+              >
+                Default
+              </motion.p>
+            </div>
+
+            {/* Rows */}
+            {[
+              { provider: 'OpenAI', range: '0 – 2', default_val: '1.0', color: '#4ade80', logo: '/logos/openai.svg' },
+              { provider: 'Anthropic', range: '0 – 1', default_val: '1.0', color: '#a78bfa', logo: '/logos/anthropic.svg' },
+              { provider: 'Gemini', range: '0 – 1', default_val: '(varies)', color: '#4a9eff', logo: '/logos/google.svg' },
+            ].map((row, i) => (
+              <motion.div
+                key={row.provider}
+                className="grid grid-cols-3 border-b border-white/5"
+                animate={{ opacity: s === 10 ? 1 : 0, x: s === 10 ? 0 : -15 }}
+                transition={{ ...spring, delay: 0.4 + i * 0.15 }}
+              >
+                <p className="text-sm font-bold p-3 flex items-center gap-2" style={{ color: row.color }}>
+                  <img src={row.logo} alt={row.provider} className="w-5 h-5 rounded" />
+                  {row.provider}
+                </p>
+                <p className="text-sm font-mono text-white/60 p-3 text-center">
+                  {row.range}
+                </p>
+                <p className="text-sm font-mono text-white/60 p-3 text-center">
+                  {row.default_val}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.p
+            className="text-xs text-center mt-4"
+            style={{ color: '#4a9eff' }}
+            animate={{ opacity: s === 10 ? 1 : 0 }}
+            transition={{ ...spring, delay: 0.9 }}
+          >
+            Same concept, different scales. Always check the docs.
+          </motion.p>
+        </div>
+      </motion.div>
+
+      {/* Step 11: "When to Use Which" */}
       <motion.div
         className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-6"
-        animate={{ opacity: s === 6 ? 1 : 0 }}
+        animate={{ opacity: s === 11 ? 1 : 0 }}
         transition={spring}
       >
         <motion.p
           className="text-sm text-white/40 mb-6"
-          animate={{ opacity: s === 6 ? 1 : 0 }}
+          animate={{ opacity: s === 11 ? 1 : 0 }}
           transition={spring}
         >
           Match temperature to your task
@@ -460,13 +972,13 @@ export default function TemperatureAnim() {
                 backgroundColor: `${uc.color}05`,
               }}
               animate={{
-                opacity: s === 6 ? 1 : 0,
-                y: s === 6 ? 0 : 25,
+                opacity: s === 11 ? 1 : 0,
+                y: s === 11 ? 0 : 25,
               }}
               transition={{ ...spring, delay: i * 0.2 }}
             >
               <div className="text-center mb-3">
-                <span className="text-3xl">{uc.icon}</span>
+                <span className="text-4xl">{uc.icon}</span>
               </div>
               <p className="text-sm font-bold text-center mb-1" style={{ color: uc.color }}>
                 {uc.label}
@@ -481,7 +993,7 @@ export default function TemperatureAnim() {
                   className="h-full rounded-full"
                   style={{ backgroundColor: uc.color }}
                   animate={{
-                    width: s === 6 ? `${(i + 1) * 33}%` : '0%',
+                    width: s === 11 ? `${(i + 1) * 33}%` : '0%',
                   }}
                   transition={{ ...smooth, delay: 0.5 + i * 0.2 }}
                 />
@@ -492,7 +1004,7 @@ export default function TemperatureAnim() {
                   <motion.div
                     key={task}
                     className="text-xs text-white/50 flex items-center gap-2"
-                    animate={{ opacity: s === 6 ? 1 : 0, x: s === 6 ? 0 : -10 }}
+                    animate={{ opacity: s === 11 ? 1 : 0, x: s === 11 ? 0 : -10 }}
                     transition={{ ...spring, delay: 0.6 + i * 0.2 + j * 0.08 }}
                   >
                     <span style={{ color: uc.color }}>•</span>
@@ -505,16 +1017,16 @@ export default function TemperatureAnim() {
         </div>
       </motion.div>
 
-      {/* Step 7: "Key Takeaways" */}
+      {/* Step 12: "Key Takeaways" */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        animate={{ opacity: s === 7 ? 1 : 0 }}
+        animate={{ opacity: s === 12 ? 1 : 0 }}
         transition={spring}
       >
         <div className="text-center max-w-xl w-full px-6">
           <motion.h2
-            className="text-3xl font-bold text-white mb-6"
-            animate={{ opacity: s === 7 ? 1 : 0, y: s === 7 ? 0 : 20 }}
+            className="text-5xl font-bold text-white mb-6"
+            animate={{ opacity: s === 12 ? 1 : 0, y: s === 12 ? 0 : 20 }}
             transition={spring}
           >
             Key Takeaways
@@ -524,17 +1036,19 @@ export default function TemperatureAnim() {
             { icon: '🤖', text: 'Temp 0 = deterministic — always the same output', color: '#4a9eff' },
             { icon: '⚖️', text: 'Temp 0.7 = balanced default — creative but controlled', color: '#fbbf24' },
             { icon: '🎲', text: 'Temp 1.5 = creative chaos — surprising & unpredictable', color: '#ef4444' },
+            { icon: '🔢', text: 'Softmax divides logits by T — lower T sharpens, higher T flattens', color: '#a78bfa' },
+            { icon: '✂️', text: 'Top-P is an alternative — cuts off low-probability tokens', color: '#f472b6' },
             { icon: '🎯', text: 'Match temperature to your task — code low, stories high', color: '#4ade80' },
           ].map((item, i) => (
             <motion.div
               key={i}
               className="flex items-center gap-4 mb-3 px-5 py-3 rounded-xl bg-white/5 border text-left"
               style={{ borderColor: `${item.color}30` }}
-              animate={{ opacity: s === 7 ? 1 : 0, y: s === 7 ? 0 : 20 }}
+              animate={{ opacity: s === 12 ? 1 : 0, y: s === 12 ? 0 : 20 }}
               transition={{ ...spring, delay: i * 0.12 }}
             >
               <span className="text-2xl">{item.icon}</span>
-              <span className="text-white/80 text-sm">{item.text}</span>
+              <span className="text-white/80 text-base font-medium">{item.text}</span>
             </motion.div>
           ))}
         </div>

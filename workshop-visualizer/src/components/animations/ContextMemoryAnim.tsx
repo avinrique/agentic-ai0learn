@@ -1,7 +1,6 @@
 'use client';
 import { motion } from 'framer-motion';
 import { useConceptStore } from '@/stores/conceptStore';
-import { useState, useEffect } from 'react';
 
 const spring = { type: 'spring' as const, damping: 25, stiffness: 120 };
 const smooth = { duration: 0.6, ease: 'easeInOut' as const };
@@ -74,7 +73,7 @@ function MsgBubble({
       <span className="text-sm text-white/70 flex-1">{msg.content}</span>
       {isNew && (
         <motion.span
-          className="text-[10px] px-1.5 py-0.5 rounded bg-accent-green/20 text-accent-green font-bold shrink-0"
+          className="text-sm px-1.5 py-0.5 rounded bg-accent-green/20 text-accent-green font-bold shrink-0"
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ ...spring, delay: 0.4 }}
@@ -84,7 +83,7 @@ function MsgBubble({
       )}
       {resent && (
         <motion.span
-          className="text-[10px] px-1.5 py-0.5 rounded bg-accent-gold/20 text-accent-gold font-bold shrink-0"
+          className="text-sm px-1.5 py-0.5 rounded bg-accent-gold/20 text-accent-gold font-bold shrink-0"
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ ...spring, delay: resentDelay }}
@@ -99,18 +98,6 @@ function MsgBubble({
 export default function ContextMemoryAnim() {
   const { currentStep } = useConceptStore();
   const s = currentStep;
-
-  // Typing effect for step 12 personality comparison
-  const [typingIdx, setTypingIdx] = useState(0);
-  useEffect(() => {
-    if (s === 12) {
-      setTypingIdx(0);
-      const timer = setInterval(() => {
-        setTypingIdx((prev) => (prev < 3 ? prev + 1 : prev));
-      }, 600);
-      return () => clearInterval(timer);
-    }
-  }, [s]);
 
   // Cost bar chart animation
   const costBars = [
@@ -171,7 +158,7 @@ export default function ContextMemoryAnim() {
                 <span className="text-xs text-white/60">Your name is Alex!</span>
               </div>
             </div>
-            <p className="text-[10px] text-white/30 mt-3 text-center">
+            <p className="text-sm text-white/30 mt-3 text-center">
               It FEELS like it remembers...
             </p>
           </motion.div>
@@ -306,7 +293,7 @@ export default function ContextMemoryAnim() {
           >
             <p className="text-xs text-white/40 mb-2 font-mono">API Call #1</p>
             <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <p className="text-[10px] text-white/30 mb-2 font-mono">messages = [</p>
+              <p className="text-sm text-white/30 mb-2 font-mono">messages = [</p>
               <div className="space-y-1.5 pl-2">
                 {step3Msgs.map((msg, i) => (
                   <motion.div
@@ -319,7 +306,7 @@ export default function ContextMemoryAnim() {
                   </motion.div>
                 ))}
               </div>
-              <p className="text-[10px] text-white/30 mt-2 font-mono">]</p>
+              <p className="text-sm text-white/30 mt-2 font-mono">]</p>
             </div>
           </motion.div>
 
@@ -405,7 +392,7 @@ export default function ContextMemoryAnim() {
           >
             <p className="text-xs text-white/40 mb-2 font-mono">Your messages array now:</p>
             <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <p className="text-[10px] text-white/30 mb-2 font-mono">messages = [</p>
+              <p className="text-sm text-white/30 mb-2 font-mono">messages = [</p>
               <div className="space-y-1.5 pl-2 max-h-[55%] overflow-y-auto">
                 {step4Msgs.map((msg, i) => (
                   <motion.div
@@ -421,12 +408,12 @@ export default function ContextMemoryAnim() {
                   </motion.div>
                 ))}
               </div>
-              <p className="text-[10px] text-white/30 mt-2 font-mono">]</p>
+              <p className="text-sm text-white/30 mt-2 font-mono">]</p>
             </div>
 
             {/* Annotation arrow */}
             <motion.p
-              className="text-[10px] text-white/40 mt-2 text-center italic"
+              className="text-sm text-white/40 mt-2 text-center italic"
               animate={{ opacity: s === 4 ? 1 : 0 }}
               transition={{ ...spring, delay: 0.6 }}
             >
@@ -487,7 +474,7 @@ export default function ContextMemoryAnim() {
               No memory!
             </motion.p>
             <motion.p
-              className="text-[10px] text-white/30 max-w-[140px] text-center"
+              className="text-sm text-white/30 max-w-[140px] text-center"
               initial={{ opacity: 0 }}
               animate={{ opacity: s === 4 ? 1 : 0 }}
               transition={{ ...spring, delay: 0.8 }}
@@ -531,7 +518,7 @@ export default function ContextMemoryAnim() {
                 backgroundColor: 'rgba(251,191,36,0.03)',
               }}
             >
-              <p className="text-[10px] text-white/30 mb-2 font-mono">messages = [</p>
+              <p className="text-sm text-white/30 mb-2 font-mono">messages = [</p>
               <div className="space-y-1.5 pl-2 max-h-[55%] overflow-y-auto">
                 {step5Msgs.map((msg, i) => {
                   const isLast = i === step5Msgs.length - 1;
@@ -553,11 +540,11 @@ export default function ContextMemoryAnim() {
                   );
                 })}
               </div>
-              <p className="text-[10px] text-white/30 mt-2 font-mono">]</p>
+              <p className="text-sm text-white/30 mt-2 font-mono">]</p>
             </div>
 
             <motion.p
-              className="text-[10px] text-accent-gold mt-2 text-center"
+              className="text-sm text-accent-gold mt-2 text-center"
               animate={{ opacity: s === 5 ? 1 : 0 }}
               transition={{ ...spring, delay: 1.2 }}
             >
@@ -604,7 +591,7 @@ export default function ContextMemoryAnim() {
             </motion.div>
             <p className="text-xs text-white/30">LLM</p>
             <motion.p
-              className="text-[10px] text-white/50 max-w-[150px] text-center leading-relaxed"
+              className="text-sm text-white/50 max-w-[150px] text-center leading-relaxed"
               initial={{ opacity: 0 }}
               animate={{ opacity: s === 5 ? 1 : 0 }}
               transition={{ ...spring, delay: 0.7 }}
@@ -642,16 +629,16 @@ export default function ContextMemoryAnim() {
         </motion.div>
       </motion.div>
 
-      {/* Step 6: Growing Cost bar chart */}
+      {/* Step 6: Growing Cost bar chart + real-world cost */}
       <motion.div
         className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-6"
         animate={{ opacity: s === 6 ? 1 : 0 }}
         transition={spring}
       >
-        <p className="text-white/40 text-sm mb-6">
+        <p className="text-white/40 text-base font-medium mb-4">
           Token cost per API call
         </p>
-        <div className="flex items-end gap-3 h-48 max-w-lg w-full justify-center">
+        <div className="flex items-end gap-3 h-36 max-w-lg w-full justify-center">
           {costBars.map((bar, i) => {
             const maxTokens = 12000;
             const heightPct = (bar.tokens / maxTokens) * 100;
@@ -672,7 +659,7 @@ export default function ContextMemoryAnim() {
                 transition={{ ...smooth, delay: i * 0.12 }}
               >
                 {bar.cost && (
-                  <span className="text-[9px] text-white/40">{bar.cost}</span>
+                  <span className="text-xs text-white/40">{bar.cost}</span>
                 )}
                 <motion.div
                   className="w-10 rounded-t-md"
@@ -682,16 +669,44 @@ export default function ContextMemoryAnim() {
                   }}
                   transition={{ ...smooth, delay: 0.3 + i * 0.12 }}
                 />
-                <span className="text-[10px] text-white/50">
+                <span className="text-sm text-white/50">
                   Call {bar.call}
                 </span>
-                <span className="text-[9px] text-white/30 font-mono">
+                <span className="text-xs text-white/30 font-mono">
                   {bar.tokens.toLocaleString()}
                 </span>
               </motion.div>
             );
           })}
         </div>
+
+        {/* Real-world cost example */}
+        <motion.div
+          className="mt-4 max-w-md w-full rounded-xl border border-accent-gold/30 bg-accent-gold/5 px-4 py-3"
+          animate={{ opacity: s === 6 ? 1 : 0, y: s === 6 ? 0 : 10 }}
+          transition={{ ...spring, delay: 1.2 }}
+        >
+          <p className="text-xs text-white/50 text-center mb-2">Real-world example: GPT-4 customer support bot</p>
+          <div className="flex items-center justify-between text-center">
+            <div>
+              <p className="text-sm font-mono text-accent-blue">20 msgs/chat</p>
+              <p className="text-sm text-white/30">~$0.36/chat</p>
+            </div>
+            <span className="text-white/20">×</span>
+            <div>
+              <p className="text-sm font-mono text-accent-gold">1,000 chats/day</p>
+              <p className="text-sm text-white/30">$360/day</p>
+            </div>
+            <span className="text-white/20">=</span>
+            <motion.div
+              animate={{ scale: s === 6 ? [1, 1.05, 1] : 1 }}
+              transition={{ duration: 1.5, repeat: Infinity, delay: 2 }}
+            >
+              <p className="text-lg font-bold font-mono text-red-400">$10,800</p>
+              <p className="text-sm text-red-400/60">/month</p>
+            </motion.div>
+          </div>
+        </motion.div>
       </motion.div>
 
       {/* ===== ACT 3: THE LIMIT (Steps 7-9) ===== */}
@@ -735,7 +750,7 @@ export default function ContextMemoryAnim() {
                   />
                 </div>
                 <span className="text-xs text-white/40 w-16">{model.tokens}</span>
-                <span className="text-[10px] text-white/25 w-32">{model.pages}</span>
+                <span className="text-sm text-white/25 w-32">{model.pages}</span>
               </motion.div>
             ))}
           </div>
@@ -804,7 +819,7 @@ export default function ContextMemoryAnim() {
                 <span className="font-bold">{msg.role}:</span> {msg.text}
                 {s === 8 && i < 6 && (
                   <motion.span
-                    className="absolute right-1 top-0.5 text-[9px] text-red-400/60"
+                    className="absolute right-1 top-0.5 text-xs text-red-400/60"
                     animate={{ opacity: [0, 1, 0] }}
                     transition={{ duration: 0.8, delay: 0.5 + i * 0.08 }}
                   >
@@ -834,7 +849,7 @@ export default function ContextMemoryAnim() {
               />
             </div>
             <motion.p
-              className="text-[10px] text-accent-green text-center mt-1"
+              className="text-sm text-accent-green text-center mt-1"
               animate={{ opacity: s === 8 ? 1 : 0 }}
               transition={{ ...spring, delay: 1.5 }}
             >
@@ -863,7 +878,7 @@ export default function ContextMemoryAnim() {
               }}
               transition={spring}
             >
-              <p className="text-[10px] text-white/30 mb-2">Before (8 messages)</p>
+              <p className="text-sm text-white/30 mb-2">Before (8 messages)</p>
               <div className="space-y-1">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <motion.div
@@ -877,7 +892,7 @@ export default function ContextMemoryAnim() {
                   />
                 ))}
               </div>
-              <p className="text-[10px] text-accent-gold mt-2 text-right">2,400 tokens</p>
+              <p className="text-sm text-accent-gold mt-2 text-right">2,400 tokens</p>
             </motion.div>
 
             {/* Arrow with sparkle */}
@@ -902,7 +917,7 @@ export default function ContextMemoryAnim() {
               }}
               transition={{ ...spring, delay: 1 }}
             >
-              <p className="text-[10px] text-white/30 mb-2">After (3 messages)</p>
+              <p className="text-sm text-white/30 mb-2">After (3 messages)</p>
               <motion.div
                 className="px-2 py-2 rounded border border-accent-purple/30 bg-accent-purple/10 mb-1"
                 animate={{
@@ -910,333 +925,19 @@ export default function ContextMemoryAnim() {
                 }}
                 transition={{ ...spring, delay: 1.3 }}
               >
-                <span className="text-[10px] text-accent-purple font-bold">SUMMARY:</span>
-                <p className="text-[9px] text-white/50 mt-1 leading-relaxed italic">
+                <span className="text-sm text-accent-purple font-bold">SUMMARY:</span>
+                <p className="text-xs text-white/50 mt-1 leading-relaxed italic">
                   &quot;User is planning a Japan trip. Discussed Tokyo (3 days), food recs (ramen, sushi), hotels in Shinjuku, and Kyoto temples.&quot;
                 </p>
               </motion.div>
               <div className="h-3 rounded bg-accent-blue/20 mb-1" />
               <div className="h-3 rounded bg-accent-green/20" />
-              <p className="text-[10px] text-accent-green mt-2 text-right">380 tokens (saved 84%!)</p>
+              <p className="text-sm text-accent-green mt-2 text-right">380 tokens (saved 84%!)</p>
             </motion.div>
           </div>
         </div>
       </motion.div>
 
-      {/* ===== ACT 4: THE SYSTEM PROMPT (Steps 10-13) ===== */}
-
-      {/* Step 10: System Prompt Zoom */}
-      <motion.div
-        className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        animate={{
-          opacity: s === 10 ? 1 : 0,
-          scale: s === 10 ? 1 : 0.85,
-        }}
-        transition={spring}
-      >
-        <div className="text-center">
-          <motion.div
-            className="rounded-xl border-2 border-accent-purple/40 p-6 bg-navy-800/95 backdrop-blur-sm inline-block"
-            animate={{
-              boxShadow:
-                s === 10
-                  ? '0 0 30px rgba(167,139,250,0.3)'
-                  : '0 0 0px rgba(167,139,250,0)',
-            }}
-            transition={spring}
-          >
-            <p className="text-xs text-white/30 font-mono mb-2">
-              messages[0] = {'{'}
-            </p>
-            <p className="text-sm font-mono">
-              <span className="text-accent-purple">role:</span>{' '}
-              <span className="text-accent-gold">&quot;system&quot;</span>
-            </p>
-            <p className="text-sm font-mono mt-1">
-              <span className="text-accent-purple">content:</span>{' '}
-              <span className="text-white/70">
-                &quot;You are a helpful assistant&quot;
-              </span>
-            </p>
-            <p className="text-xs text-white/30 font-mono mt-2">{'}'}</p>
-          </motion.div>
-          <div className="mt-4 space-y-1">
-            <p className="text-xs text-white/50">
-              Always{' '}
-              <span className="text-accent-purple font-bold">messages[0]</span>
-              {' '}— the first element
-            </p>
-            <p className="text-xs text-white/50">
-              Read{' '}
-              <span className="text-accent-gold font-bold">first, every single call</span>
-            </p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Step 11: System Prompt Anatomy */}
-      <motion.div
-        className="absolute inset-0 flex items-center justify-center pointer-events-none px-6"
-        animate={{ opacity: s === 11 ? 1 : 0 }}
-        transition={spring}
-      >
-        <div className="max-w-sm w-full space-y-3">
-          <p className="text-sm text-white/40 text-center mb-4">System Prompt Template</p>
-          {[
-            {
-              label: 'Persona',
-              color: '#a78bfa',
-              example: '"You are an expert Python tutor."',
-            },
-            {
-              label: 'Format',
-              color: '#4a9eff',
-              example: '"Respond with code examples."',
-            },
-            {
-              label: 'Rules',
-              color: '#fbbf24',
-              example: '"Never give answers directly — guide the student."',
-            },
-            {
-              label: 'Context',
-              color: '#4ade80',
-              example: '"The student is a beginner."',
-            },
-          ].map((section, i) => (
-            <motion.div
-              key={section.label}
-              className="rounded-lg border p-3"
-              style={{
-                borderColor: `${section.color}40`,
-                backgroundColor: `${section.color}08`,
-              }}
-              animate={{
-                opacity: s === 11 ? 1 : 0,
-                x: s === 11 ? 0 : -15,
-              }}
-              transition={{ ...spring, delay: i * 0.15 }}
-            >
-              <span
-                className="text-xs font-bold"
-                style={{ color: section.color }}
-              >
-                {section.label}
-              </span>
-              <motion.p
-                className="text-xs text-white/50 mt-1 italic"
-                animate={{ opacity: s === 11 ? 1 : 0 }}
-                transition={{ ...spring, delay: 0.3 + i * 0.15 }}
-              >
-                {section.example}
-              </motion.p>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Step 12: Same Question, Different Personality — three columns */}
-      <motion.div
-        className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-6"
-        animate={{ opacity: s === 12 ? 1 : 0 }}
-        transition={spring}
-      >
-        <p className="text-sm text-white/40 mb-1">Same question:</p>
-        <p className="text-sm text-accent-blue mb-5">&quot;Explain gravity&quot;</p>
-        <div className="grid grid-cols-3 gap-4 w-full max-w-2xl">
-          {[
-            {
-              persona: 'Physicist',
-              color: '#4a9eff',
-              prompt: '"You are a physicist"',
-              response: '"Gravity is the curvature of spacetime caused by mass-energy, described by Einstein\'s field equations..."',
-            },
-            {
-              persona: 'Pirate',
-              color: '#fbbf24',
-              prompt: '"You are a pirate"',
-              response: '"Arrr! Gravity be the force that keeps yer boots on the deck and yer rum in the bottle, savvy?"',
-            },
-            {
-              persona: 'Poet',
-              color: '#a78bfa',
-              prompt: '"You are a poet"',
-              response: '"An invisible thread, gentle and sure, draws all things earthward in embrace most pure..."',
-            },
-          ].map((col, i) => (
-            <motion.div
-              key={col.persona}
-              className="rounded-xl border p-4"
-              style={{
-                borderColor: `${col.color}30`,
-                backgroundColor: `${col.color}05`,
-              }}
-              animate={{
-                opacity: s === 12 ? 1 : 0,
-                y: s === 12 ? 0 : 20,
-              }}
-              transition={{ ...spring, delay: i * 0.2 }}
-            >
-              <p
-                className="text-xs font-bold mb-1"
-                style={{ color: col.color }}
-              >
-                {col.prompt}
-              </p>
-              <motion.p
-                className="text-xs text-accent-green/80 italic mt-3 leading-relaxed"
-                animate={{
-                  opacity: s === 12 && typingIdx > i ? 1 : 0,
-                }}
-                transition={{ ...smooth, delay: 0.2 }}
-              >
-                {col.response}
-              </motion.p>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Step 13: System Prompt Re-sent Every Call (cost timeline) */}
-      <motion.div
-        className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-6"
-        animate={{ opacity: s === 13 ? 1 : 0 }}
-        transition={spring}
-      >
-        <div className="max-w-lg w-full">
-          {/* System prompt at top */}
-          <motion.div
-            className="rounded-lg border border-accent-purple/30 bg-accent-purple/10 px-4 py-2 mb-4 text-center"
-            animate={{
-              opacity: s === 13 ? 1 : 0,
-            }}
-            transition={spring}
-          >
-            <span className="text-xs text-accent-purple font-bold">System Prompt</span>
-            <span className="text-xs text-white/40 ml-2">~2,000 tokens</span>
-          </motion.div>
-
-          {/* Timeline of calls */}
-          <div className="flex items-center justify-between mb-4">
-            {[1, 5, 10, 15, 20].map((call, i) => (
-              <motion.div
-                key={call}
-                className="flex flex-col items-center"
-                animate={{
-                  opacity: s === 13 ? 1 : 0,
-                  y: s === 13 ? 0 : 10,
-                }}
-                transition={{ ...spring, delay: i * 0.1 }}
-              >
-                <motion.div
-                  className="w-6 h-6 rounded border border-accent-purple/30 bg-accent-purple/10 mb-1"
-                  animate={{
-                    opacity: s === 13 ? 0.3 + i * 0.15 : 0,
-                  }}
-                  transition={{ ...spring, delay: 0.5 + i * 0.1 }}
-                />
-                <span className="text-[9px] text-white/30">Call {call}</span>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Connecting line */}
-          <motion.div
-            className="h-0.5 bg-accent-purple/20 rounded-full mx-3 mb-4"
-            animate={{ opacity: s === 13 ? 1 : 0 }}
-            transition={{ ...spring, delay: 0.3 }}
-          />
-
-          {/* Running cost */}
-          <motion.div
-            className="text-center rounded-xl border border-accent-gold/30 bg-accent-gold/5 px-4 py-3"
-            animate={{
-              opacity: s === 13 ? 1 : 0,
-              scale: s === 13 ? 1 : 0.9,
-            }}
-            transition={{ ...spring, delay: 1 }}
-          >
-            <p className="text-sm font-mono text-accent-gold">
-              2,000 tokens × 20 calls = <span className="text-lg font-bold">40,000 tokens</span>
-            </p>
-            <p className="text-[10px] text-white/40 mt-1">
-              Just for the system prompt — keep it concise!
-            </p>
-          </motion.div>
-        </div>
-      </motion.div>
-
-      {/* ===== ACT 5: SYNTHESIS (Step 14) ===== */}
-
-      {/* Step 14: Key Takeaways */}
-      <motion.div
-        className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        animate={{ opacity: s === 14 ? 1 : 0 }}
-        transition={spring}
-      >
-        <div className="text-center max-w-xl w-full px-6">
-          <motion.h2
-            className="text-3xl font-bold text-white mb-6"
-            animate={{
-              opacity: s === 14 ? 1 : 0,
-              y: s === 14 ? 0 : 20,
-            }}
-            transition={spring}
-          >
-            Key Takeaways
-          </motion.h2>
-          {[
-            {
-              icon: '📋',
-              text: 'The messages array IS the memory — there is no other state',
-              color: '#4a9eff',
-            },
-            {
-              icon: '🔄',
-              text: 'Every API call re-sends the entire conversation',
-              color: '#fbbf24',
-            },
-            {
-              icon: '📈',
-              text: 'Cost grows with every turn — more messages = more tokens',
-              color: '#ef4444',
-            },
-            {
-              icon: '✂️',
-              text: 'When full: drop old messages or summarize them',
-              color: '#4ade80',
-            },
-            {
-              icon: '💬',
-              text: 'System prompt = messages[0] — re-read every call',
-              color: '#a78bfa',
-            },
-          ].map((item, i) => (
-            <motion.div
-              key={i}
-              className="flex items-center gap-4 mb-3 px-5 py-3 rounded-xl bg-white/5 border text-left"
-              style={{ borderColor: `${item.color}30` }}
-              animate={{
-                opacity: s === 14 ? 1 : 0,
-                y: s === 14 ? 0 : 20,
-              }}
-              transition={{ ...spring, delay: s === 14 ? i * 0.12 : 0 }}
-            >
-              <span className="text-2xl">{item.icon}</span>
-              <span className="text-white/80 text-sm">{item.text}</span>
-            </motion.div>
-          ))}
-          <motion.p
-            className="text-sm text-accent-green mt-4"
-            animate={{
-              opacity: s === 14 ? 1 : 0,
-            }}
-            transition={{ ...spring, delay: 0.8 }}
-          >
-            Now you can build it yourself!
-          </motion.p>
-        </div>
-      </motion.div>
     </div>
   );
 }

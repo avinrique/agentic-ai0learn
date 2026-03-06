@@ -82,6 +82,32 @@ response = client.chat.completions.create(
 print(f"\\nAI's classification for 'It's okay, not great.':")
 print(response.choices[0].message.content)`;
 
+export const conversationLoopCode = `# 3_conversation_loop.py
+from openai import OpenAI
+client = OpenAI()
+
+messages = [{"role": "system", "content": "You are a helpful assistant."}]
+
+print("Chat started! Type 'quit' to exit.\\n")
+
+while True:
+    user_input = input("You: ")
+    if user_input.lower() == "quit":
+        break
+
+    messages.append({"role": "user", "content": user_input})
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages
+    )
+
+    assistant_msg = response.choices[0].message.content
+    messages.append({"role": "assistant", "content": assistant_msg})
+    print(f"AI: {assistant_msg}\\n")
+
+print("Goodbye!")`;
+
 export const challengeCode = `# 5_challenge_restaurant_recommender.py
 from openai import OpenAI
 import json

@@ -10,6 +10,7 @@ export default function ContextMemoryPage() {
       description="LLMs don't remember — and the system prompt is just message[0]."
       steps={contextMemorySteps}
       animationPanel={<ContextMemoryAnim />}
+      lessonId="context-memory"
     />
   );
 }

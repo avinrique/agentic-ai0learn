@@ -12,6 +12,7 @@ export default function FewShotPage() {
       description="Teach the AI new tasks by providing examples in the conversation."
       animationPanel={<FewShotAnim />}
       steps={fewShotTrace}
+      lessonId="few-shot"
     >
       <TracerPanel code={fewShotCode} />
     </LessonLayout>

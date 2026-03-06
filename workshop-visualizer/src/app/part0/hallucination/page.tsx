@@ -10,6 +10,7 @@ export default function HallucinationPage() {
       description="When AI confidently says things that aren't true — and how to fight it."
       steps={hallucinationSteps}
       animationPanel={<HallucinationAnim />}
+      lessonId="hallucination"
     />
   );
 }

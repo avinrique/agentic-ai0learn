@@ -18,6 +18,7 @@ export default function JsonOutputPage() {
         </div>
       }
       steps={jsonOutputTrace}
+      lessonId="json-output"
     >
       <TracerPanel code={jsonOutputCode} />
     </LessonLayout>

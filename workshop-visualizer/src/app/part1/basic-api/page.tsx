@@ -12,6 +12,7 @@ export default function BasicApiPage() {
       description="Send your first prompt to OpenAI and get a response back."
       animationPanel={<ApiCallFlow />}
       steps={basicApiTrace}
+      lessonId="basic-api"
     >
       <TracerPanel code={basicApiCode} />
     </LessonLayout>

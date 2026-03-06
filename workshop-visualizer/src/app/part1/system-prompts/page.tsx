@@ -12,6 +12,7 @@ export default function SystemPromptsPage() {
       description="Use system messages to control the AI's personality and behavior."
       animationPanel={<MessageArrayBuilder />}
       steps={systemPromptsTrace}
+      lessonId="system-prompts-tracer"
     >
       <TracerPanel code={systemPromptsCode} />
     </LessonLayout>
