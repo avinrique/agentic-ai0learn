@@ -13,13 +13,31 @@ interface AgentDataFlowProps {
 
 type Station = 'idle' | 'user' | 'ai' | 'tool' | 'result' | 'final';
 
+interface FlowState {
+  activeStation: Station;
+  currentLoop: number;
+  thought: string;
+  toolName: string;
+  toolArgs: string;
+  toolResult: string;
+  finalAnswer: string;
+  statusText: string;
+  phase: 'setup' | 'flow' | 'done';
+}
+
+const nodeConfig = [
+  { id: 'user' as const, letter: 'U', label: 'User', color: '#60a5fa' },
+  { id: 'ai' as const, letter: 'AI', label: 'AI', color: '#a78bfa' },
+  { id: 'tool' as const, letter: 'T', label: 'Tool', color: '#f59e0b' },
+  { id: 'result' as const, letter: 'R', label: 'Result', color: '#4ade80' },
+];
+
 export default function AgentDataFlow({ loopCount = 1, agentName, accentColor = '#4a9eff' }: AgentDataFlowProps) {
   const { currentStep, steps } = useTracerStore();
   const trigger = steps[currentStep]?.animationTrigger;
   const variables = useMemo(() => steps[currentStep]?.variables ?? [], [steps, currentStep]);
 
-  // Track which loop iteration we're in
-  const { activeStation, currentLoop, thought, toolName, toolArgs, toolResult, finalAnswer } = useMemo(() => {
+  const flowState: FlowState = useMemo(() => {
     let station: Station = 'idle';
     let loop = 0;
     let thought = '';
@@ -27,249 +45,370 @@ export default function AgentDataFlow({ loopCount = 1, agentName, accentColor = 
     let toolArgsVal = '';
     let toolResultVal = '';
     let finalAnswerVal = '';
+    let statusText = '';
+    let phase: 'setup' | 'flow' | 'done' = 'setup';
 
-    if (!trigger) return { activeStation: station, currentLoop: loop, thought, toolName: toolNameVal, toolArgs: toolArgsVal, toolResult: toolResultVal, finalAnswer: finalAnswerVal };
+    if (!trigger) {
+      return { activeStation: 'idle', currentLoop: 0, thought: '', toolName: '', toolArgs: '', toolResult: '', finalAnswer: '', statusText: '', phase: 'setup' };
+    }
 
     // Count send triggers to determine loop number
-    const currentIdx = steps.findIndex((s, i) => i === currentStep);
     let sendCount = 0;
-    for (let i = 0; i <= currentIdx; i++) {
+    for (let i = 0; i <= currentStep; i++) {
       const t = steps[i]?.animationTrigger;
       if (t?.includes('send')) sendCount++;
     }
     loop = Math.max(1, sendCount);
 
-    if (trigger.includes('send') || trigger === 'defineTools' || trigger === 'addSystemMsg') {
+    if (trigger === 'import' || trigger === 'defineTools' || trigger === 'addSystemMsg') {
+      station = 'idle';
+      phase = 'setup';
+      if (trigger === 'import') statusText = 'Importing SDK modules...';
+      else if (trigger === 'defineTools') statusText = 'Defining tool functions...';
+      else statusText = 'Setting up system message...';
+    } else if (trigger.includes('send')) {
       station = 'user';
+      phase = 'flow';
+      statusText = 'Sending messages to AI...';
     } else if (trigger === 'apiProcessing') {
       station = 'ai';
+      phase = 'flow';
+      statusText = 'AI is thinking...';
     } else if (trigger.includes('decide')) {
       station = 'ai';
-      // Extract reasoning from variables
+      phase = 'flow';
       const toolCallVar = variables.find(v => v.name === 'tool_name' || v.name === 'function_name');
-      if (toolCallVar) thought = `I need to call ${toolCallVar.value}`;
-      const argsV = variables.find(v => v.name === 'arguments' || v.name === 'args');
-      if (argsV) {
-        toolArgsVal = argsV.value;
-        const nameMatch = argsV.value;
-        if (!thought && nameMatch) thought = 'Deciding which tool to use...';
+      if (toolCallVar) {
+        thought = `I need to call ${toolCallVar.value}`;
+        statusText = `AI decided to call ${toolCallVar.value}`;
+      } else {
+        thought = 'Deciding which tool to use...';
+        statusText = 'AI is deciding what to do...';
       }
+      const argsV = variables.find(v => v.name === 'arguments' || v.name === 'args');
+      if (argsV) toolArgsVal = argsV.value;
     } else if (trigger.startsWith('toolSelect-')) {
       station = 'tool';
+      phase = 'flow';
       toolNameVal = trigger.replace('toolSelect-', '');
+      statusText = `Selected tool: ${toolNameVal}`;
       const argsV = variables.find(v => v.name === 'arguments' || v.name === 'args');
       if (argsV) toolArgsVal = argsV.value;
     } else if (trigger.includes('execute')) {
       station = 'tool';
-      const resultV = variables.find(v => v.name === 'result' || v.name === 'function_result');
-      if (resultV) toolResultVal = resultV.value;
-      const argsV = variables.find(v => v.name === 'arguments' || v.name === 'args');
-      if (argsV) toolArgsVal = argsV.value;
+      phase = 'flow';
       const nameV = variables.find(v => v.name === 'tool_name' || v.name === 'function_name');
       if (nameV) toolNameVal = nameV.value;
-    } else if (trigger.includes('return')) {
-      station = 'result';
+      const argsV = variables.find(v => v.name === 'arguments' || v.name === 'args');
+      if (argsV) toolArgsVal = argsV.value;
       const resultV = variables.find(v => v.name === 'result' || v.name === 'function_result');
       if (resultV) toolResultVal = resultV.value;
+      statusText = toolNameVal ? `Running ${toolNameVal}(${toolArgsVal || '...'})` : 'Executing tool...';
+    } else if (trigger.includes('return')) {
+      station = 'result';
+      phase = 'flow';
+      const resultV = variables.find(v => v.name === 'result' || v.name === 'function_result');
+      if (resultV) toolResultVal = resultV.value;
+      statusText = 'Tool returned a result';
     } else if (trigger.includes('finalAnswer') || trigger.includes('final')) {
       station = 'final';
+      phase = 'done';
       const msgV = variables.find(v => v.name === 'assistant_msg' || v.name === 'final_answer' || v.name === 'content');
       if (msgV) finalAnswerVal = msgV.value;
+      statusText = 'AI generated final answer';
+    } else {
+      // Unknown trigger — show flow phase with idle station
+      phase = 'flow';
+      station = 'idle';
+      statusText = '';
     }
 
-    return { activeStation: station, currentLoop: loop, thought, toolName: toolNameVal, toolArgs: toolArgsVal, toolResult: toolResultVal, finalAnswer: finalAnswerVal };
+    return { activeStation: station, currentLoop: loop, thought, toolName: toolNameVal, toolArgs: toolArgsVal, toolResult: toolResultVal, finalAnswer: finalAnswerVal, statusText, phase };
   }, [trigger, variables, steps, currentStep]);
 
-  const stationConfig = [
-    { id: 'user' as const, label: 'User', icon: '👤', x: '10%', y: '50%' },
-    { id: 'ai' as const, label: 'AI Brain', icon: '🧠', x: '50%', y: '10%' },
-    { id: 'tool' as const, label: 'Tool', icon: '🔧', x: '90%', y: '50%' },
-    { id: 'result' as const, label: 'Result', icon: '📦', x: '50%', y: '90%' },
-  ];
+  const { activeStation, currentLoop, toolName, toolArgs, toolResult, finalAnswer, statusText, phase } = flowState;
 
-  // Connection paths (horseshoe: user→ai→tool→result→ai)
-  const connections: { from: Station; to: Station; active: boolean }[] = [
-    { from: 'user', to: 'ai', active: activeStation === 'user' || activeStation === 'ai' },
-    { from: 'ai', to: 'tool', active: activeStation === 'tool' },
-    { from: 'tool', to: 'result', active: activeStation === 'result' },
-    { from: 'result', to: 'ai', active: activeStation === 'result' },
-  ];
+  const showFlow = phase === 'flow' || phase === 'done';
 
-  const getPos = (id: Station) => stationConfig.find(s => s.id === id);
+  // Determine which nodes are visible (progressive reveal)
+  const visibleNodes = useMemo(() => {
+    if (!showFlow) return new Set<string>();
+    const visible = new Set<string>();
+    visible.add('user');
+    visible.add('ai');
+    if (activeStation === 'tool' || activeStation === 'result' || activeStation === 'final') {
+      visible.add('tool');
+    }
+    if (activeStation === 'result' || activeStation === 'final') {
+      visible.add('result');
+    }
+    return visible;
+  }, [showFlow, activeStation]);
+
+  // Determine active arrows
+  const arrows = useMemo(() => {
+    if (!showFlow) return { userToAi: false, aiToTool: false, toolToResult: false, resultToAi: false };
+    return {
+      userToAi: activeStation === 'user' || activeStation === 'ai',
+      aiToTool: activeStation === 'tool',
+      toolToResult: activeStation === 'result',
+      resultToAi: activeStation === 'result',
+    };
+  }, [showFlow, activeStation]);
 
   return (
-    <div className="h-full relative p-4 overflow-hidden">
-      {/* Agent name */}
-      {agentName && (
-        <div className="absolute top-3 left-4 text-xs text-white/30 uppercase tracking-wider">{agentName}</div>
-      )}
+    <div className="h-full flex flex-col p-4 overflow-hidden">
+      {/* Header: Agent name + Loop counter */}
+      <div className="flex items-center justify-between mb-3 flex-shrink-0">
+        {agentName && (
+          <div className="text-xs text-white/30 uppercase tracking-wider font-medium">{agentName}</div>
+        )}
+        <div className="flex-1" />
+        <AnimatePresence mode="wait">
+          {currentLoop > 0 && loopCount > 1 && (
+            <motion.div
+              key={currentLoop}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              className="px-3 py-1 rounded-full text-xs font-bold border"
+              style={{
+                color: accentColor,
+                backgroundColor: `${accentColor}15`,
+                borderColor: `${accentColor}30`,
+              }}
+            >
+              Loop {currentLoop}{loopCount > 1 ? ` / ${loopCount}` : ''}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
-      {/* Loop counter */}
+      {/* Status Banner */}
       <AnimatePresence mode="wait">
-        {currentLoop > 0 && loopCount > 1 && (
+        {statusText && (
           <motion.div
-            key={currentLoop}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute top-3 right-4 px-3 py-1 rounded-full text-xs font-bold border"
+            key={statusText}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.25 }}
+            className="mb-4 px-4 py-2.5 rounded-lg border text-sm font-medium text-center flex-shrink-0"
             style={{
               color: accentColor,
-              backgroundColor: `${accentColor}15`,
-              borderColor: `${accentColor}30`,
+              backgroundColor: `${accentColor}12`,
+              borderColor: `${accentColor}25`,
             }}
           >
-            Loop {currentLoop}{loopCount > 1 ? ` / ${loopCount}` : ''}
+            {statusText}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Connection lines (SVG) */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
-        {connections.map(({ from, to, active }, i) => {
-          const fromPos = getPos(from);
-          const toPos = getPos(to);
-          if (!fromPos || !toPos) return null;
-          return (
-            <line
-              key={i}
-              x1={fromPos.x}
-              y1={fromPos.y}
-              x2={toPos.x}
-              y2={toPos.y}
-              stroke={active ? accentColor : 'rgba(255,255,255,0.08)'}
-              strokeWidth={active ? 2 : 1}
-              strokeDasharray={active ? '8 4' : '4 4'}
-              opacity={active ? 0.6 : 0.3}
-            />
-          );
-        })}
-      </svg>
-
-      {/* Station nodes */}
-      {stationConfig.map((station) => {
-        const isActive = activeStation === station.id || (station.id === 'ai' && activeStation === 'final');
-        return (
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+        {/* Idle/setup state */}
+        {!showFlow && (
           <motion.div
-            key={station.id}
-            className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1"
-            style={{ left: station.x, top: station.y, zIndex: 10 }}
-            animate={{
-              scale: isActive ? 1.1 : 1,
-            }}
-            transition={spring}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center text-white/30 text-sm"
           >
-            <motion.div
-              className="w-16 h-16 rounded-xl border-2 flex items-center justify-center text-2xl"
-              animate={{
-                boxShadow: isActive ? `0 0 30px ${accentColor}40` : `0 0 0px ${accentColor}00`,
-                borderColor: isActive ? `${accentColor}80` : 'rgba(255,255,255,0.1)',
-                backgroundColor: isActive ? `${accentColor}15` : 'rgba(255,255,255,0.03)',
-              }}
-              transition={spring}
-            >
-              {station.icon}
-            </motion.div>
-            <span className="text-[10px] font-medium" style={{ color: isActive ? accentColor : 'rgba(255,255,255,0.4)' }}>
-              {station.label}
-            </span>
-          </motion.div>
-        );
-      })}
-
-      {/* Floating data packets / bubbles */}
-
-      {/* AI Thought bubble */}
-      <AnimatePresence>
-        {activeStation === 'ai' && thought && (
-          <motion.div
-            key="thought"
-            initial={{ opacity: 0, y: 10, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={spring}
-            className="absolute left-1/2 -translate-x-1/2 px-3 py-2 rounded-lg border text-xs font-mono max-w-[200px] text-center"
-            style={{ top: '26%', zIndex: 20, color: accentColor, backgroundColor: `${accentColor}10`, borderColor: `${accentColor}30` }}
-          >
-            💭 {thought}
+            {phase === 'setup' ? 'Setting up tools...' : 'Step through code to see the agent loop'}
           </motion.div>
         )}
-      </AnimatePresence>
 
-      {/* Tool execution info */}
+        {/* Flow diagram */}
+        {showFlow && (
+          <div className="w-full flex flex-col items-center gap-4">
+            {/* Horizontal flow row: User -> AI -> Tool */}
+            <div className="flex items-center justify-center gap-2 w-full">
+              {nodeConfig.slice(0, 3).map((node, idx) => {
+                const isVisible = visibleNodes.has(node.id);
+                const isActive = activeStation === node.id || (node.id === 'ai' && activeStation === 'final');
+                const showArrow = idx === 0 ? arrows.userToAi : idx === 1 ? arrows.aiToTool : false;
+
+                return (
+                  <div key={node.id} className="flex items-center">
+                    {/* Node */}
+                    <AnimatePresence>
+                      {isVisible && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.7 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.7 }}
+                          transition={spring}
+                          className="flex flex-col items-center gap-1"
+                        >
+                          <motion.div
+                            className="w-14 h-14 rounded-xl border-2 flex items-center justify-center text-base font-bold"
+                            animate={{
+                              scale: isActive ? 1.1 : 1,
+                              boxShadow: isActive ? `0 0 24px ${node.color}50` : `0 0 0px ${node.color}00`,
+                              borderColor: isActive ? node.color : 'rgba(255,255,255,0.1)',
+                              backgroundColor: isActive ? `${node.color}20` : 'rgba(255,255,255,0.03)',
+                            }}
+                            transition={spring}
+                          >
+                            <span style={{ color: isActive ? node.color : 'rgba(255,255,255,0.35)' }}>
+                              {node.letter}
+                            </span>
+                          </motion.div>
+                          <span
+                            className="text-[10px] font-medium"
+                            style={{ color: isActive ? node.color : 'rgba(255,255,255,0.3)' }}
+                          >
+                            {node.label}
+                          </span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Arrow to next node */}
+                    {idx < 2 && isVisible && visibleNodes.has(nodeConfig[idx + 1]?.id) && (
+                      <motion.div
+                        initial={{ opacity: 0, scaleX: 0 }}
+                        animate={{ opacity: 1, scaleX: 1 }}
+                        className="mx-2 flex items-center"
+                        style={{ originX: 0 }}
+                      >
+                        <div
+                          className="h-0.5 w-8 transition-colors duration-300"
+                          style={{ backgroundColor: showArrow ? accentColor : 'rgba(255,255,255,0.1)' }}
+                        />
+                        <div
+                          className="w-0 h-0 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent border-l-[7px] transition-colors duration-300"
+                          style={{ borderLeftColor: showArrow ? accentColor : 'rgba(255,255,255,0.1)' }}
+                        />
+                      </motion.div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Return loop: Result -> AI (below the main row) */}
+            <AnimatePresence>
+              {visibleNodes.has('result') && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={spring}
+                  className="flex items-center gap-2"
+                >
+                  {/* Up arrow from Result to AI */}
+                  <motion.div
+                    className="flex items-center"
+                    animate={{ opacity: arrows.resultToAi ? 1 : 0.3 }}
+                  >
+                    <div
+                      className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[7px] transition-colors duration-300"
+                      style={{ borderBottomColor: arrows.resultToAi ? accentColor : 'rgba(255,255,255,0.1)' }}
+                    />
+                    <div
+                      className="h-0.5 w-6 transition-colors duration-300"
+                      style={{ backgroundColor: arrows.resultToAi ? accentColor : 'rgba(255,255,255,0.1)' }}
+                    />
+                  </motion.div>
+
+                  {/* Result node */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.7 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={spring}
+                    className="flex flex-col items-center gap-1"
+                  >
+                    <motion.div
+                      className="w-14 h-14 rounded-xl border-2 flex items-center justify-center text-base font-bold"
+                      animate={{
+                        scale: activeStation === 'result' ? 1.1 : 1,
+                        boxShadow: activeStation === 'result' ? `0 0 24px ${nodeConfig[3].color}50` : `0 0 0px ${nodeConfig[3].color}00`,
+                        borderColor: activeStation === 'result' ? nodeConfig[3].color : 'rgba(255,255,255,0.1)',
+                        backgroundColor: activeStation === 'result' ? `${nodeConfig[3].color}20` : 'rgba(255,255,255,0.03)',
+                      }}
+                      transition={spring}
+                    >
+                      <span style={{ color: activeStation === 'result' ? nodeConfig[3].color : 'rgba(255,255,255,0.35)' }}>
+                        R
+                      </span>
+                    </motion.div>
+                    <span
+                      className="text-[10px] font-medium"
+                      style={{ color: activeStation === 'result' ? nodeConfig[3].color : 'rgba(255,255,255,0.3)' }}
+                    >
+                      Result
+                    </span>
+                  </motion.div>
+
+                  {/* Left arrow from Tool to Result */}
+                  <motion.div
+                    className="flex items-center"
+                    animate={{ opacity: arrows.toolToResult ? 1 : 0.3 }}
+                  >
+                    <div
+                      className="h-0.5 w-6 transition-colors duration-300"
+                      style={{ backgroundColor: arrows.toolToResult ? accentColor : 'rgba(255,255,255,0.1)' }}
+                    />
+                    <div
+                      className="w-0 h-0 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent border-r-[7px] transition-colors duration-300"
+                      style={{ borderRightColor: arrows.toolToResult ? accentColor : 'rgba(255,255,255,0.1)' }}
+                    />
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Final answer banner */}
+            <AnimatePresence>
+              {activeStation === 'final' && (
+                <motion.div
+                  key="final"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={spring}
+                  className="px-4 py-3 rounded-xl border-2 text-sm font-medium max-w-[280px] text-center"
+                  style={{ color: '#4ade80', backgroundColor: 'rgba(74,222,128,0.1)', borderColor: 'rgba(74,222,128,0.4)', boxShadow: '0 0 24px rgba(74,222,128,0.12)' }}
+                >
+                  <div className="text-[10px] text-green-400/60 uppercase tracking-wider mb-1">Final Answer</div>
+                  {finalAnswer || 'Response generated!'}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
+
+      {/* Data Panel */}
       <AnimatePresence>
-        {activeStation === 'tool' && (toolName || toolArgs) && (
+        {(toolName || toolArgs || toolResult) && showFlow && (
           <motion.div
-            key="tool-exec"
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0 }}
-            transition={spring}
-            className="absolute px-3 py-2 rounded-lg border bg-white/5 border-white/15 text-xs font-mono max-w-[220px]"
-            style={{ right: '3%', top: '25%', zIndex: 20 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.2 }}
+            className="mt-3 px-3 py-2.5 rounded-lg border border-white/10 bg-white/[0.03] text-xs font-mono space-y-1 flex-shrink-0 overflow-hidden"
           >
-            {toolName && <div className="text-accent-blue font-bold mb-1">{toolName}()</div>}
-            {toolArgs && <div className="text-white/50 text-[10px]">args: {toolArgs}</div>}
+            {toolName && (
+              <div className="flex gap-2">
+                <span className="text-white/40">Function:</span>
+                <span style={{ color: accentColor }} className="font-bold">{toolName}()</span>
+              </div>
+            )}
+            {toolArgs && (
+              <div className="flex gap-2">
+                <span className="text-white/40">Args:</span>
+                <span className="text-white/70 truncate">{toolArgs}</span>
+              </div>
+            )}
             {toolResult && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-green-400 mt-1 text-[10px]"
-              >
-                → {toolResult}
-              </motion.div>
+              <div className="flex gap-2">
+                <span className="text-white/40">Result:</span>
+                <span className="text-green-400 truncate">{toolResult}</span>
+              </div>
             )}
           </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Result flowing back */}
-      <AnimatePresence>
-        {activeStation === 'result' && toolResult && (
-          <motion.div
-            key="result-packet"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={spring}
-            className="absolute left-1/2 -translate-x-1/2 px-3 py-2 rounded-lg border text-xs font-mono text-center"
-            style={{ top: '75%', zIndex: 20, color: '#4ade80', backgroundColor: 'rgba(74,222,128,0.1)', borderColor: 'rgba(74,222,128,0.3)' }}
-          >
-            📦 Result: {toolResult}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Final answer */}
-      <AnimatePresence>
-        {activeStation === 'final' && (
-          <motion.div
-            key="final"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={spring}
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-3 rounded-xl border-2 text-sm font-medium max-w-[260px] text-center"
-            style={{ zIndex: 30, color: '#4ade80', backgroundColor: 'rgba(74,222,128,0.1)', borderColor: 'rgba(74,222,128,0.4)', boxShadow: '0 0 30px rgba(74,222,128,0.15)' }}
-          >
-            <div className="text-[10px] text-green-400/60 uppercase tracking-wider mb-1">Final Answer</div>
-            {finalAnswer || 'Response generated!'}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Animated data packet moving between stations */}
-      <AnimatePresence>
-        {activeStation === 'user' && (
-          <motion.div
-            key="packet-user-ai"
-            initial={{ left: '10%', top: '50%', opacity: 0 }}
-            animate={{ left: '50%', top: '10%', opacity: [0, 1, 1, 0.5] }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1.2, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full"
-            style={{ backgroundColor: accentColor, boxShadow: `0 0 10px ${accentColor}`, zIndex: 15 }}
-          />
         )}
       </AnimatePresence>
     </div>

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useConceptStore } from '@/stores/conceptStore';
+import { useKeyboardNav } from '@/hooks/useKeyboardNav';
 import { lessons } from '@/data/lessons';
 import StepProgressBar from '@/components/ui/StepProgressBar';
 import StepTimeline from '@/components/ui/StepTimeline';
@@ -12,6 +13,7 @@ interface ConceptStepControlsProps {
 }
 
 export default function ConceptStepControls({ lessonId }: ConceptStepControlsProps) {
+  useKeyboardNav('concept');
   const { currentStep, steps, isPlaying, nextStep, prevStep, reset, togglePlay, goToStep } = useConceptStore();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [timelineOpen, setTimelineOpen] = useState(false);
