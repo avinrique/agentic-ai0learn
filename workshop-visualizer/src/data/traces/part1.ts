@@ -1,510 +1,433 @@
-import { TraceStep, TraceVariant } from '@/stores/tracerStore';
+import { TraceStep, TraceVariant, Variable } from '@/stores/tracerStore';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Lesson 1 – basicApiTrace (13 steps)
+// Builder: each step only lists the variables it sets. Variables carry forward
+// to later steps automatically, and isNew / isChanged are computed for us.
 // ─────────────────────────────────────────────────────────────────────────────
-export const basicApiTrace: TraceStep[] = [
-  {
-    lineNumber: 1,
-    variables: [],
-    output: '',
-    explanation: 'This is just a comment. Python ignores lines starting with #.',
-  },
-  {
-    lineNumber: 2,
-    variables: [{ name: 'module', value: 'openai', isNew: true }],
-    output: '',
-    animationTrigger: 'import',
-    explanation: "Importing the OpenAI class from the openai package — the official Python SDK for talking to OpenAI's API.",
-  },
-  {
-    lineNumber: 3,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'createClient',
-    explanation: "Creates an OpenAI client. It automatically reads your OPENAI_API_KEY from environment variables — that's your secret key that authenticates you with OpenAI.",
-  },
-  {
-    lineNumber: 5,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-    ],
-    output: 'Sending a basic prompt to the AI...',
-    explanation: 'A simple print statement so we can see the program is running.',
-  },
-  {
-    lineNumber: 8,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'model', value: '"gpt-4o-mini"', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'selectModel',
-    explanation: 'We choose "gpt-4o-mini" — OpenAI\'s fast, cheap model. Other options: "gpt-4o" (smarter, slower) or "gpt-4-turbo". The model parameter tells OpenAI WHICH AI brain to use.',
-  },
-  {
-    lineNumber: 10,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'model', value: '"gpt-4o-mini"' },
-      { name: 'messages', value: '[{role: "user", content: "Write a funny..."}]', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'buildMessages',
-    explanation: 'The messages parameter is a LIST of message objects. Each has a "role" (who said it) and "content" (what they said). Here we send one user message — our prompt.',
-  },
-  {
-    lineNumber: 7,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'model', value: '"gpt-4o-mini"' },
-      { name: 'messages', value: '[{role: "user", content: "Write a funny..."}]' },
-    ],
-    output: '',
-    animationTrigger: 'apiCall',
-    explanation: 'Python sends an HTTPS POST request to https://api.openai.com/v1/chat/completions with your API key in the header. The request body contains the model name and messages array as JSON.',
-  },
-  {
-    lineNumber: 7,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'model', value: '"gpt-4o-mini"' },
-      { name: 'messages', value: '[{role: "user", content: "Write a funny..."}]' },
-    ],
-    output: '',
-    animationTrigger: 'apiProcessing',
-    explanation: "The request is at OpenAI's servers. gpt-4o-mini reads your messages, generates a response token by token, then sends back a JSON response.",
-  },
-  {
-    lineNumber: 7,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'model', value: '"gpt-4o-mini"' },
-      { name: 'messages', value: '[{role: "user", content: "Write a funny..."}]' },
-      { name: 'response', value: '<ChatCompletion object>', isNew: true },
-      { name: 'tokens_used', value: '~50 tokens', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'apiCallComplete',
-    explanation: 'The API responded! The response object contains choices (possible responses), usage info (tokens used), and metadata.',
-  },
-  {
-    lineNumber: 14,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'model', value: '"gpt-4o-mini"' },
-      { name: 'response', value: '<ChatCompletion object>' },
-    ],
-    output: "\nAI's Response:",
-    explanation: 'Printing a header before the actual AI response.',
-  },
-  {
-    lineNumber: 15,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'model', value: '"gpt-4o-mini"' },
-      { name: 'response', value: '<ChatCompletion object>' },
-      {
-        name: 'content',
-        value:
-          "Oh AI, you slice through data with ease,\nLike mozzarella on a pizza breeze,\nBut you'll never taste the cheesy goodness, please!",
-        isNew: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'extractContent',
-    explanation: 'response.choices[0] gets the first choice. .message gets the message object. .content extracts the text string — the AI\'s actual reply!',
-  },
-  {
-    lineNumber: 15,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'content',
-        value:
-          "Oh AI, you slice through data with ease,\nLike mozzarella on a pizza breeze,\nBut you'll never taste the cheesy goodness, please!",
-      },
-    ],
-    output:
-      "Oh AI, you slice through data with ease,\nLike mozzarella on a pizza breeze,\nBut you'll never taste the cheesy goodness, please!",
-    animationTrigger: 'printOutput',
-    explanation: 'The poem is printed! The entire round trip (your code → OpenAI → response) took about 1-2 seconds.',
-  },
-];
+interface StepDef {
+  line: number;
+  exp: string;
+  set?: Record<string, string>;
+  out?: string;
+  trig?: string;
+}
+
+function buildTrace(defs: StepDef[]): TraceStep[] {
+  let vars: Variable[] = [];
+  return defs.map((d) => {
+    vars = vars.map((v) => ({ name: v.name, value: v.value }));
+    if (d.set) {
+      for (const [name, value] of Object.entries(d.set)) {
+        const i = vars.findIndex((v) => v.name === name);
+        if (i < 0) vars.push({ name, value, isNew: true });
+        else if (vars[i].value !== value) vars[i] = { name, value, isChanged: true };
+      }
+    }
+    const step: TraceStep = {
+      lineNumber: d.line,
+      variables: vars,
+      output: d.out ?? '',
+      explanation: d.exp,
+    };
+    if (d.trig) step.animationTrigger = d.trig;
+    return step;
+  });
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Lesson 2 – systemPromptsTrace (13 steps)
+// Lesson 1 – basicApiTrace
 // ─────────────────────────────────────────────────────────────────────────────
-export const systemPromptsTrace: TraceStep[] = [
+const POEM =
+  "Oh AI, you slice through data with ease,\nLike mozzarella on a pizza breeze,\nBut you'll never taste the cheesy goodness, please!";
+
+export const basicApiTrace: TraceStep[] = buildTrace([
   {
-    lineNumber: 1,
-    variables: [],
-    output: '',
-    explanation: "Comment line — let's learn about system prompts!",
+    line: 1,
+    exp: "What we'll build: a tiny program that sends one question to an AI and prints its answer. This is your first API call, so every line is new.",
   },
   {
-    lineNumber: 2,
-    variables: [{ name: 'module', value: 'openai', isNew: true }],
-    output: '',
-    animationTrigger: 'import',
-    explanation: 'Importing the OpenAI library, same as before.',
+    line: 1,
+    exp: 'Line 1 is a comment. Python skips any line that starts with #. It is only a note for humans (here, the file name).',
   },
   {
-    lineNumber: 3,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI()', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'createClient',
-    explanation: 'Creating the client — same pattern as Lesson 1.',
+    line: 2,
+    set: { OpenAI: '<class OpenAI>' },
+    trig: 'import',
+    exp: 'This line loads the OpenAI library. A library is ready-made code someone else wrote, so we do not have to write the internet part ourselves.',
   },
   {
-    lineNumber: 5,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI()' },
-    ],
-    output: "Using a system prompt to set the AI's role...",
-    explanation: 'Status print.',
+    line: 3,
+    set: { client: 'OpenAI(api_key=sk-...)' },
+    trig: 'createClient',
+    exp: 'We create a client and store it in the variable client. Think of the client as a phone line to OpenAI.',
   },
   {
-    lineNumber: 10,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI()' },
-      {
-        name: 'messages_display',
-        value: '[{"role":"system","content":"You are a friendly Python tutor."}]',
-        isNew: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'addSystemMsg',
-    explanation: 'NEW CONCEPT: The "system" role! This special message sets the AI\'s personality and rules for the ENTIRE conversation. The AI follows these instructions but won\'t show them to the user.',
+    line: 3,
+    trig: 'createClient',
+    exp: 'Where is the password? OpenAI() quietly reads your secret key from an environment variable called OPENAI_API_KEY. Never paste that key into your code.',
   },
   {
-    lineNumber: 11,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI()' },
-      {
-        name: 'messages_display',
-        value:
-          '[{"role":"system","content":"You are a friendly Python tutor."},{"role":"user","content":"Explain what a list comprehension is with an example."}]',
-        isChanged: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'addUserMsg',
-    explanation: 'The "user" role is YOU — the human asking a question. The AI sees BOTH the system prompt AND this user message, so it answers AS a Python tutor.',
+    line: 5,
+    out: 'Sending a basic prompt to the AI...',
+    trig: 'createClient',
+    exp: 'This print shows a message so we know the program has started. Look at the Output panel.',
   },
   {
-    lineNumber: 7,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI()' },
-      {
-        name: 'messages_display',
-        value:
-          '[{"role":"system","content":"You are a friendly Python tutor."},{"role":"user","content":"Explain what a list comprehension is with an example."}]',
-      },
-    ],
-    output: '',
-    animationTrigger: 'apiCall',
-    explanation: 'Sending 2 messages to OpenAI: the system prompt sets the role, the user message asks the question.',
+    line: 7,
+    trig: 'createClient',
+    exp: 'client.chat.completions.create( starts a request to the AI. The indented lines below are the details we send with it.',
   },
   {
-    lineNumber: 7,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI()' },
-      {
-        name: 'messages_display',
-        value:
-          '[{"role":"system","content":"You are a friendly Python tutor."},{"role":"user","content":"Explain what a list comprehension is with an example."}]',
-      },
-    ],
-    output: '',
-    animationTrigger: 'apiProcessing',
-    explanation: 'gpt-4o-mini reads the system prompt first, then the user question. Because we said "friendly Python tutor", it will explain things simply with examples.',
+    line: 8,
+    set: { model: '"gpt-4o-mini"' },
+    trig: 'selectModel',
+    exp: 'model= picks which AI answers. "gpt-4o-mini" is a small, fast and cheap model, which is perfect for learning.',
   },
   {
-    lineNumber: 7,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI()' },
-      { name: 'response', value: '<ChatCompletion>', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'apiCallComplete',
-    explanation: 'Response received! Because of the system prompt, the answer is educational, friendly, and includes a code example.',
+    line: 9,
+    trig: 'buildMessages',
+    exp: 'messages= is a list of messages: the chat we send to the AI. Here the list holds just one message.',
   },
   {
-    lineNumber: 15,
-    variables: [
-      { name: 'response', value: '<ChatCompletion>' },
-    ],
-    output: "\nPython Tutor's Response:",
-    explanation: 'Printing a header.',
+    line: 10,
+    set: { messages: '[{"role": "user", "content": "Write a funny 3-line poem..."}]' },
+    trig: 'buildMessages',
+    exp: 'Each message is a dictionary with two keys. "role" says who is talking. "user" means you, the person asking.',
   },
   {
-    lineNumber: 16,
-    variables: [
-      { name: 'response', value: '<ChatCompletion>' },
-      {
-        name: 'content',
-        value:
-          'A list comprehension is a concise way to create lists!\n\nExample: squares = [x**2 for x in range(10)]\nThis creates [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]',
-        isNew: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'extractContent',
-    explanation: 'Same extraction: response.choices[0].message.content. The system prompt shaped HOW the AI answered.',
+    line: 10,
+    trig: 'buildMessages',
+    exp: '"content" is the actual text of the message. Here it asks for a funny 3-line poem about AI and pizza.',
   },
   {
-    lineNumber: 16,
-    variables: [
-      {
-        name: 'content',
-        value:
-          'A list comprehension is a concise way to create lists!\n\nExample: squares = [x**2 for x in range(10)]\nThis creates [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]',
-      },
-    ],
-    output:
-      'A list comprehension is a concise way to create lists!\n\nExample: squares = [x**2 for x in range(10)]\nThis creates [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]',
-    animationTrigger: 'printOutput',
-    explanation: "Notice: friendly tone, code example, simple explanation — exactly what a Python tutor would do! That's the power of system prompts.",
+    line: 7,
+    trig: 'apiCall',
+    exp: "Now the request travels over the internet to OpenAI's servers. Our program waits on this line until an answer comes back.",
   },
-];
+  {
+    line: 7,
+    trig: 'apiProcessing',
+    exp: "On OpenAI's side, the model reads our message and writes a reply, a few words at a time.",
+  },
+  {
+    line: 7,
+    set: { response: '<ChatCompletion object>' },
+    trig: 'apiCallComplete',
+    exp: 'The answer arrives and is saved in the variable response. It is an object with extra details inside, not just plain text.',
+  },
+  {
+    line: 14,
+    out: "\nAI's Response:",
+    trig: 'apiCallComplete',
+    exp: 'This print writes a heading. The \\n at the start adds an empty line before it.',
+  },
+  {
+    line: 15,
+    set: { content: POEM },
+    trig: 'extractContent',
+    exp: 'response.choices[0].message.content digs into the response to get just the text. choices[0] means "the first answer".',
+  },
+  {
+    line: 15,
+    out: POEM,
+    trig: 'printOutput',
+    exp: 'print shows the poem in the Output panel. That is one full round trip: your code, to OpenAI, and back.',
+  },
+  {
+    line: 15,
+    trig: 'printOutput',
+    exp: 'What you learned: 1) the client talks to OpenAI. 2) messages is a list of {role, content}. 3) The reply text is in response.choices[0].message.content.',
+  },
+]);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Lesson 3 – conversationLoopTrace (16 steps)
+// Lesson 2 – systemPromptsTrace
 // ─────────────────────────────────────────────────────────────────────────────
-export const conversationLoopTrace: TraceStep[] = [
+const SYS_TUTOR = { role: 'system', content: 'You are a friendly Python tutor.' };
+const USER_TUTOR = { role: 'user', content: 'Explain what a list comprehension is with an example.' };
+const TUTOR_REPLY =
+  'A list comprehension is a short way to build a list!\n\nExample: squares = [x**2 for x in range(10)]\nThis creates [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]';
+
+export const systemPromptsTrace: TraceStep[] = buildTrace([
   {
-    lineNumber: 1,
-    variables: [],
-    output: '',
-    explanation: "Comment line — we're building a multi-turn chatbot that remembers context.",
+    line: 1,
+    exp: "What we'll build: the same program as Lesson 1, plus ONE new message. That message gives the AI a role to play before it answers.",
   },
   {
-    lineNumber: 2,
-    variables: [{ name: 'module', value: 'openai', isNew: true }],
-    output: '',
-    animationTrigger: 'import',
-    explanation: 'Importing the OpenAI library — same as before.',
+    line: 2,
+    set: { OpenAI: '<class OpenAI>' },
+    trig: 'import',
+    exp: 'Same as Lesson 1: load the OpenAI library.',
   },
   {
-    lineNumber: 3,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'createClient',
-    explanation: 'Creating the OpenAI client.',
+    line: 3,
+    set: { client: 'OpenAI(api_key=sk-...)' },
+    trig: 'createClient',
+    exp: 'Same as Lesson 1: create the client, our phone line to OpenAI.',
   },
   {
-    lineNumber: 5,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages',
-        value: '[{"role":"system","content":"You are a helpful assistant."}]',
-        isNew: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'initMessages',
-    explanation: 'KEY LINE: We create a messages list with just the system prompt. This list will GROW as the conversation continues — it IS the memory.',
+    line: 5,
+    out: "Using a system prompt to set the AI's role...",
+    trig: 'createClient',
+    exp: 'A print so we can see the program running. Check the Output panel.',
   },
   {
-    lineNumber: 7,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages',
-        value: '[{"role":"system","content":"You are a helpful assistant."}]',
-      },
-    ],
-    output: 'Chat started! Type \'quit\' to exit.\n',
-    explanation: 'Status print to the user.',
+    line: 7,
+    trig: 'createClient',
+    exp: 'The API call starts here, exactly like in Lesson 1.',
   },
   {
-    lineNumber: 9,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages',
-        value: '[{"role":"system","content":"You are a helpful assistant."}]',
-      },
-    ],
-    output: '',
-    animationTrigger: 'loopStart',
-    explanation: 'The while True loop starts. This is the CONVERSATION LOOP — it runs forever until the user types "quit".',
+    line: 8,
+    set: { model: '"gpt-4o-mini"' },
+    trig: 'createClient',
+    exp: 'The same fast, cheap model as before: gpt-4o-mini.',
   },
   {
-    lineNumber: 10,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages',
-        value: '[{"role":"system","content":"You are a helpful assistant."}]',
-      },
-      { name: 'user_input', value: '"What is Python?"', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'userInput1',
-    explanation: 'input() pauses and waits for the user to type. They type "What is Python?" and press Enter.',
+    line: 9,
+    trig: 'createClient',
+    exp: 'The messages list. This time it will hold TWO messages instead of one.',
   },
   {
-    lineNumber: 14,
-    variables: [
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'user_input', value: '"What is Python?"' },
-      {
-        name: 'messages',
-        value: '[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"What is Python?"}]',
-        isChanged: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'appendUser1',
-    explanation: 'We APPEND the user message to our messages list. The list now has 2 items: system prompt + this user message.',
+    line: 10,
+    set: { messages_display: JSON.stringify([SYS_TUTOR]) },
+    trig: 'addSystemMsg',
+    exp: 'NEW: a message with the role "system". Think of it as an instruction sheet: it tells the AI who to be and how to behave.',
   },
   {
-    lineNumber: 16,
-    variables: [
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages',
-        value: '[{"role":"system",...},{"role":"user","content":"What is Python?"}]',
-      },
-    ],
-    output: '',
-    animationTrigger: 'apiCall1',
-    explanation: 'API call #1: We send the ENTIRE messages list (2 messages) to OpenAI. The model sees the system prompt and the user question.',
+    line: 10,
+    trig: 'addSystemMsg',
+    exp: 'Here the instruction is "You are a friendly Python tutor." The user never sees it, but the AI follows it for the whole chat.',
   },
   {
-    lineNumber: 16,
-    variables: [
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages',
-        value: '[{"role":"system",...},{"role":"user","content":"What is Python?"}]',
-      },
-      { name: 'response', value: '<ChatCompletion>', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'apiResponse1',
-    explanation: 'Response received! The model generated an answer about Python.',
+    line: 11,
+    set: { messages_display: JSON.stringify([SYS_TUTOR, USER_TUTOR]) },
+    trig: 'addUserMsg',
+    exp: 'The "user" message is the question, just like in Lesson 1. It asks what a list comprehension is.',
   },
   {
-    lineNumber: 21,
-    variables: [
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'assistant_msg', value: '"Python is a high-level programming language..."', isNew: true },
-      {
-        name: 'messages',
-        value: '[{"role":"system",...},{"role":"user","content":"What is Python?"},{"role":"assistant","content":"Python is a high-level programming language..."}]',
-        isChanged: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'appendAssistant1',
-    explanation: 'We extract the response AND APPEND IT to messages. Now the list has 3 items. This is the KEY trick — we save the AI\'s response so it can "remember" it next turn.',
+    line: 11,
+    trig: 'buildMessages',
+    exp: 'Order matters: the system message comes first, then the user message. The AI reads the rules before it reads the question.',
   },
   {
-    lineNumber: 23,
-    variables: [
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'assistant_msg', value: '"Python is a high-level programming language..."' },
-      {
-        name: 'messages',
-        value: '[sys, user1, asst1] — 3 messages, ~127 tokens',
-      },
-    ],
-    output: 'AI: Python is a high-level programming language...\n',
-    animationTrigger: 'printResponse1',
-    explanation: 'Print the response. Turn 1 complete! Now the loop goes back to the top.',
+    line: 7,
+    trig: 'apiCall',
+    exp: 'The request goes to OpenAI with both messages inside.',
   },
   {
-    lineNumber: 10,
-    variables: [
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'user_input', value: '"How is it different from Java?"', isChanged: true },
-      {
-        name: 'messages',
-        value: '[sys, user1, asst1] — 3 messages',
-      },
-    ],
-    output: '',
-    animationTrigger: 'userInput2',
-    explanation: 'Turn 2: The user types "How is it different from Java?" — notice they don\'t mention Python. Will the AI know what they mean?',
+    line: 7,
+    trig: 'apiProcessing',
+    exp: 'The model reads the system message first, so it answers in the style of a friendly tutor: simple words and an example.',
   },
   {
-    lineNumber: 14,
-    variables: [
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'user_input', value: '"How is it different from Java?"' },
-      {
-        name: 'messages',
-        value: '[sys, user1, asst1, {"role":"user","content":"How is it different from Java?"}] — 4 messages',
-        isChanged: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'appendUser2',
-    explanation: 'Append user message #2. The messages list now has 4 items. When we send this, the model sees the ENTIRE conversation history.',
+    line: 7,
+    set: { response: '<ChatCompletion object>' },
+    trig: 'apiCallComplete',
+    exp: 'The answer arrives and is saved in response.',
   },
   {
-    lineNumber: 16,
-    variables: [
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages',
-        value: '[sys, user1, asst1, user2] — 4 messages, ~384 tokens',
-      },
-      { name: 'tokens_used', value: '~384 (growing!)', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'apiCall2',
-    explanation: 'API call #2: We send ALL 4 messages. The model sees the prior Q&A about Python, so it understands "it" means Python and "different from Java" is a comparison request.',
+    line: 15,
+    out: "\nPython Tutor's Response:",
+    trig: 'apiCallComplete',
+    exp: 'This print writes a heading, with an empty line before it.',
   },
   {
-    lineNumber: 21,
-    variables: [
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'assistant_msg', value: '"Python uses dynamic typing while Java uses static typing..."', isChanged: true },
-      {
-        name: 'messages',
-        value: '[sys, user1, asst1, user2, asst2] — 5 messages, ~500 tokens',
-        isChanged: true,
-      },
-    ],
-    output: 'AI: Python uses dynamic typing while Java uses static typing...\n',
-    animationTrigger: 'appendAssistant2',
-    explanation: 'It worked! The AI compared Python to Java because it SAW the entire conversation. We append this response too — the list keeps growing. This is how "memory" works: replay everything, every time.',
+    line: 16,
+    set: { content: TUTOR_REPLY },
+    trig: 'extractContent',
+    exp: 'Same as Lesson 1: response.choices[0].message.content gets the reply text out of the response.',
   },
-];
+  {
+    line: 16,
+    out: TUTOR_REPLY,
+    trig: 'printOutput',
+    exp: 'The answer is printed. Notice the friendly tone and the small code example. That is the tutor role at work.',
+  },
+  {
+    line: 16,
+    trig: 'printOutput',
+    exp: 'Compare with Lesson 1: the code is almost the same. One extra system message changed the style of the whole answer.',
+  },
+  {
+    line: 16,
+    trig: 'printOutput',
+    exp: 'What you learned: 1) a "system" message sets the AI\'s role and rules. 2) It goes first in the list. 3) The user never sees it, but the AI follows it.',
+  },
+]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Lesson 3 – conversationLoopTrace (+ variants)
+// The `messages` variable is valid JSON so ConversationLoopAnim can draw it.
+// ─────────────────────────────────────────────────────────────────────────────
+const SYS_HELPER = { role: 'system', content: 'You are a helpful assistant.' };
+const Q1 = 'What is Python?';
+const A1 = 'Python is a high-level programming language...';
+
+interface Turn2 {
+  question: string;
+  answer: string;
+  askExp: string;
+  sendExp: string;
+  resultExp: string;
+}
+
+function conversationLoopSteps(t: Turn2): TraceStep[] {
+  const m1 = [SYS_HELPER];
+  const m2 = [...m1, { role: 'user', content: Q1 }];
+  const m3 = [...m2, { role: 'assistant', content: A1 }];
+  const m4 = [...m3, { role: 'user', content: t.question }];
+  const m5 = [...m4, { role: 'assistant', content: t.answer }];
+  const j = (m: object[]) => JSON.stringify(m);
+
+  return buildTrace([
+    {
+      line: 1,
+      exp: "What we'll build: a chatbot you can talk to again and again. New idea: the AI remembers nothing by itself, so WE keep the chat history in a list.",
+    },
+    {
+      line: 2,
+      set: { OpenAI: '<class OpenAI>' },
+      trig: 'import',
+      exp: 'Same as before: load the OpenAI library.',
+    },
+    {
+      line: 3,
+      set: { client: 'OpenAI(api_key=sk-...)' },
+      trig: 'createClient',
+      exp: 'Same as before: create the client, our phone line to OpenAI.',
+    },
+    {
+      line: 5,
+      set: { messages: j(m1) },
+      trig: 'initMessages',
+      exp: "We create the messages list with one system message. This list is the chat history: our program's memory.",
+    },
+    {
+      line: 7,
+      out: "Chat started! Type 'quit' to exit.\n",
+      trig: 'initMessages',
+      exp: 'A print tells the user how to stop the chat. Look at the Output panel.',
+    },
+    {
+      line: 9,
+      trig: 'loopStart',
+      exp: 'while True: repeats the indented lines below forever. One trip through the loop is one turn of the chat.',
+    },
+    {
+      line: 10,
+      set: { user_input: `"${Q1}"` },
+      out: `You: ${Q1}`,
+      trig: 'userInput1',
+      exp: `input() pauses and waits for the user to type. Here they type "${Q1}" and press Enter.`,
+    },
+    {
+      line: 11,
+      trig: 'userInput1',
+      exp: 'This if checks whether the user typed "quit". .lower() makes the text lowercase, so "QUIT" works too.',
+    },
+    {
+      line: 12,
+      trig: 'userInput1',
+      exp: 'break would leave the loop and end the chat. The user did not type quit, so this line is skipped.',
+    },
+    {
+      line: 14,
+      set: { messages: j(m2) },
+      trig: 'appendUser1',
+      exp: "append() adds the user's message to the end of the list. The list now has 2 messages: system + user.",
+    },
+    {
+      line: 16,
+      trig: 'apiCall1',
+      exp: 'We call the API, the same way as in earlier lessons.',
+    },
+    {
+      line: 18,
+      trig: 'apiCall1',
+      exp: 'Look at messages=messages: we send the WHOLE list, not just the newest question.',
+    },
+    {
+      line: 16,
+      set: { response: '<ChatCompletion object>' },
+      trig: 'apiResponse1',
+      exp: 'The reply comes back and is saved in response.',
+    },
+    {
+      line: 21,
+      set: { assistant_msg: `"${A1}"` },
+      trig: 'apiResponse1',
+      exp: 'We take the reply text out of the response and save it in assistant_msg.',
+    },
+    {
+      line: 22,
+      set: { messages: j(m3) },
+      trig: 'appendAssistant1',
+      exp: "KEY LINE: we also append the AI's answer to the list, with the role \"assistant\". The list now has 3 messages.",
+    },
+    {
+      line: 22,
+      trig: 'appendAssistant1',
+      exp: 'Why save the answer? The AI forgets everything between calls. Next turn, this list is how it "remembers" what was said.',
+    },
+    {
+      line: 23,
+      out: `AI: ${A1}\n`,
+      trig: 'printResponse1',
+      exp: 'We print the answer. Turn 1 is done, and the loop jumps back to the top.',
+    },
+    {
+      line: 10,
+      set: { user_input: `"${t.question}"` },
+      out: `You: ${t.question}`,
+      trig: 'userInput2',
+      exp: t.askExp,
+    },
+    {
+      line: 14,
+      set: { messages: j(m4) },
+      trig: 'appendUser2',
+      exp: 'The same append line runs again. The new question joins the list, which now has 4 messages.',
+    },
+    {
+      line: 18,
+      trig: 'apiCall2',
+      exp: t.sendExp,
+    },
+    {
+      line: 18,
+      trig: 'apiCall2',
+      exp: 'Notice the list grows every turn. A longer list means more tokens (pieces of text), so each request gets a little slower and costs a little more.',
+    },
+    {
+      line: 22,
+      set: { response: '<ChatCompletion object>', assistant_msg: `"${t.answer}"`, messages: j(m5) },
+      trig: 'appendAssistant2',
+      exp: 'The new answer is appended too. The list now has 5 messages, and it keeps growing each turn.',
+    },
+    {
+      line: 23,
+      out: `AI: ${t.answer}\n`,
+      trig: 'appendAssistant2',
+      exp: t.resultExp,
+    },
+    {
+      line: 23,
+      trig: 'appendAssistant2',
+      exp: 'What you learned: 1) while True makes a chat loop. 2) We append both user and AI messages to one list. 3) We send the whole list every time. That list IS the memory.',
+    },
+  ]);
+}
+
+export const conversationLoopTrace: TraceStep[] = conversationLoopSteps({
+  question: 'How is it different from Java?',
+  answer: 'Python uses dynamic typing while Java uses static typing...',
+  askExp:
+    'Turn 2: the user types "How is it different from Java?". Notice the word Python is not in this question. What does "it" mean?',
+  sendExp:
+    'Again we send the whole list, all 4 messages. The AI can read the first question, so it knows "it" means Python.',
+  resultExp:
+    'The AI compared Python with Java. It understood "it" only because it saw the full history we sent.',
+});
 
 // Conversation Loop Variants
 export const conversationLoopVariants: TraceVariant[] = [
@@ -518,605 +441,442 @@ export const conversationLoopVariants: TraceVariant[] = [
     id: 'context-break',
     label: 'Tell me about dogs',
     inputValue: 'Tell me about dogs',
-    steps: conversationLoopTrace.map((step) => {
-      // Override only the turn-2 steps to show a context break
-      if (step.animationTrigger === 'userInput2') {
-        return {
-          ...step,
-          variables: step.variables.map(v =>
-            v.name === 'user_input' ? { ...v, value: '"Tell me about dogs"', isChanged: true } : v
-          ),
-          explanation: 'Turn 2: The user types "Tell me about dogs" — a topic change! The AI still has the Python history in context.',
-        };
-      }
-      if (step.animationTrigger === 'appendUser2') {
-        return {
-          ...step,
-          variables: step.variables.map(v =>
-            v.name === 'messages'
-              ? { ...v, value: '[sys, user1, asst1, {"role":"user","content":"Tell me about dogs"}] — 4 messages', isChanged: true }
-              : v
-          ),
-          explanation: 'Append "Tell me about dogs". The messages list now has 4 items including the full Python conversation.',
-        };
-      }
-      if (step.animationTrigger === 'apiCall2') {
-        return {
-          ...step,
-          explanation: 'API call #2: All 4 messages sent. The AI sees the Python discussion AND the new topic request. It has full context to handle the topic switch.',
-        };
-      }
-      if (step.animationTrigger === 'appendAssistant2') {
-        return {
-          ...step,
-          variables: step.variables.map(v => {
-            if (v.name === 'assistant_msg') return { ...v, value: '"Dogs are wonderful companions known for their loyalty..."', isChanged: true };
-            if (v.name === 'messages') return { ...v, value: '[sys, user1, asst1, user2, asst2] — 5 messages, ~500 tokens', isChanged: true };
-            return v;
-          }),
-          output: 'AI: Dogs are wonderful companions known for their loyalty...\n',
-          explanation: 'The AI answers about dogs — it handled the topic switch while still having the Python context in memory. The messages array grows regardless of topic!',
-        };
-      }
-      return step;
+    steps: conversationLoopSteps({
+      question: 'Tell me about dogs',
+      answer: 'Dogs are loyal, friendly animals that have lived with people for thousands of years...',
+      askExp:
+        'Turn 2: the user types "Tell me about dogs". This is a brand-new topic, not connected to Python.',
+      sendExp:
+        'We still send the whole list, all 4 messages. The Python chat is still inside, even though the new question is about dogs.',
+      resultExp:
+        'The AI simply answers about dogs. The old Python messages stay in the list, but they do not get in the way of a new topic.',
     }),
   },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Lesson 4 – jsonOutputTrace (14 steps)
+// Lesson 4 – jsonOutputTrace
 // ─────────────────────────────────────────────────────────────────────────────
-export const jsonOutputTrace: TraceStep[] = [
+const JSON_SYSTEM = 'You are a helpful assistant that only responds in valid JSON.';
+const JSON_USER =
+  "Give me 3 Python interview questions in JSON format. Use the keys: 'question' and 'difficulty'.";
+const JSON_REPLY =
+  '{"questions":[{"question":"What is a list comprehension?","difficulty":"easy"},{"question":"What are decorators?","difficulty":"medium"},{"question":"Explain the GIL.","difficulty":"hard"}]}';
+
+export const jsonOutputTrace: TraceStep[] = buildTrace([
   {
-    lineNumber: 1,
-    variables: [],
-    output: '',
-    explanation: "Comment line — we're learning how to get structured JSON output from the AI.",
+    line: 1,
+    exp: "What we'll build: ask the AI for data in JSON, a format programs can read easily. New: the response_format setting.",
   },
   {
-    lineNumber: 2,
-    variables: [{ name: 'module', value: 'openai', isNew: true }],
-    output: '',
-    animationTrigger: 'import',
-    explanation: 'Importing the OpenAI library as usual.',
+    line: 1,
+    exp: 'What is JSON? Text made of keys and values, like {"difficulty": "easy"}. It looks a lot like a Python dictionary.',
   },
   {
-    lineNumber: 3,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'createClient',
-    explanation: 'Creating the OpenAI client — reads your API key from the environment.',
+    line: 2,
+    set: { OpenAI: '<class OpenAI>' },
+    trig: 'import',
+    exp: 'Same as before: load the OpenAI library.',
   },
   {
-    lineNumber: 5,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-    ],
-    output: 'Requesting structured JSON output...',
-    explanation: 'Status print so we know the script is running.',
+    line: 3,
+    set: { client: 'OpenAI(api_key=sk-...)' },
+    trig: 'createClient',
+    exp: 'Same as before: create the client, our phone line to OpenAI.',
   },
   {
-    lineNumber: 7,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'system_prompt',
-        value: '"You are a helpful assistant that only responds in valid JSON."',
-        isNew: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'addSystemMsg',
-    explanation: 'KEY TRICK: We tell the AI in the system prompt that it MUST respond in valid JSON. This primes the model before we even use response_format.',
+    line: 5,
+    out: 'Asking the AI for structured JSON output...',
+    trig: 'createClient',
+    exp: 'A print so we can see the program running. Check the Output panel.',
   },
   {
-    lineNumber: 9,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'system_prompt',
-        value: '"You are a helpful assistant that only responds in valid JSON."',
-      },
-      {
-        name: 'user_prompt',
-        value: '"Give me 3 Python interview questions with difficulty levels and topics as JSON."',
-        isNew: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'addUserMsg',
-    explanation: 'The user prompt asks for data in a structured way. Mentioning JSON in the prompt reinforces the JSON-only instruction from the system prompt.',
+    line: 7,
+    set: { system_prompt: `"${JSON_SYSTEM}"` },
+    trig: 'addSystemMsg',
+    exp: 'We save the system prompt in a variable. It tells the AI to answer only in valid JSON.',
   },
   {
-    lineNumber: 17,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'system_prompt',
-        value: '"You are a helpful assistant that only responds in valid JSON."',
-      },
-      {
-        name: 'user_prompt',
-        value: '"Give me 3 Python interview questions with difficulty levels and topics as JSON."',
-      },
-      { name: 'response_format', value: '{"type": "json_object"}', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'buildMessages',
-    explanation: 'IMPORTANT: response_format={"type":"json_object"} activates OpenAI\'s JSON mode. This GUARANTEES the model returns valid, parseable JSON — no extra text, no markdown fences, just pure JSON.',
+    line: 9,
+    set: { user_prompt: `"${JSON_USER}"` },
+    trig: 'addUserMsg',
+    exp: 'The user prompt is saved in a variable too. It asks for 3 Python interview questions.',
   },
   {
-    lineNumber: 13,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'response_format', value: '{"type": "json_object"}' },
-    ],
-    output: '',
-    animationTrigger: 'apiCall',
-    explanation: 'Sending the request to OpenAI with JSON mode enabled. The API enforces valid JSON on its end before returning the response.',
+    line: 9,
+    trig: 'addUserMsg',
+    exp: "It also names the keys we want: 'question' and 'difficulty'. Naming the keys tells the AI the exact shape of the data.",
   },
   {
-    lineNumber: 13,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'response_format', value: '{"type": "json_object"}' },
-    ],
-    output: '',
-    animationTrigger: 'apiProcessing',
-    explanation: "gpt-4o-mini generates its response constrained to valid JSON. OpenAI's servers validate the JSON before sending it back — you're guaranteed a parseable response.",
+    line: 11,
+    trig: 'addUserMsg',
+    exp: 'The API call starts here, the same way as before.',
   },
   {
-    lineNumber: 13,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'response_format', value: '{"type": "json_object"}' },
-      { name: 'response', value: '<ChatCompletion object>', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'apiCallComplete',
-    explanation: 'Response received! Because JSON mode was on, the content is guaranteed to be a valid JSON string.',
+    line: 12,
+    set: { model: '"gpt-4o-mini"' },
+    trig: 'addUserMsg',
+    exp: 'The same fast, cheap model: gpt-4o-mini.',
   },
   {
-    lineNumber: 21,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'response', value: '<ChatCompletion object>' },
-      {
-        name: 'raw_json',
-        value:
-          '{"questions":[{"id":1,"question":"What is a list comprehension?","difficulty":"easy","topic":"syntax"},{"id":2,"question":"Explain the GIL.","difficulty":"hard","topic":"concurrency"},{"id":3,"question":"What are decorators?","difficulty":"medium","topic":"functions"}]}',
-        isNew: true,
-      },
-    ],
-    output:
-      'Raw JSON string:\n{"questions":[{"id":1,"question":"What is a list comprehension?","difficulty":"easy","topic":"syntax"},{"id":2,"question":"Explain the GIL.","difficulty":"hard","topic":"concurrency"},{"id":3,"question":"What are decorators?","difficulty":"medium","topic":"functions"}]}',
-    animationTrigger: 'extractContent',
-    explanation: 'We extract the content string — it looks like raw JSON text right now. Next we parse it into a real Python dictionary with json.loads().',
+    line: 14,
+    trig: 'addUserMsg',
+    exp: 'The system message. Its content is the variable system_prompt instead of text typed in place. It works exactly the same.',
   },
   {
-    lineNumber: 24,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'raw_json',
-        value:
-          '{"questions":[{"id":1,"question":"What is a list comprehension?","difficulty":"easy","topic":"syntax"},{"id":2,"question":"Explain the GIL.","difficulty":"hard","topic":"concurrency"},{"id":3,"question":"What are decorators?","difficulty":"medium","topic":"functions"}]}',
-      },
-      {
-        name: 'parsed',
-        value: "{'questions': [{'id': 1, 'question': 'What is a list comprehension?', ...}]}",
-        isNew: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'jsonParse',
-    explanation: 'json.loads() converts the JSON string into a real Python dict. Now we can access parsed["questions"][0]["difficulty"] like any Python object — no string manipulation needed!',
+    line: 15,
+    trig: 'addUserMsg',
+    exp: 'The user message, using the variable user_prompt.',
   },
   {
-    lineNumber: 26,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'parsed',
-        value: "{'questions': [{'id': 1, 'question': 'What is a list comprehension?', ...}]}",
-      },
-    ],
-    output:
-      'Parsed and pretty-printed:\n{\n  "questions": [\n    {\n      "id": 1,\n      "question": "What is a list comprehension?",\n      "difficulty": "easy",\n      "topic": "syntax"\n    },\n    {\n      "id": 2,\n      "question": "Explain the GIL.",\n      "difficulty": "hard",\n      "topic": "concurrency"\n    },\n    {\n      "id": 3,\n      "question": "What are decorators?",\n      "difficulty": "medium",\n      "topic": "functions"\n    }\n  ]\n}',
-    animationTrigger: 'printOutput',
-    explanation: 'json.dumps(parsed, indent=2) re-serialises the Python dict as a nicely indented JSON string. The AI returned structured data we can work with programmatically!',
+    line: 17,
+    set: { response_format: '{"type": "json_object"}' },
+    trig: 'buildMessages',
+    exp: 'NEW: response_format={"type": "json_object"} turns on JSON mode. OpenAI then makes sure the reply is valid JSON.',
   },
-];
+  {
+    line: 17,
+    trig: 'buildMessages',
+    exp: 'Why use both the prompt and JSON mode? The prompt says WHAT data we want. JSON mode makes sure the format is valid.',
+  },
+  {
+    line: 11,
+    trig: 'apiCall',
+    exp: 'The request goes to OpenAI with both messages and JSON mode switched on.',
+  },
+  {
+    line: 11,
+    trig: 'apiProcessing',
+    exp: 'The model writes its answer, and JSON mode keeps it in valid JSON: no chatty sentences around it.',
+  },
+  {
+    line: 11,
+    set: { response: '<ChatCompletion object>' },
+    trig: 'apiCallComplete',
+    exp: 'The answer arrives and is saved in response.',
+  },
+  {
+    line: 20,
+    out: "\nAI's JSON Response:",
+    trig: 'apiCallComplete',
+    exp: 'This print writes a heading, with an empty line before it.',
+  },
+  {
+    line: 21,
+    set: { raw_json: JSON_REPLY },
+    out: JSON_REPLY,
+    trig: 'extractContent',
+    exp: 'We print the reply text. In the Output panel you can see JSON: curly braces, keys, and values.',
+  },
+  {
+    line: 21,
+    trig: 'extractContent',
+    exp: 'Careful: this is still just text (a string). To use it as a Python dictionary we need json.loads(). The challenge lesson does exactly that.',
+  },
+  {
+    line: 21,
+    trig: 'extractContent',
+    exp: 'What you learned: 1) JSON is data made of keys and values. 2) Name the keys you want in the prompt. 3) response_format turns on JSON mode for valid JSON.',
+  },
+]);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Lesson 4 – fewShotTrace (16 steps)
+// Lesson 5 – fewShotTrace
 // ─────────────────────────────────────────────────────────────────────────────
-export const fewShotTrace: TraceStep[] = [
+const FS_SYS = {
+  role: 'system',
+  content: "You are a sentiment classifier. Respond with only 'Positive', 'Negative', or 'Neutral'.",
+};
+const FS_1U = { role: 'user', content: 'I love this product!' };
+const FS_1A = { role: 'assistant', content: 'Positive' };
+const FS_2U = { role: 'user', content: 'This is terrible.' };
+const FS_2A = { role: 'assistant', content: 'Negative' };
+const FS_Q = { role: 'user', content: "It's okay, not great." };
+const fs = (...m: object[]) => JSON.stringify(m);
+
+export const fewShotTrace: TraceStep[] = buildTrace([
   {
-    lineNumber: 1,
-    variables: [],
-    output: '',
-    explanation: "Comment line — we're learning few-shot prompting, where we teach the AI by example.",
+    line: 1,
+    exp: "What we'll build: a sentiment classifier that labels text as Positive, Negative or Neutral. New idea: teach the AI by showing it examples first.",
   },
   {
-    lineNumber: 2,
-    variables: [{ name: 'module', value: 'openai', isNew: true }],
-    output: '',
-    animationTrigger: 'import',
-    explanation: 'Importing the OpenAI library.',
+    line: 2,
+    set: { OpenAI: '<class OpenAI>' },
+    exp: 'Same as before: load the OpenAI library.',
   },
   {
-    lineNumber: 3,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'createClient',
-    explanation: 'Creating the OpenAI client.',
+    line: 3,
+    set: { client: 'OpenAI(api_key=sk-...)' },
+    exp: 'Same as before: create the client, our phone line to OpenAI.',
   },
   {
-    lineNumber: 5,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-    ],
-    output: 'Teaching the AI to classify sentiment with examples...',
-    explanation: 'Status print — we are about to build a multi-message few-shot prompt.',
+    line: 5,
+    out: 'Teaching the AI a new task (sentiment analysis) with examples...',
+    exp: 'A print so we can see the program running. "Sentiment" means the feeling in a sentence: happy, unhappy, or in between.',
   },
   {
-    lineNumber: 9,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages_display',
-        value:
-          '[{"role":"system","content":"You are a sentiment classifier. Respond with only: Positive, Negative, or Neutral."}]',
-        isNew: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'addSystemMsg',
-    explanation: 'The system message defines the task: classify sentiment. It constrains the output to exactly three words. This is the "rulebook" for our classifier.',
+    line: 7,
+    exp: 'This time we build the messages list BEFORE the API call and save it in a variable. It will hold a small, made-up conversation.',
   },
   {
-    lineNumber: 12,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages_display',
-        value:
-          '[{"role":"system","content":"You are a sentiment classifier. Respond with only: Positive, Negative, or Neutral."},{"role":"user","content":"I love this product!"}]',
-        isChanged: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'addExample1User',
-    explanation: 'FEW-SHOT: Instead of just asking a question, we first SHOW the AI examples. This user message is Example 1 — a clearly positive sentence.',
+    line: 8,
+    set: { messages: fs(FS_SYS) },
+    trig: 'addSystemMsg',
+    exp: 'The system message sets the job: classify sentiment. It allows only three answers: Positive, Negative or Neutral.',
   },
   {
-    lineNumber: 13,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages_display',
-        value:
-          '[{"role":"system","content":"You are a sentiment classifier. Respond with only: Positive, Negative, or Neutral."},{"role":"user","content":"I love this product!"},{"role":"assistant","content":"Positive"}]',
-        isChanged: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'addExample1Asst',
-    explanation: 'We provide the CORRECT answer as an "assistant" message. The AI learns: when a user says something like "I love this", the answer is "Positive".',
+    line: 10,
+    trig: 'addSystemMsg',
+    exp: '# Example 1 is a comment. It is only a label for us; Python ignores it.',
   },
   {
-    lineNumber: 16,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages_display',
-        value:
-          '[{"role":"system","content":"You are a sentiment classifier. Respond with only: Positive, Negative, or Neutral."},{"role":"user","content":"I love this product!"},{"role":"assistant","content":"Positive"},{"role":"user","content":"This is terrible, I want a refund."}]',
-        isChanged: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'addExample2User',
-    explanation: 'Example 2 user message — a clearly negative sentence. By showing multiple examples we establish a reliable pattern.',
+    line: 11,
+    set: { messages: fs(FS_SYS, FS_1U) },
+    trig: 'addExample1User',
+    exp: 'Example 1 starts with a user message: "I love this product!" This is a sample input.',
   },
   {
-    lineNumber: 17,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages_display',
-        value:
-          '[{"role":"system","content":"You are a sentiment classifier. Respond with only: Positive, Negative, or Neutral."},{"role":"user","content":"I love this product!"},{"role":"assistant","content":"Positive"},{"role":"user","content":"This is terrible, I want a refund."},{"role":"assistant","content":"Negative"}]',
-        isChanged: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'addExample2Asst',
-    explanation: 'The correct label "Negative" is provided as the assistant reply. The AI now has two labelled examples to infer the classification pattern from.',
+    line: 12,
+    set: { messages: fs(FS_SYS, FS_1U, FS_1A) },
+    trig: 'addExample1Asst',
+    exp: 'Next comes an assistant message with the right answer: "Positive". We write the AI\'s reply ourselves, to show it what we want.',
   },
   {
-    lineNumber: 20,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages_display',
-        value:
-          '[{"role":"system","content":"You are a sentiment classifier. Respond with only: Positive, Negative, or Neutral."},{"role":"user","content":"I love this product!"},{"role":"assistant","content":"Positive"},{"role":"user","content":"This is terrible, I want a refund."},{"role":"assistant","content":"Negative"}]',
-      },
-    ],
-    output: '',
-    animationTrigger: 'buildFewShot',
-    explanation: '5 messages so far — system + 2 example pairs. The AI sees a PATTERN: user text → assistant classification. This is "few-shot learning" — teaching by example!',
+    line: 15,
+    set: { messages: fs(FS_SYS, FS_1U, FS_1A, FS_2U) },
+    trig: 'addExample2User',
+    exp: 'Example 2 has the same shape. The user text is "This is terrible."',
   },
   {
-    lineNumber: 22,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages_display',
-        value:
-          '[{"role":"system","content":"You are a sentiment classifier. Respond with only: Positive, Negative, or Neutral."},{"role":"user","content":"I love this product!"},{"role":"assistant","content":"Positive"},{"role":"user","content":"This is terrible, I want a refund."},{"role":"assistant","content":"Negative"},{"role":"user","content":"It\'s okay, not great but not bad either."}]',
-        isChanged: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'addRealQuestion',
-    explanation: 'NOW the real question is added as the final user message. The AI will use the pattern from the two examples to predict the label for this ambiguous sentence.',
+    line: 16,
+    set: { messages: fs(FS_SYS, FS_1U, FS_1A, FS_2U, FS_2A) },
+    trig: 'addExample2Asst',
+    exp: 'And its correct answer: "Negative".',
   },
   {
-    lineNumber: 25,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages_display',
-        value:
-          '[{"role":"system","content":"You are a sentiment classifier. Respond with only: Positive, Negative, or Neutral."},{"role":"user","content":"I love this product!"},{"role":"assistant","content":"Positive"},{"role":"user","content":"This is terrible, I want a refund."},{"role":"assistant","content":"Negative"},{"role":"user","content":"It\'s okay, not great but not bad either."}]',
-      },
-    ],
-    output: '',
-    animationTrigger: 'apiCall',
-    explanation: 'Sending all 6 messages to OpenAI. The model sees the complete conversation history — examples plus the new question.',
+    line: 16,
+    trig: 'buildFewShot',
+    exp: 'With two examples, the pattern is clear: a sentence goes in, a one-word label comes out. Look at the pattern badge in the panel.',
   },
   {
-    lineNumber: 25,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'messages_display',
-        value:
-          '[{"role":"system","content":"You are a sentiment classifier. Respond with only: Positive, Negative, or Neutral."},{"role":"user","content":"I love this product!"},{"role":"assistant","content":"Positive"},{"role":"user","content":"This is terrible, I want a refund."},{"role":"assistant","content":"Negative"},{"role":"user","content":"It\'s okay, not great but not bad either."}]',
-      },
-    ],
-    output: '',
-    animationTrigger: 'apiProcessing',
-    explanation: 'gpt-4o-mini analyses the examples, recognises the pattern, and applies it to the new sentence. "It\'s okay, not great but not bad either" is ambiguous — the examples guide the answer.',
+    line: 18,
+    trig: 'buildFewShot',
+    exp: 'This comment marks where the examples end and the real question begins.',
   },
   {
-    lineNumber: 25,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'response', value: '<ChatCompletion object>', isNew: true },
-      { name: 'prediction', value: '"Neutral"', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'showPrediction',
-    explanation: 'The model predicted "Neutral" — correct! It generalised from just 2 examples. Few-shot prompting is powerful for classification tasks where labelled data in the prompt guides the model.',
+    line: 19,
+    set: { messages: fs(FS_SYS, FS_1U, FS_1A, FS_2U, FS_2A, FS_Q) },
+    trig: 'addRealQuestion',
+    exp: 'The last user message is the text we really want labelled: "It\'s okay, not great." This time there is no answer after it.',
   },
   {
-    lineNumber: 28,
-    variables: [
-      { name: 'module', value: 'openai' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'prediction', value: '"Neutral"' },
-    ],
-    output: "\nSentiment for \"It's okay, not great but not bad either.\": Neutral",
-    animationTrigger: 'printOutput',
-    explanation: 'The classification is printed. We taught the AI a task with just 2 examples in the prompt — no fine-tuning, no training data files, just a clever message structure.',
+    line: 20,
+    trig: 'addRealQuestion',
+    exp: 'The list is closed. It holds 6 messages: 1 system message, 2 example pairs, and 1 real question.',
   },
-];
+  {
+    line: 22,
+    trig: 'addRealQuestion',
+    exp: 'Now the API call, the same as always.',
+  },
+  {
+    line: 24,
+    trig: 'apiCall',
+    exp: 'messages=messages sends the whole list, examples included. The AI sees them as an earlier conversation.',
+  },
+  {
+    line: 22,
+    trig: 'apiProcessing',
+    exp: 'The model spots the pattern in the examples and continues it: it writes one label for the new sentence.',
+  },
+  {
+    line: 22,
+    set: { response: '<ChatCompletion object>' },
+    trig: 'showPrediction',
+    exp: 'The reply arrives: "Neutral". The model copied the style of our examples: one word, no extra text.',
+  },
+  {
+    line: 27,
+    out: "\nAI's classification for 'It's okay, not great.':",
+    trig: 'showPrediction',
+    exp: 'This print writes a heading. The f before the quotes makes it an f-string, a string that can hold values.',
+  },
+  {
+    line: 28,
+    out: 'Neutral',
+    trig: 'showPrediction',
+    exp: 'We print the reply text. The Output panel shows just "Neutral".',
+  },
+  {
+    line: 28,
+    trig: 'showPrediction',
+    exp: 'What you learned: 1) you can teach a task with example user/assistant pairs. 2) This is called few-shot prompting. 3) The AI copies the pattern, including the answer style.',
+  },
+]);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Lesson 4 Challenge – challengeTrace (12 steps)
+// Part 1 Challenge – challengeTrace
 // ─────────────────────────────────────────────────────────────────────────────
-export const challengeTrace: TraceStep[] = [
-  {
-    lineNumber: 1,
-    variables: [],
-    output: '',
-    explanation: "Challenge time! We'll combine system prompts, few-shot examples, and JSON output into a restaurant recommender.",
-  },
-  {
-    lineNumber: 2,
-    variables: [
-      { name: 'module_openai', value: 'openai', isNew: true },
-      { name: 'module_json', value: 'json', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'import',
-    explanation: 'Importing both openai (to call the API) and json (to parse the structured response).',
-  },
-  {
-    lineNumber: 4,
-    variables: [
-      { name: 'module_openai', value: 'openai' },
-      { name: 'module_json', value: 'json' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'createClient',
-    explanation: 'Creating the OpenAI client.',
-  },
-  {
-    lineNumber: 6,
-    variables: [
-      { name: 'module_openai', value: 'openai' },
-      { name: 'module_json', value: 'json' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'system_prompt',
-        value:
-          '"You are a restaurant recommendation expert. Always respond with a valid JSON object containing a list of restaurants."',
-        isNew: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'addSystemMsg',
-    explanation: 'The system prompt defines the expert persona AND explicitly states that responses must be JSON. Mentioning JSON in both the system prompt and response_format gives the most reliable results.',
-  },
-  {
-    lineNumber: 10,
-    variables: [
-      { name: 'module_openai', value: 'openai' },
-      { name: 'module_json', value: 'json' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'system_prompt',
-        value:
-          '"You are a restaurant recommendation expert. Always respond with a valid JSON object containing a list of restaurants."',
-      },
-      {
-        name: 'user_prompt',
-        value:
-          '"Recommend 3 restaurants in Bangalore for a team dinner. Include name, cuisine, price_range, and a one-line description."',
-        isNew: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'addUserMsg',
-    explanation: 'The user prompt specifies city (Bangalore), context (team dinner), count (3), and the exact JSON fields wanted. Clear, structured prompts produce structured, usable outputs.',
-  },
-  {
-    lineNumber: 14,
-    variables: [
-      { name: 'module_openai', value: 'openai' },
-      { name: 'module_json', value: 'json' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      {
-        name: 'user_prompt',
-        value:
-          '"Recommend 3 restaurants in Bangalore for a team dinner. Include name, cuisine, price_range, and a one-line description."',
-      },
-      { name: 'response_format', value: '{"type": "json_object"}', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'buildMessages',
-    explanation: 'response_format="json_object" locks the output to valid JSON. Combined with the system prompt, this double-enforces structured output — the safest approach for production apps.',
-  },
-  {
-    lineNumber: 18,
-    variables: [
-      { name: 'module_openai', value: 'openai' },
-      { name: 'module_json', value: 'json' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'response_format', value: '{"type": "json_object"}' },
-    ],
-    output: 'Fetching restaurant recommendations...',
-    animationTrigger: 'apiCall',
-    explanation: 'The request is dispatched — system prompt, user prompt, and JSON mode all bundled into one API call.',
-  },
-  {
-    lineNumber: 18,
-    variables: [
-      { name: 'module_openai', value: 'openai' },
-      { name: 'module_json', value: 'json' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'response_format', value: '{"type": "json_object"}' },
-    ],
-    output: '',
-    animationTrigger: 'apiProcessing',
-    explanation: "OpenAI's servers generate the restaurant list constrained to valid JSON. The model uses its training knowledge of Bangalore restaurants to populate the fields.",
-  },
-  {
-    lineNumber: 18,
-    variables: [
-      { name: 'module_openai', value: 'openai' },
-      { name: 'module_json', value: 'json' },
-      { name: 'client', value: 'OpenAI(api_key=sk-...)' },
-      { name: 'response', value: '<ChatCompletion object>', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'apiCallComplete',
-    explanation: 'Response received! The content will be a valid JSON string — guaranteed by JSON mode.',
-  },
-  {
-    lineNumber: 22,
-    variables: [
-      { name: 'module_openai', value: 'openai' },
-      { name: 'module_json', value: 'json' },
-      { name: 'response', value: '<ChatCompletion object>' },
-      {
-        name: 'raw_json',
-        value:
-          '{"restaurants":[{"name":"Toit Brewpub","cuisine":"Continental / Craft Beer","price_range":"₹₹₹","description":"Lively multi-level brewpub perfect for large teams with its own craft beers."},{"name":"Fatty Bao","cuisine":"Pan-Asian","price_range":"₹₹₹","description":"Modern Asian comfort food with bold flavours in a buzzy atmosphere."},{"name":"The Permit Room","cuisine":"South Indian","price_range":"₹₹","description":"Kerala-inspired cocktails and hearty South Indian bites in a hip, relaxed setting."}]}',
-        isNew: true,
-      },
-    ],
-    output:
-      'Raw JSON:\n{"restaurants":[{"name":"Toit Brewpub","cuisine":"Continental / Craft Beer","price_range":"₹₹₹","description":"Lively multi-level brewpub perfect for large teams with its own craft beers."},{"name":"Fatty Bao","cuisine":"Pan-Asian","price_range":"₹₹₹","description":"Modern Asian comfort food with bold flavours in a buzzy atmosphere."},{"name":"The Permit Room","cuisine":"South Indian","price_range":"₹₹","description":"Kerala-inspired cocktails and hearty South Indian bites in a hip, relaxed setting."}]}',
-    animationTrigger: 'extractContent',
-    explanation: 'Raw JSON extracted from the response. Readable but dense — next we parse and pretty-print it.',
-  },
-  {
-    lineNumber: 25,
-    variables: [
-      { name: 'module_openai', value: 'openai' },
-      { name: 'module_json', value: 'json' },
-      {
-        name: 'raw_json',
-        value:
-          '{"restaurants":[{"name":"Toit Brewpub",...},{"name":"Fatty Bao",...},{"name":"The Permit Room",...}]}',
-      },
-      {
-        name: 'parsed',
-        value: "{'restaurants': [{'name': 'Toit Brewpub', ...}, {'name': 'Fatty Bao', ...}, {'name': 'The Permit Room', ...}]}",
-        isNew: true,
-      },
-    ],
-    output: '',
-    animationTrigger: 'jsonParse',
-    explanation: 'json.loads() converts the raw string into a Python dict. Now we can iterate over parsed["restaurants"] or access individual fields like parsed["restaurants"][0]["name"].',
-  },
-  {
-    lineNumber: 27,
-    variables: [
-      { name: 'module_openai', value: 'openai' },
-      { name: 'module_json', value: 'json' },
-      {
-        name: 'parsed',
-        value: "{'restaurants': [{'name': 'Toit Brewpub', ...}, {'name': 'Fatty Bao', ...}, {'name': 'The Permit Room', ...}]}",
-      },
-    ],
-    output:
-      'Restaurant Recommendations for Bangalore:\n{\n  "restaurants": [\n    {\n      "name": "Toit Brewpub",\n      "cuisine": "Continental / Craft Beer",\n      "price_range": "₹₹₹",\n      "description": "Lively multi-level brewpub perfect for large teams with its own craft beers."\n    },\n    {\n      "name": "Fatty Bao",\n      "cuisine": "Pan-Asian",\n      "price_range": "₹₹₹",\n      "description": "Modern Asian comfort food with bold flavours in a buzzy atmosphere."\n    },\n    {\n      "name": "The Permit Room",\n      "cuisine": "South Indian",\n      "price_range": "₹₹",\n      "description": "Kerala-inspired cocktails and hearty South Indian bites in a hip, relaxed setting."\n    }\n  ]\n}',
-    animationTrigger: 'printOutput',
-    explanation: 'json.dumps(parsed, indent=2) pretty-prints the data. Challenge complete — you combined system prompts + JSON mode + structured output into a real-world recommender!',
-  },
+const CH_SYSTEM =
+  'You are a helpful restaurant recommender. You will be given a cuisine and location, and must reply in valid JSON format.';
+const CH_USER =
+  'Find 3 great South Indian restaurants in Bangalore, India.\nThe JSON output should be a list called "recommendations".\nEach item in the list should be an object with two keys: "name" and "reason".';
+const CH_REC = [
+  { name: 'Mavalli Tiffin Rooms (MTR)', reason: 'A Bangalore classic, famous for rava idli and masala dosa.' },
+  { name: 'Vidyarthi Bhavan', reason: 'Loved for its crispy, butter-rich dosas since 1943.' },
+  { name: 'Central Tiffin Room (CTR)', reason: 'Known for its soft, buttery benne masala dosa.' },
 ];
+const CH_RAW = JSON.stringify({ recommendations: CH_REC });
+const CH_PRETTY = JSON.stringify({ recommendations: CH_REC }, null, 2);
+const CH_MSG_SYS = { role: 'system', content: CH_SYSTEM };
+const CH_MSG_USER = { role: 'user', content: CH_USER };
+
+export const challengeTrace: TraceStep[] = buildTrace([
+  {
+    line: 1,
+    exp: "Challenge: a restaurant recommender for Bangalore. It combines Part 1 skills: a system prompt, a clear user prompt, and JSON mode.",
+  },
+  {
+    line: 2,
+    set: { OpenAI: '<class OpenAI>' },
+    trig: 'import',
+    exp: 'Same as before: load the OpenAI library.',
+  },
+  {
+    line: 3,
+    set: { json: '<module json>' },
+    trig: 'import',
+    exp: "NEW: we also import json, Python's built-in tool for reading and writing JSON text.",
+  },
+  {
+    line: 5,
+    set: { client: 'OpenAI(api_key=sk-...)' },
+    trig: 'createClient',
+    exp: 'Same as before: create the client, our phone line to OpenAI.',
+  },
+  {
+    line: 7,
+    out: 'Calling the Restaurant Recommender Bot (Bangalore)...',
+    exp: 'A print so we can see the program running. Check the Output panel.',
+  },
+  {
+    line: 9,
+    set: { system_prompt: `"${CH_SYSTEM}"`, messages_display: JSON.stringify([CH_MSG_SYS]) },
+    trig: 'addSystemMsg',
+    exp: 'The system prompt gives the AI its role: a helpful restaurant recommender.',
+  },
+  {
+    line: 9,
+    trig: 'addSystemMsg',
+    exp: 'It also sets a format rule: the reply must be valid JSON.',
+  },
+  {
+    line: 11,
+    set: {
+      user_prompt: `"""${CH_USER}"""`,
+      messages_display: JSON.stringify([CH_MSG_SYS, CH_MSG_USER]),
+    },
+    trig: 'addUserMsg',
+    exp: 'The user prompt uses triple quotes """. They let one string cover several lines.',
+  },
+  {
+    line: 12,
+    trig: 'addUserMsg',
+    exp: 'First, the task: find 3 South Indian restaurants in Bangalore. Clear and specific.',
+  },
+  {
+    line: 13,
+    trig: 'addUserMsg',
+    exp: 'Next, we name the list: "recommendations". Now we know which key to look for in the reply.',
+  },
+  {
+    line: 14,
+    trig: 'addUserMsg',
+    exp: 'Each item gets two keys: "name" and "reason". We have described the exact shape of the data we want back.',
+  },
+  {
+    line: 17,
+    set: { model: '"gpt-4o-mini"' },
+    trig: 'addUserMsg',
+    exp: 'The API call starts here, the same pattern as the earlier lessons, with the same gpt-4o-mini model.',
+  },
+  {
+    line: 19,
+    trig: 'addUserMsg',
+    exp: 'messages holds two messages: system_prompt first, then user_prompt. Look at the message panel.',
+  },
+  {
+    line: 23,
+    set: { response_format: '{"type": "json_object"}' },
+    trig: 'buildMessages',
+    exp: 'JSON mode is on, like in the JSON lesson. The prompt says what data we want; JSON mode makes sure the reply is valid JSON.',
+  },
+  {
+    line: 17,
+    trig: 'apiCall',
+    exp: 'The request goes to OpenAI: both messages plus JSON mode.',
+  },
+  {
+    line: 17,
+    trig: 'apiProcessing',
+    exp: 'The model picks 3 restaurants and writes them in the JSON shape we asked for.',
+  },
+  {
+    line: 17,
+    set: { response: '<ChatCompletion object>' },
+    trig: 'apiCallComplete',
+    exp: 'The answer arrives and is saved in response.',
+  },
+  {
+    line: 26,
+    out: "\n--- AI's Raw JSON Response ---",
+    trig: 'apiCallComplete',
+    exp: 'A heading for the raw (unformatted) reply.',
+  },
+  {
+    line: 27,
+    set: { raw_json: CH_RAW },
+    trig: 'extractContent',
+    exp: 'We save the reply text in raw_json. It is a string: just characters, not yet a Python dictionary.',
+  },
+  {
+    line: 28,
+    out: CH_RAW,
+    trig: 'extractContent',
+    exp: 'Printing it shows everything squeezed onto one long line. A computer can read it, but it is hard for people.',
+  },
+  {
+    line: 30,
+    out: "\n--- AI's 'Pretty' JSON Response ---",
+    trig: 'extractContent',
+    exp: 'A second heading, for the nicely formatted version.',
+  },
+  {
+    line: 31,
+    trig: 'jsonParse',
+    exp: 'try: means "attempt this". If something inside fails, Python jumps to the except block below instead of crashing.',
+  },
+  {
+    line: 32,
+    set: { parsed_json: "{'recommendations': [{'name': 'Mavalli Tiffin Rooms (MTR)', ...}, ...]}" },
+    trig: 'jsonParse',
+    exp: 'json.loads() turns the JSON string into a Python dictionary. Now parsed_json["recommendations"] gives us the list of restaurants.',
+  },
+  {
+    line: 33,
+    set: { pretty_json: CH_PRETTY },
+    trig: 'jsonParse',
+    exp: 'json.dumps(..., indent=2) turns the dictionary back into text, this time with line breaks and 2-space indents.',
+  },
+  {
+    line: 34,
+    out: CH_PRETTY,
+    trig: 'printOutput',
+    exp: 'Printing pretty_json shows one key per line. Much easier to read! The except block is skipped because the JSON was valid.',
+  },
+  {
+    line: 34,
+    trig: 'printOutput',
+    exp: 'What you learned: 1) combine a system prompt, a clear user prompt, and JSON mode. 2) json.loads() turns JSON text into a dictionary. 3) json.dumps(indent=2) makes it readable.',
+  },
+]);

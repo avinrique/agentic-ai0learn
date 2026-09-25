@@ -11,6 +11,14 @@ const fallbackQuestions = [
   { id: 3, question: 'What are decorators?', difficulty: 'medium', topic: 'functions' },
 ];
 
+interface JsonItem {
+  question?: string;
+  name?: string;
+  reason?: string;
+  difficulty?: string;
+  topic?: string;
+}
+
 const difficultyColors: Record<string, string> = {
   easy: '#4ade80',
   medium: '#fbbf24',
@@ -36,16 +44,18 @@ export default function JsonParseAnim() {
     return 'idle';
   }, [trigger]);
 
-  // Parse questions from trace variables
-  const questions = useMemo(() => {
+  // Parse the list from trace variables: {"questions": [...]} in the JSON lesson,
+  // {"recommendations": [...]} in the challenge.
+  const { listKey, questions } = useMemo((): { listKey: string; questions: JsonItem[] } => {
     const rawVar = variables.find(v => v.name === 'raw_json');
     if (rawVar) {
       try {
         const parsed = JSON.parse(rawVar.value);
-        if (parsed.questions) return parsed.questions;
+        const key = Object.keys(parsed).find(k => Array.isArray(parsed[k]));
+        if (key) return { listKey: key, questions: parsed[key] };
       } catch { /* fallback */ }
     }
-    return fallbackQuestions;
+    return { listKey: 'questions', questions: fallbackQuestions };
   }, [variables]);
 
   const rawJsonStr = useMemo(() => {
@@ -183,8 +193,8 @@ export default function JsonParseAnim() {
             </div>
             <div className="font-mono text-[11px] text-white/70 bg-black/30 rounded-xl p-3 border border-green-500/20 overflow-auto flex-1">
               <div className="text-white/40">{`{`}</div>
-              <div className="pl-4 text-purple-300">&quot;questions&quot;: [</div>
-              {questions.map((q: { id?: number; question: string; difficulty: string; topic?: string }, i: number) => (
+              <div className="pl-4 text-purple-300">&quot;{listKey}&quot;: [</div>
+              {questions.map((q, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, x: -10 }}
@@ -192,7 +202,7 @@ export default function JsonParseAnim() {
                   transition={{ ...spring, delay: i * 0.15 }}
                   className="pl-8 text-white/60"
                 >
-                  {`{ "question": "${q.question}", "difficulty": "${q.difficulty}"${q.topic ? `, "topic": "${q.topic}"` : ''} }`}{i < questions.length - 1 ? ',' : ''}
+                  {JSON.stringify(q).replace(/":/g, '": ').replace(/,"/g, ', "')}{i < questions.length - 1 ? ',' : ''}
                 </motion.div>
               ))}
               <div className="pl-4 text-purple-300">]</div>
@@ -217,8 +227,8 @@ export default function JsonParseAnim() {
               <span className="font-mono text-xs text-accent-blue bg-accent-blue/10 px-2 py-0.5 rounded">json.dumps(parsed, indent=2)</span>
             </div>
             <div className="space-y-2 overflow-auto flex-1">
-              {questions.map((q: { id?: number; question: string; difficulty: string; topic?: string }, i: number) => {
-                const diffColor = difficultyColors[q.difficulty] || '#fbbf24';
+              {questions.map((q, i) => {
+                const diffColor = (q.difficulty && difficultyColors[q.difficulty]) || '#fbbf24';
                 return (
                   <motion.div
                     key={i}
@@ -228,7 +238,8 @@ export default function JsonParseAnim() {
                     className="bg-navy-700/50 border border-white/10 rounded-lg p-3 flex items-start gap-3"
                   >
                     <div className="flex-1">
-                      <div className="text-sm text-white/80 font-medium">{q.question}</div>
+                      <div className="text-sm text-white/80 font-medium">{q.question ?? q.name}</div>
+                      {q.reason && <div className="text-xs text-white/50 mt-1">{q.reason}</div>}
                     </div>
                     <div className="flex gap-2 items-center shrink-0">
                       {q.topic && (
@@ -236,12 +247,14 @@ export default function JsonParseAnim() {
                           {q.topic}
                         </span>
                       )}
-                      <span
-                        className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase"
-                        style={{ color: diffColor, backgroundColor: `${diffColor}15`, border: `1px solid ${diffColor}30` }}
-                      >
-                        {q.difficulty}
-                      </span>
+                      {q.difficulty && (
+                        <span
+                          className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase"
+                          style={{ color: diffColor, backgroundColor: `${diffColor}15`, border: `1px solid ${diffColor}30` }}
+                        >
+                          {q.difficulty}
+                        </span>
+                      )}
                     </div>
                   </motion.div>
                 );

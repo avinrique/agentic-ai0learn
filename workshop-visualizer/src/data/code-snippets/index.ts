@@ -292,7 +292,7 @@ from openai import OpenAI
 import json
 client = OpenAI()
 
-# --- Tools ---
+# --- Tools (real Python functions) ---
 def add(a, b):
     return a + b
 
@@ -303,7 +303,7 @@ def lookup(query):
             return line
     return "Sorry, I don't know that."
 
-# --- Tool Descriptions ---
+# --- Tool descriptions (the menu for the AI) ---
 tools = [
     {"type": "function", "function": {
         "name": "add",
@@ -314,14 +314,16 @@ tools = [
     }},
     {"type": "function", "function": {
         "name": "lookup",
-        "description": "Search for a concept in the notes file.",
+        "description": "Search for a concept or term in the notes file.",
         "parameters": {"type": "object", "properties": {
             "query": {"type": "string"}
         }, "required": ["query"]}
     }}
 ]
 
-system_prompt = "You are StudyBuddy - a friendly AI assistant."
+system_prompt = """You are StudyBuddy - a friendly AI assistant that helps students.
+If the user asks a math question, use the calculator.
+If the user asks a concept question, use the lookup function."""
 user_query = "What is LangChain?"
 
 messages = [
@@ -329,7 +331,7 @@ messages = [
     {"role": "user", "content": user_query}
 ]
 
-# --- Let GPT decide which tool ---
+# --- Let GPT decide which tool to use ---
 response = client.chat.completions.create(
     model="gpt-4o-mini", messages=messages, tools=tools
 )
@@ -337,18 +339,30 @@ assistant_message = response.choices[0].message
 
 # --- Execute the chosen tool ---
 tool_call = assistant_message.tool_calls[0]
-name = tool_call.function.name
+tool_name = tool_call.function.name
 args = json.loads(tool_call.function.arguments)
 
-if name == "add": result = add(**args)
-elif name == "lookup": result = lookup(**args)
+if tool_name == "add":
+    result = add(**args)
+elif tool_name == "lookup":
+    result = lookup(**args)
+else:
+    result = "Tool not found."
+print("Tool result:", result)
 
-# --- Send result back for final answer ---
+# --- Send result back for a final answer ---
 messages.append(assistant_message)
-messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": str(result)})
+messages.append({
+    "role": "tool",
+    "tool_call_id": tool_call.id,
+    "content": str(result)
+})
 
-final = client.chat.completions.create(model="gpt-4o-mini", messages=messages)
-print("StudyBuddy:", final.choices[0].message.content)`;
+response_final = client.chat.completions.create(
+    model="gpt-4o-mini", messages=messages
+)
+final_answer = response_final.choices[0].message.content
+print("StudyBuddy:", final_answer)`;
 
 export const studyBuddyProCode = `# study_buddy_pro.py - 7 Tools
 from openai import OpenAI
@@ -359,8 +373,8 @@ client = OpenAI()
 def add(a, b): return a + b
 def subtract(a, b): return a - b
 def multiply(a, b): return a * b
-def divide(a, b): return a / b if b != 0 else "Error: divide by zero"
-def percentage(part, total): return (part / total) * 100
+def divide(a, b): return a / b if b != 0 else "Cannot divide by zero!"
+def percentage(part, total): return (part / total) * 100 if total != 0 else "Total cannot be zero!"
 def simple_interest(principal, rate, time): return (principal * rate * time) / 100
 def lookup(query):
     text = open("study_buddy_notes.txt").read()
@@ -369,18 +383,29 @@ def lookup(query):
             return line
     return "Sorry, I don't know that."
 
-# --- Tool descriptions for the LLM ---
+# --- Tool descriptions for the LLM ({...} = parameters shortened) ---
 tools = [
-    {"type": "function", "function": {"name": "add", ...}},
-    {"type": "function", "function": {"name": "subtract", ...}},
-    {"type": "function", "function": {"name": "multiply", ...}},
-    {"type": "function", "function": {"name": "divide", ...}},
-    {"type": "function", "function": {"name": "percentage", ...}},
-    {"type": "function", "function": {"name": "simple_interest", ...}},
-    {"type": "function", "function": {"name": "lookup", ...}},
+    {"type": "function", "function": {"name": "add", "description": "Add two numbers.", "parameters": {...}}},
+    {"type": "function", "function": {"name": "subtract", "description": "Subtract b from a.", "parameters": {...}}},
+    {"type": "function", "function": {"name": "multiply", "description": "Multiply two numbers.", "parameters": {...}}},
+    {"type": "function", "function": {"name": "divide", "description": "Divide a by b.", "parameters": {...}}},
+    {"type": "function", "function": {"name": "percentage", "description": "Calculate percentage as (part/total)*100.", "parameters": {...}}},
+    {"type": "function", "function": {
+        "name": "simple_interest",
+        "description": "Calculate simple interest using (principal * rate * time) / 100.",
+        "parameters": {"type": "object", "properties": {
+            "principal": {"type": "number"},
+            "rate": {"type": "number"},
+            "time": {"type": "number"}
+        }, "required": ["principal", "rate", "time"]}
+    }},
+    {"type": "function", "function": {"name": "lookup", "description": "Search for a concept or term in the notes file.", "parameters": {...}}},
 ]
 
-system_prompt = "You are StudyBuddy Pro - a smart AI tutor with 7 tools."
+system_prompt = """You are StudyBuddy Pro - a smart and friendly AI tutor.
+You can solve math problems (add, subtract, multiply, divide, percentages, simple interest)
+and explain topics using the lookup tool.
+Always choose the correct function based on the user's request."""
 user_query = "Find the simple interest on 1000 at 5% for 2 years"
 
 messages = [
@@ -393,53 +418,87 @@ response = client.chat.completions.create(
 )
 assistant_message = response.choices[0].message
 tool_call = assistant_message.tool_calls[0]
-name = tool_call.function.name
+tool_name = tool_call.function.name
 args = json.loads(tool_call.function.arguments)
 
-# Route to correct function
-result = {"add": add, "subtract": subtract, "multiply": multiply,
-          "divide": divide, "percentage": percentage,
-          "simple_interest": simple_interest, "lookup": lookup}[name](**args)
+# --- Route to the correct function (a lookup table instead of 7 if/elifs) ---
+available_functions = {
+    "add": add, "subtract": subtract, "multiply": multiply,
+    "divide": divide, "percentage": percentage,
+    "simple_interest": simple_interest, "lookup": lookup,
+}
+function_to_call = available_functions[tool_name]
+result = function_to_call(**args)
+print("Tool result:", result)
 
+# --- Send the result back for a final answer ---
 messages.append(assistant_message)
-messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": str(result)})
-final = client.chat.completions.create(model="gpt-4o-mini", messages=messages)
-print("StudyBuddy Pro:", final.choices[0].message.content)`;
+messages.append({
+    "role": "tool",
+    "tool_call_id": tool_call.id,
+    "content": str(result)
+})
+
+response_final = client.chat.completions.create(
+    model="gpt-4o-mini", messages=messages
+)
+final_answer = response_final.choices[0].message.content
+print("StudyBuddy Pro:", final_answer)`;
 
 export const terminalAssistantCode = `# terminal_assistant.py
-import json, subprocess
+import json
+import subprocess
 from openai import OpenAI
 client = OpenAI()
 
 # --- Tool functions ---
 def run_command(command):
-    result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30)
-    return result.stdout + result.stderr or "(no output)"
+    try:
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30)
+        output = result.stdout + result.stderr
+        return output if output.strip() else "(command ran successfully with no output)"
+    except Exception as e:
+        return f"Error running command: {e}"
 
 def read_file(path):
-    with open(path, "r") as f: return f.read()
+    with open(path, "r") as f:
+        return f.read()
 
 def write_file(path, content):
-    with open(path, "w") as f: f.write(content)
+    with open(path, "w") as f:
+        f.write(content)
     return f"Successfully wrote to {path}"
 
-# --- Tools list ---
+# --- Tools list (the menu for the AI; {...} = parameters shortened) ---
 tools = [
-    {"type": "function", "function": {"name": "run_command", ...}},
-    {"type": "function", "function": {"name": "read_file", ...}},
-    {"type": "function", "function": {"name": "write_file", ...}},
+    {"type": "function", "function": {"name": "run_command", "description": "Run a shell command in the terminal (e.g. ls, pwd, mkdir) and return the output.", "parameters": {...}}},
+    {"type": "function", "function": {"name": "read_file", "description": "Read the contents of a file at the given path.", "parameters": {...}}},
+    {"type": "function", "function": {"name": "write_file", "description": "Write content to a file. Creates or overwrites it.", "parameters": {...}}},
 ]
 
-system_prompt = "You are a friendly terminal assistant."
+# --- Map function names to actual Python functions ---
+available_functions = {
+    "run_command": run_command,
+    "read_file": read_file,
+    "write_file": write_file,
+}
+
+system_prompt = """You are a friendly terminal assistant.
+You can run shell commands, read files, and write files.
+If a command could be destructive (like rm), confirm with the user first."""
 messages = [{"role": "system", "content": system_prompt}]
 
 # --- Main chat loop ---
 while True:
     user_input = input("You: ")
-    if user_input.strip().lower() == "exit": break
+    if user_input.strip().lower() == "exit":
+        print("Goodbye!")
+        break
+    if not user_input.strip():
+        continue
     messages.append({"role": "user", "content": user_input})
 
-    # Agent loop
+    # --- Agent loop: keep going until the AI gives a final text answer ---
     while True:
         response = client.chat.completions.create(
             model="gpt-4o-mini", messages=messages, tools=tools
@@ -452,9 +511,15 @@ while True:
             break
 
         for tool_call in message.tool_calls:
-            fn = tool_call.function.name
-            args = json.loads(tool_call.function.arguments)
-            result = {"run_command": run_command, "read_file": read_file,
-                       "write_file": write_file}[fn](**args)
-            messages.append({"role": "tool", "tool_call_id": tool_call.id,
-                            "content": result})`;
+            function_name = tool_call.function.name
+            arguments = json.loads(tool_call.function.arguments)
+            print(f"  [Using tool: {function_name}]")
+
+            function_to_call = available_functions[function_name]
+            result = function_to_call(**arguments)
+
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": result,
+            })`;

@@ -75,13 +75,10 @@ const triggerMessages: Record<string, Message[]> = {
   ],
 };
 
-const tokenEstimates: Record<number, number> = {
-  1: 15,
-  2: 50,
-  3: 127,
-  4: 384,
-  5: 500,
-};
+// Rough token count: ~4 characters per token plus a few tokens of overhead per message.
+function estimateTokens(messages: Message[]): number {
+  return messages.reduce((sum, m) => sum + Math.ceil(m.content.length / 4) + 4, 0);
+}
 
 const insightCallouts: Record<string, { text: string; color: string }> = {
   appendAssistant1: { text: "The AI has no memory \u2014 we REPLAY everything each turn", color: '#fbbf24' },
@@ -92,7 +89,7 @@ const insightCallouts: Record<string, { text: string; color: string }> = {
 const apiCallInfo: Record<string, string> = {
   apiCall1:    'Sending 2 messages \u2192 OpenAI',
   apiResponse1: 'Response received',
-  apiCall2:    'Sending 4 messages \u2192 OpenAI  (~384 tokens)',
+  apiCall2:    'Sending 4 messages \u2192 OpenAI',
 };
 
 export default function ConversationLoopAnim() {
@@ -117,10 +114,19 @@ export default function ConversationLoopAnim() {
   }, [trigger, currentStep, steps]);
 
   const msgCount = messages.length;
-  const tokenCount = tokenEstimates[msgCount] || 0;
+  const tokenCount = estimateTokens(messages);
 
   const isSending = trigger === 'apiCall1' || trigger === 'apiCall2' || trigger === 'apiResponse1';
-  const calloutInfo = trigger ? insightCallouts[trigger] : undefined;
+  // The Java callouts only fit the default run; other variants ask a different turn-2 question.
+  const turn2 = messages.filter(m => m.role === 'user')[1]?.content;
+  const isJavaRun = !turn2 || turn2.includes('Java');
+  const calloutInfo = !trigger
+    ? undefined
+    : !isJavaRun && trigger === 'userInput2'
+      ? { text: `Turn 2: '${turn2}' \u2014 a new topic, but the old messages are still sent`, color: '#4a9eff' }
+      : !isJavaRun && trigger === 'appendAssistant2'
+        ? { text: 'The AI saw the full history and switched topics smoothly', color: '#4ade80' }
+        : insightCallouts[trigger];
   const apiInfo = trigger ? apiCallInfo[trigger] : undefined;
 
   return (
