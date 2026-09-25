@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useConceptStore } from '@/stores/conceptStore';
@@ -7,6 +7,9 @@ import { useKeyboardNav } from '@/hooks/useKeyboardNav';
 import { lessons } from '@/data/lessons';
 import StepProgressBar from '@/components/ui/StepProgressBar';
 import StepTimeline from '@/components/ui/StepTimeline';
+import PaceToggle from '@/components/ui/PaceToggle';
+import { useUIStore } from '@/stores/uiStore';
+import { stepDelay } from '@/lib/pacing';
 
 interface ConceptStepControlsProps {
   lessonId: string;
@@ -15,7 +18,7 @@ interface ConceptStepControlsProps {
 export default function ConceptStepControls({ lessonId }: ConceptStepControlsProps) {
   useKeyboardNav('concept');
   const { currentStep, steps, isPlaying, nextStep, prevStep, reset, togglePlay, goToStep } = useConceptStore();
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const playPace = useUIStore((s) => s.playPace);
   const [timelineOpen, setTimelineOpen] = useState(false);
 
   const lessonIndex = lessons.findIndex((l) => l.id === lessonId);
@@ -24,19 +27,12 @@ export default function ConceptStepControls({ lessonId }: ConceptStepControlsPro
   const isLastStep = currentStep >= steps.length - 1;
 
   // Auto-play
+  const stepText = `${steps[currentStep]?.explanation ?? ''} ${steps[currentStep]?.subtitle ?? ''}`;
   useEffect(() => {
-    if (isPlaying && currentStep < steps.length - 1) {
-      intervalRef.current = setInterval(() => {
-        nextStep();
-      }, 2500);
-    }
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [isPlaying, currentStep, steps.length, nextStep]);
+    if (!isPlaying || currentStep >= steps.length - 1) return;
+    const timer = setTimeout(nextStep, stepDelay(stepText, playPace));
+    return () => clearTimeout(timer);
+  }, [isPlaying, currentStep, steps.length, nextStep, stepText, playPace]);
 
   return (
     <>
@@ -89,6 +85,7 @@ export default function ConceptStepControls({ lessonId }: ConceptStepControlsPro
         >
           Next ▶
         </button>
+        <PaceToggle />
 
         {/* Timeline toggle */}
         <button

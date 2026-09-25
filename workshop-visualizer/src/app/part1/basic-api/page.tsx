@@ -8,7 +8,7 @@ import { basicApiTrace } from '@/data/traces';
 export default function BasicApiPage() {
   return (
     <LessonLayout
-      title="1. Basic API Call"
+      title="Basic API Call"
       description="Send your first prompt to OpenAI and get a response back."
       animationPanel={<ApiCallFlow />}
       steps={basicApiTrace}

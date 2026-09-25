@@ -9,7 +9,7 @@ import { multiFunctionTrace, multiFunctionVariants } from '@/data/traces';
 export default function MultiFunctionPage() {
   return (
     <LessonLayout
-      title="7. Multi-Function Agent: Math Tutor"
+      title="Multi-Function Agent: Math Tutor"
       description="An agent with 4 tools and a loop that cycles multiple times."
       animationPanel={
         <AgentLoopPanel

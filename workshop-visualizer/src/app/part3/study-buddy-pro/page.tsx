@@ -8,7 +8,7 @@ import { studyBuddyProTrace } from '@/data/traces';
 export default function StudyBuddyProPage() {
   return (
     <LessonLayout
-      title="9. Study Buddy Pro"
+      title="Study Buddy Pro"
       description="An advanced agent with 7 tools including percentage and simple interest."
       animationPanel={
         <AgentLoopPanel

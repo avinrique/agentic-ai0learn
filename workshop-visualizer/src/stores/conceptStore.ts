@@ -10,7 +10,6 @@ interface ConceptState {
   currentStep: number;
   steps: ConceptStep[];
   isPlaying: boolean;
-  playSpeed: number;
 
   setSteps: (steps: ConceptStep[]) => void;
   nextStep: () => void;
@@ -25,7 +24,6 @@ export const useConceptStore = create<ConceptState>((set, get) => ({
   currentStep: 0,
   steps: [],
   isPlaying: false,
-  playSpeed: 2500,
 
   setSteps: (steps) => set({ steps, currentStep: 0, isPlaying: false }),
 

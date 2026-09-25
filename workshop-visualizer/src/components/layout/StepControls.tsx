@@ -8,6 +8,7 @@ import { useKeyboardNav } from '@/hooks/useKeyboardNav';
 import { lessons } from '@/data/lessons';
 import StepProgressBar from '@/components/ui/StepProgressBar';
 import StepTimeline from '@/components/ui/StepTimeline';
+import PaceToggle from '@/components/ui/PaceToggle';
 
 interface StepControlsProps {
   lessonId: string;
@@ -75,6 +76,7 @@ export default function StepControls({ lessonId }: StepControlsProps) {
         >
           Next ▶
         </button>
+        <PaceToggle />
 
         {/* Timeline toggle */}
         <button

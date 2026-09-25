@@ -8,7 +8,7 @@ import { multiToolTrace } from '@/data/traces';
 export default function MultiToolPage() {
   return (
     <LessonLayout
-      title="8. Multi-Tool Agent: Study Buddy"
+      title="Multi-Tool Agent: Study Buddy"
       description="An agent with calculator + knowledge lookup tools."
       animationPanel={
         <AgentLoopPanel

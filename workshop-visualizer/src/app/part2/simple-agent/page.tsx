@@ -9,7 +9,7 @@ import { simpleAgentTrace, simpleAgentVariants } from '@/data/traces';
 export default function SimpleAgentPage() {
   return (
     <LessonLayout
-      title="6. Simple Agent: Calculator"
+      title="Simple Agent: Calculator"
       description="Build your first agent with a single tool — the add function."
       animationPanel={
         <AgentLoopPanel

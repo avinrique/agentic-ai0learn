@@ -14,7 +14,10 @@ export {
   simpleAgentVariants,
   multiFunctionTrace,
   multiFunctionVariants,
+} from './part2';
+
+export {
   multiToolTrace,
   studyBuddyProTrace,
   terminalAssistantTrace,
-} from './part2and3';
+} from './part3';

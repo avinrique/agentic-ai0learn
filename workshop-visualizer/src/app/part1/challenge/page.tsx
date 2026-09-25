@@ -9,7 +9,7 @@ import { challengeTrace } from '@/data/traces';
 export default function ChallengePage() {
   return (
     <LessonLayout
-      title="5. Challenge: Restaurant Recommender"
+      title="Challenge: Restaurant Recommender"
       description="Combine all Part 1 skills to build a restaurant recommender."
       animationPanel={
         <div className="h-full flex flex-col">

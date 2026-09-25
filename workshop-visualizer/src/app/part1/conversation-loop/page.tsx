@@ -9,7 +9,7 @@ import { conversationLoopTrace, conversationLoopVariants } from '@/data/traces';
 export default function ConversationLoopPage() {
   return (
     <LessonLayout
-      title="3. Conversation Loop"
+      title="Conversation Loop"
       description="Build a multi-turn chatbot that remembers context across messages."
       animationPanel={<ConversationLoopAnim />}
       steps={conversationLoopTrace}

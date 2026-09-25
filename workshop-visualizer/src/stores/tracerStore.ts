@@ -28,7 +28,6 @@ interface TracerState {
   variants: TraceVariant[];
   activeVariantId: string;
   isPlaying: boolean;
-  playSpeed: number;
   cumulativeOutput: string[];
 
   setSteps: (steps: TraceStep[]) => void;
@@ -48,7 +47,6 @@ export const useTracerStore = create<TracerState>((set, get) => ({
   variants: [],
   activeVariantId: 'default',
   isPlaying: false,
-  playSpeed: 1500,
   cumulativeOutput: [],
 
   setSteps: (steps) => set({ steps, currentStep: 0, cumulativeOutput: [] }),

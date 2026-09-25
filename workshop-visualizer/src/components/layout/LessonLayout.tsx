@@ -1,6 +1,7 @@
 'use client';
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
+import LessonBadge from '@/components/ui/LessonBadge';
 import StepControls from './StepControls';
 import ResizableHandle from './ResizableHandle';
 import { useTracerStore, TraceStep, TraceVariant } from '@/stores/tracerStore';
@@ -59,6 +60,7 @@ export default function LessonLayout({
         <header className={`px-6 border-b border-white/10 bg-navy-800/50 flex-shrink-0 ${isFullscreen ? 'py-2' : 'py-3'}`}>
           <div className="flex items-center justify-between">
             <div>
+              {!isFullscreen && <LessonBadge lessonId={lessonId} />}
               {!isFullscreen && <h1 className="text-xl font-bold text-white">{title}</h1>}
               {!isFullscreen && <p className="text-sm text-white/40 mt-0.5">{description}</p>}
             </div>
@@ -71,7 +73,7 @@ export default function LessonLayout({
             </button>
           </div>
           {currentTraceStep?.explanation && (
-            <div className={`px-3 py-1.5 rounded-lg bg-accent-blue/10 border border-accent-blue/20 text-sm text-accent-blue ${isFullscreen ? '' : 'mt-2'}`}>
+            <div className={`px-4 py-2 rounded-lg bg-accent-blue/10 border border-accent-blue/20 text-[15px] leading-relaxed text-blue-100 ${isFullscreen ? '' : 'mt-2'}`}>
               {currentTraceStep.explanation}
             </div>
           )}

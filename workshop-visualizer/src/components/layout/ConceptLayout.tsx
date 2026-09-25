@@ -2,6 +2,7 @@
 import { ReactNode, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
+import LessonBadge from '@/components/ui/LessonBadge';
 import ConceptStepControls from './ConceptStepControls';
 import { useConceptStore, ConceptStep } from '@/stores/conceptStore';
 import { useProgressStore } from '@/stores/progressStore';
@@ -78,6 +79,7 @@ export default function ConceptLayout({
           <header className="px-6 py-3 border-b border-white/10 bg-navy-800/50 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div>
+                <LessonBadge lessonId={lessonId} />
                 <h1 className="text-xl font-bold text-white">{title}</h1>
                 <p className="text-sm text-white/40 mt-0.5">{description}</p>
               </div>
@@ -97,11 +99,11 @@ export default function ConceptLayout({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -5 }}
                   transition={{ duration: 0.2 }}
-                  className="mt-2 px-3 py-1.5 rounded-lg bg-accent-blue/10 border border-accent-blue/20 text-sm text-accent-blue"
+                  className="mt-2 px-4 py-2 rounded-lg bg-accent-blue/10 border border-accent-blue/20 text-[15px] leading-relaxed text-blue-100"
                 >
                   {currentConceptStep.explanation}
                   {currentConceptStep.subtitle && (
-                    <span className="block text-xs text-accent-blue/60 mt-0.5">
+                    <span className="block text-[13px] font-medium text-accent-blue mt-1">
                       {currentConceptStep.subtitle}
                     </span>
                   )}

@@ -9,7 +9,7 @@ import { jsonOutputTrace } from '@/data/traces';
 export default function JsonOutputPage() {
   return (
     <LessonLayout
-      title="3. JSON Output"
+      title="JSON Output"
       description="Force the AI to respond in structured JSON format."
       animationPanel={
         <div className="h-full flex flex-col">

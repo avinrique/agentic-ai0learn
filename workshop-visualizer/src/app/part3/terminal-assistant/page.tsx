@@ -8,7 +8,7 @@ import { terminalAssistantTrace } from '@/data/traces';
 export default function TerminalAssistantPage() {
   return (
     <LessonLayout
-      title="10. Terminal Assistant"
+      title="Terminal Assistant"
       description="A fully autonomous agent that can run commands, read, and write files."
       animationPanel={
         <AgentLoopPanel

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { PlayPace } from '@/lib/pacing';
 
 interface UIState {
   sidebarCollapsed: boolean;
@@ -7,6 +8,8 @@ interface UIState {
   isFullscreen: boolean;
   setFullscreen: (fs: boolean) => void;
   toggleFullscreen: () => void;
+  playPace: PlayPace;
+  setPlayPace: (pace: PlayPace) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -16,4 +19,6 @@ export const useUIStore = create<UIState>((set) => ({
   isFullscreen: false,
   setFullscreen: (fs) => set({ isFullscreen: fs }),
   toggleFullscreen: () => set((state) => ({ isFullscreen: !state.isFullscreen })),
+  playPace: 'normal',
+  setPlayPace: (pace) => set({ playPace: pace }),
 }));

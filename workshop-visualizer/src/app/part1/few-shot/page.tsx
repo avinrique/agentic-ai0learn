@@ -8,7 +8,7 @@ import { fewShotTrace } from '@/data/traces';
 export default function FewShotPage() {
   return (
     <LessonLayout
-      title="4. Few-Shot Learning"
+      title="Few-Shot Learning"
       description="Teach the AI new tasks by providing examples in the conversation."
       animationPanel={<FewShotAnim />}
       steps={fewShotTrace}
