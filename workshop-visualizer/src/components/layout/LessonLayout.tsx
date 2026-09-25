@@ -35,9 +35,7 @@ export default function LessonLayout({
 
   useEffect(() => {
     setSteps(steps);
-    if (variants) {
-      setVariants(variants);
-    }
+    setVariants(variants ?? []);
   }, [steps, variants, setSteps, setVariants]);
 
   useEffect(() => {

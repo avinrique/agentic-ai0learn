@@ -261,7 +261,7 @@ const simpleAgent100Plus200Steps: TraceStep[] = buildTrace([
   {
     line: 32,
     set: { messages: SA_USER('What is 100 + 200?') },
-    say: 'The history starts with the new question: "What is 100 + 200?"',
+    say: 'The history starts with one user question. In this run it is "What is 100 + 200?" (the highlighted line shows the new question).',
   },
   {
     line: 33,
@@ -405,6 +405,7 @@ interface MathCase {
   whyFirst: string; // why the AI asks for the first operation first
   answer: string;
   resultNote?: string; // extra note for the first result (e.g. 20.0)
+  questionNote?: string; // for variants: the code on screen still shows the default question
 }
 
 function buildMathTutorTrace(c: MathCase): TraceStep[] {
@@ -452,7 +453,7 @@ function buildMathTutorTrace(c: MathCase): TraceStep[] {
       line: 33,
       set: { messages: hist() },
       anim: 'addSystemMsg',
-      say: `The history starts with two messages: a system message (act as a math tutor, use tools) and the user's question, "${q}"`,
+      say: `The history starts with two messages: a system message (act as a math tutor, use tools) and the user's question, "${q}"${c.questionNote ? ' ' + c.questionNote : ''}`,
     },
     {
       line: 37,

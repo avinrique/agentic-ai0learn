@@ -51,7 +51,7 @@ export const useTracerStore = create<TracerState>((set, get) => ({
 
   setSteps: (steps) => set({ steps, currentStep: 0, cumulativeOutput: [] }),
 
-  setVariants: (variants) => set({ variants }),
+  setVariants: (variants) => set({ variants, activeVariantId: 'default' }),
 
   setActiveVariant: (id) => {
     const { variants } = get();

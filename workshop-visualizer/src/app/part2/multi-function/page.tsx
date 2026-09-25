@@ -15,7 +15,7 @@ export default function MultiFunctionPage() {
         <AgentLoopPanel
           agentName="Math Tutor Agent"
           accentColor="#fbbf24"
-          loopCount={2}
+          loopCount={3}
           tools={[
             { name: 'add', icon: '+', color: '#4a9eff' },
             { name: 'subtract', icon: '-', color: '#f87171' },
