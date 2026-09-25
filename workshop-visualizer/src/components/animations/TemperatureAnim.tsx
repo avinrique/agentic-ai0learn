@@ -28,7 +28,7 @@ const tempConfigs = [
   {
     temp: 0.7,
     label: 'Temp = 0.7',
-    desc: 'Usually picks top words but sometimes surprises. The default.',
+    desc: 'Usually picks top words but sometimes surprises. A common choice for chat.',
     bars: [72, 12, 8, 5, 3],
     color: '#fbbf24',
     fillPct: 50,
@@ -915,7 +915,7 @@ export default function TemperatureAnim() {
             {[
               { provider: 'OpenAI', range: '0 – 2', default_val: '1.0', color: '#4ade80', logo: '/logos/openai.svg' },
               { provider: 'Anthropic', range: '0 – 1', default_val: '1.0', color: '#a78bfa', logo: '/logos/anthropic.svg' },
-              { provider: 'Gemini', range: '0 – 1', default_val: '(varies)', color: '#4a9eff', logo: '/logos/google.svg' },
+              { provider: 'Gemini', range: '0 – 2', default_val: '(varies)', color: '#4a9eff', logo: '/logos/google.svg' },
             ].map((row, i) => (
               <motion.div
                 key={row.provider}
@@ -1034,7 +1034,7 @@ export default function TemperatureAnim() {
           {[
             { icon: '🎛️', text: 'Temperature controls randomness in token selection (0 to 2)', color: '#4a9eff' },
             { icon: '🤖', text: 'Temp 0 = deterministic — always the same output', color: '#4a9eff' },
-            { icon: '⚖️', text: 'Temp 0.7 = balanced default — creative but controlled', color: '#fbbf24' },
+            { icon: '⚖️', text: 'Temp ~0.7 = balanced — creative but controlled', color: '#fbbf24' },
             { icon: '🎲', text: 'Temp 1.5 = creative chaos — surprising & unpredictable', color: '#ef4444' },
             { icon: '🔢', text: 'Softmax divides logits by T — lower T sharpens, higher T flattens', color: '#a78bfa' },
             { icon: '✂️', text: 'Top-P is an alternative — cuts off low-probability tokens', color: '#f472b6' },
