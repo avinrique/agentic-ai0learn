@@ -69,7 +69,7 @@ export default function MessageTimeline() {
         const resVar = vars.find(v => v.name === 'result' || v.name === 'function_result');
         msgs.push({ role: 'tool', content: `result: ${resVar?.value || '...'}`, loop: currentLoop });
       } else if (t.includes('finalAnswer') || t === 'final') {
-        const ansVar = vars.find(v => v.name === 'final_answer' || v.name === 'assistant_msg' || v.name === 'content');
+        const ansVar = vars.find(v => v.name === 'final_answer' || v.name === 'assistant_msg' || v.name === 'content' || v.name === 'message.content');
         msgs.push({ role: 'assistant_final', content: ansVar?.value || 'Response generated' });
       }
     }

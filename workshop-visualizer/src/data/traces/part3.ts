@@ -1,429 +1,596 @@
-import { TraceStep } from '@/stores/tracerStore';
+import { TraceStep, Variable } from '@/stores/tracerStore';
 
-// Export 6: multiToolTrace — Study buddy with "What is LangChain?" query (14 steps)
-export const multiToolTrace: TraceStep[] = [
-  {
-    lineNumber: 1,
-    variables: [{ name: 'module', value: 'json, openai', isNew: true }],
-    output: '',
-    animationTrigger: 'import',
-    explanation: 'Importing json and OpenAI for the study buddy agent. This agent can both calculate AND look up information.',
-  },
-  {
-    lineNumber: 3,
-    variables: [
-      { name: 'module', value: 'json, openai' },
-      { name: 'client', value: 'OpenAI()', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'createClient',
-    explanation: 'Creating the OpenAI client. The study buddy will combine factual lookup with conversational responses.',
-  },
-  {
-    lineNumber: 5,
-    variables: [
-      { name: 'client', value: 'OpenAI()' },
-      { name: 'add', value: 'function(a, b) → a + b', isNew: true },
-      { name: 'lookup', value: 'function(topic) → knowledge_base[topic]', isNew: true },
-    ],
-    output: '',
-    explanation: 'Two tools defined: add (for math) and lookup (for definitions). The lookup function searches a knowledge base for AI/ML topics. Having multiple tools makes the agent versatile.',
-  },
-  {
-    lineNumber: 18,
-    variables: [
-      { name: 'client', value: 'OpenAI()' },
-      { name: 'add', value: 'function(a, b) → a + b' },
-      { name: 'lookup', value: 'function(topic) → knowledge_base[topic]' },
-      { name: 'tools', value: '[{name:"add"}, {name:"lookup", desc:"Look up AI/ML terms"}]', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'defineTools',
-    explanation: 'Tools menu has two entries. The AI will pick "lookup" for definition questions and "add" for math questions. The descriptions guide the AI\'s choice.',
-  },
-  {
-    lineNumber: 30,
-    variables: [
-      { name: 'tools', value: '[add, lookup]' },
-      { name: 'system_prompt', value: '"You are a helpful study buddy for AI/ML students..."', isNew: true },
-      { name: 'messages', value: '[system, {role:"user", content:"What is LangChain?"}]', isNew: true },
-    ],
-    output: 'User: What is LangChain?',
-    animationTrigger: 'addSystemMsg',
-    explanation: 'System prompt establishes the study buddy persona. The user asks "What is LangChain?" — a definition question that should trigger the lookup tool.',
-  },
-  {
-    lineNumber: 35,
-    variables: [
-      { name: 'tools', value: '[add, lookup]' },
-      { name: 'messages', value: '[system, {role:"user", content:"What is LangChain?"}]' },
-    ],
-    output: '--- Sending to AI (with tools)... ---',
-    animationTrigger: 'agentLoop-send',
-    explanation: 'First API call: sending "What is LangChain?" along with the tools menu. The AI must choose: is this a math question (add) or a lookup question (lookup)?',
-  },
-  {
-    lineNumber: 35,
-    variables: [
-      { name: 'messages', value: '[system, {role:"user", content:"What is LangChain?"}]' },
-    ],
-    output: '',
-    animationTrigger: 'apiProcessing',
-    explanation: 'The AI reads the question. "What is LangChain?" is asking for a definition. The lookup tool\'s description matches perfectly — it will choose lookup.',
-  },
-  {
-    lineNumber: 40,
-    variables: [
-      { name: 'message', value: '<AssistantMessage: tool_calls=[lookup("LangChain")]>', isNew: true },
-      { name: 'message.content', value: 'null', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-decide',
-    explanation: 'The AI chose lookup("LangChain")! It matched "What is LangChain?" to the lookup tool. The AI extracted "LangChain" as the search term automatically.',
-  },
-  {
-    lineNumber: 45,
-    variables: [
-      { name: 'message.tool_calls', value: '[{function: lookup, args: {topic:"LangChain"}}]' },
-      { name: 'function_name', value: '"lookup"', isNew: true },
-    ],
-    output: '--- AI decided to call: lookup ---',
-    animationTrigger: 'toolSelect-lookup',
-    explanation: 'Tool selected: lookup. Among all available tools, the AI correctly identified this as an information retrieval task, not a math task.',
-  },
-  {
-    lineNumber: 48,
-    variables: [
-      { name: 'function_name', value: '"lookup"' },
-      { name: 'arguments', value: '{"topic": "LangChain"}', isNew: true },
-    ],
-    output: '',
-    explanation: 'Arguments parsed: topic = "LangChain". The AI extracted the exact term to look up from the user\'s question.',
-  },
-  {
-    lineNumber: 50,
-    variables: [
-      { name: 'function_name', value: '"lookup"' },
-      { name: 'arguments', value: '{"topic": "LangChain"}' },
-      { name: 'result', value: '"LangChain: A framework for building LLM-powered apps with chains and agents."', isNew: true },
-    ],
-    output: '[Debug: Running lookup("LangChain")]\n--- Ran function, result: LangChain: A framework for building LLM-powered apps with chains and agents. ---',
-    animationTrigger: 'agentLoop-execute',
-    explanation: 'Our Python lookup function found a definition in the knowledge base. Real data retrieved — not generated by the AI, but looked up from our actual database.',
-  },
-  {
-    lineNumber: 54,
-    variables: [
-      { name: 'result', value: '"LangChain: A framework for building LLM-powered apps..."' },
-      { name: 'messages', value: '[system, user, assistant(lookup), tool(result=definition)]', isChanged: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-return',
-    explanation: 'The lookup result is added to messages as a tool response. Now the AI has the factual definition and can craft a helpful, contextual answer for the student.',
-  },
-  {
-    lineNumber: 58,
-    variables: [
-      { name: 'result', value: '"LangChain: A framework for building LLM-powered apps..."' },
-      { name: 'messages', value: '[system, user, assistant(lookup), tool(result=definition)]' },
-    ],
-    output: '--- Sending result back to AI... ---',
-    animationTrigger: 'agentLoop-send2',
-    explanation: 'Second API call: AI receives the factual definition from our knowledge base. It will now write a student-friendly explanation using this grounded information.',
-  },
-  {
-    lineNumber: 65,
-    variables: [
-      { name: 'final_answer', value: '"LangChain is a framework that helps developers build applications powered by large language models..."', isNew: true },
-    ],
-    output: '--- Final Answer from AI: ---\nLangChain is a framework that helps developers build applications powered by large language models (LLMs). It provides building blocks called "chains" that you can combine to create AI apps, and supports building agents that can use tools — much like what we\'re doing right now!',
-    animationTrigger: 'agentLoop-finalAnswer',
-    explanation: 'Study buddy agent complete! The AI used the lookup result to give a grounded, accurate answer enriched with its own explanation. Factual accuracy from our data + conversational quality from the AI.',
-  },
-];
+// ---------------------------------------------------------------------------
+// Small builder: each step lists only the variables it sets (or removes with
+// null). The builder carries every other variable forward and marks isNew /
+// isChanged automatically, so the Variables panel stays consistent.
+// ---------------------------------------------------------------------------
+interface StepSpec {
+  line: number;
+  set?: Record<string, string | null>;
+  out?: string;
+  anim?: string;
+  text: string;
+}
 
-// Export 7: studyBuddyProTrace — simple interest calculation (14 steps)
-export const studyBuddyProTrace: TraceStep[] = [
-  {
-    lineNumber: 1,
-    variables: [{ name: 'module', value: 'json, openai', isNew: true }],
-    output: '',
-    animationTrigger: 'import',
-    explanation: 'Importing json and OpenAI for the Study Buddy Pro — an agent that can handle finance formulas.',
-  },
-  {
-    lineNumber: 3,
-    variables: [
-      { name: 'module', value: 'json, openai' },
-      { name: 'client', value: 'OpenAI()', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'createClient',
-    explanation: 'Creating the OpenAI client for our financial study assistant.',
-  },
-  {
-    lineNumber: 5,
-    variables: [
-      { name: 'client', value: 'OpenAI()' },
-      { name: 'lookup', value: 'function(topic) → knowledge_base[topic]', isNew: true },
-      { name: 'simple_interest', value: 'function(principal, rate, time) → principal * rate * time / 100', isNew: true },
-    ],
-    output: '',
-    explanation: 'Two tools: lookup (for definitions) and simple_interest (the formula SI = P*R*T/100). By encoding the formula as a tool, the agent always computes it correctly — no hallucination.',
-  },
-  {
-    lineNumber: 20,
-    variables: [
-      { name: 'client', value: 'OpenAI()' },
-      { name: 'lookup', value: 'function(topic) → knowledge_base[topic]' },
-      { name: 'simple_interest', value: 'function(principal, rate, time) → P*R*T/100' },
-      { name: 'tools', value: '[{name:"lookup"}, {name:"simple_interest", params:{principal,rate,time}}]', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'defineTools',
-    explanation: 'Tools menu with lookup and simple_interest. The AI will use simple_interest when it detects a finance calculation question with principal, rate, and time values.',
-  },
-  {
-    lineNumber: 32,
-    variables: [
-      { name: 'tools', value: '[lookup, simple_interest]' },
-      { name: 'system_prompt', value: '"You are a Study Buddy Pro that helps with finance and math..."', isNew: true },
-      { name: 'messages', value: '[system, {role:"user", content:"Find the simple interest on 1000 at 5% for 2 years"}]', isNew: true },
-    ],
-    output: 'User: Find the simple interest on 1000 at 5% for 2 years',
-    animationTrigger: 'addSystemMsg',
-    explanation: 'User asks a classic finance problem: SI on principal=1000, rate=5%, time=2 years. The AI must extract these three values and call simple_interest.',
-  },
-  {
-    lineNumber: 37,
-    variables: [
-      { name: 'tools', value: '[lookup, simple_interest]' },
-      { name: 'messages', value: '[system, {role:"user", content:"Find the simple interest on 1000 at 5% for 2 years"}]' },
-    ],
-    output: '--- Sending to AI (with tools)... ---',
-    animationTrigger: 'agentLoop-send',
-    explanation: 'First API call: the AI receives the finance question and the two tools. It must identify this as a calculation task and pick simple_interest.',
-  },
-  {
-    lineNumber: 37,
-    variables: [
-      { name: 'messages', value: '[system, {role:"user", content:"Find the simple interest on 1000 at 5% for 2 years"}]' },
-    ],
-    output: '',
-    animationTrigger: 'apiProcessing',
-    explanation: 'The AI processes the question. It sees numbers (1000, 5%, 2 years) and the phrase "simple interest". It matches this to the simple_interest tool immediately.',
-  },
-  {
-    lineNumber: 42,
-    variables: [
-      { name: 'message', value: '<AssistantMessage: tool_calls=[simple_interest(1000, 5, 2)]>', isNew: true },
-      { name: 'message.content', value: 'null', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-decide',
-    explanation: 'The AI chose simple_interest(principal=1000, rate=5, time=2)! It correctly extracted all three parameters from the natural language question. No math done yet.',
-  },
-  {
-    lineNumber: 47,
-    variables: [
-      { name: 'message.tool_calls', value: '[{function: simple_interest, args: {principal:1000, rate:5, time:2}}]' },
-      { name: 'function_name', value: '"simple_interest"', isNew: true },
-    ],
-    output: '--- AI decided to call: simple_interest ---',
-    animationTrigger: 'toolSelect-simple_interest',
-    explanation: 'Tool selected: simple_interest. The AI correctly identified this finance calculation and extracted all three required parameters from the user\'s text.',
-  },
-  {
-    lineNumber: 50,
-    variables: [
-      { name: 'function_name', value: '"simple_interest"' },
-      { name: 'arguments', value: '{"principal": 1000, "rate": 5, "time": 2}', isNew: true },
-    ],
-    output: '',
-    explanation: 'Arguments parsed: principal=1000, rate=5, time=2. The AI extracted these values from "1000 at 5% for 2 years" — impressive natural language understanding.',
-  },
-  {
-    lineNumber: 52,
-    variables: [
-      { name: 'function_name', value: '"simple_interest"' },
-      { name: 'arguments', value: '{"principal": 1000, "rate": 5, "time": 2}' },
-      { name: 'result', value: '100', isNew: true },
-    ],
-    output: '[Debug: Running REAL Python code: simple_interest(principal=1000, rate=5, time=2)]\n--- Ran function, result: 100 ---',
-    animationTrigger: 'agentLoop-execute',
-    explanation: 'Our Python function computes: 1000 * 5 * 2 / 100 = 100. Real calculation, guaranteed correct. The AI could not hallucinate this answer — it comes from actual code.',
-  },
-  {
-    lineNumber: 55,
-    variables: [
-      { name: 'result', value: '100' },
-      { name: 'messages', value: '[system, user, assistant(simple_interest), tool(result=100)]', isChanged: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-return',
-    explanation: 'Tool result (100) appended to conversation. The AI now has the confirmed calculation result and can explain the formula and answer to the student.',
-  },
-  {
-    lineNumber: 60,
-    variables: [
-      { name: 'result', value: '100' },
-      { name: 'messages', value: '[system, user, assistant(simple_interest), tool(result=100)]' },
-    ],
-    output: '--- Sending result back to AI... ---',
-    animationTrigger: 'agentLoop-send2',
-    explanation: 'Second API call: AI receives the verified SI result (100). It will now write an educational response explaining the formula and the answer.',
-  },
-  {
-    lineNumber: 68,
-    variables: [
-      { name: 'final_answer', value: '"Simple Interest = ₹100"', isNew: true },
-    ],
-    output: '--- Final Answer from AI: ---\nThe simple interest on ₹1000 at 5% per annum for 2 years is ₹100.\n\nFormula: SI = (P × R × T) / 100 = (1000 × 5 × 2) / 100 = 100',
-    animationTrigger: 'agentLoop-finalAnswer',
-    explanation: 'Study Buddy Pro delivers: the correct answer (100) from real code, plus the formula explanation from the AI. Students get both the answer AND the understanding!',
-  },
-];
+function build(specs: StepSpec[]): TraceStep[] {
+  const state = new Map<string, string>();
+  return specs.map((s) => {
+    const added = new Set<string>();
+    const changed = new Set<string>();
+    for (const [name, value] of Object.entries(s.set ?? {})) {
+      if (value === null) {
+        state.delete(name);
+        continue;
+      }
+      if (!state.has(name)) added.add(name);
+      else if (state.get(name) !== value) changed.add(name);
+      state.set(name, value);
+    }
+    const variables: Variable[] = Array.from(state.entries()).map(([name, value]) => ({
+      name,
+      value,
+      ...(added.has(name) ? { isNew: true } : changed.has(name) ? { isChanged: true } : {}),
+    }));
+    return {
+      lineNumber: s.line,
+      variables,
+      output: s.out ?? '',
+      ...(s.anim ? { animationTrigger: s.anim } : {}),
+      explanation: s.text,
+    };
+  });
+}
 
-// Export 8: terminalAssistantTrace — "What files are in the current directory?" (14 steps)
-export const terminalAssistantTrace: TraceStep[] = [
+// ===========================================================================
+// Lesson 8: multiToolTrace — StudyBuddy, "What is LangChain?"
+// ===========================================================================
+const LC_LINE = 'LangChain is a framework for building applications with large language models.';
+const MT_USER = '{role:"user", content:"What is LangChain?"}';
+const MT_FINAL = '"LangChain is a framework that helps you build apps powered by large language models. Keep going! 🚀"';
+
+export const multiToolTrace: TraceStep[] = build([
   {
-    lineNumber: 1,
-    variables: [{ name: 'module', value: 'json, openai, subprocess', isNew: true }],
-    output: '',
-    animationTrigger: 'import',
-    explanation: 'Importing json, OpenAI, and subprocess. The subprocess module lets our Python code actually run shell commands — this is what makes the terminal assistant powerful (and dangerous if misused).',
+    line: 1,
+    text: `We'll build StudyBuddy, an agent with two very different tools: add (math) and lookup (search notes). New vs. last lesson: the AI must pick the right KIND of tool.`,
   },
   {
-    lineNumber: 4,
-    variables: [
-      { name: 'module', value: 'json, openai, subprocess' },
-      { name: 'client', value: 'OpenAI()', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'createClient',
-    explanation: 'Creating the OpenAI client. The terminal assistant will translate natural language into shell commands.',
+    line: 3,
+    anim: 'import',
+    text: `Line 2 imports OpenAI to talk to the AI. This line imports json, which we need later to read the AI's tool arguments.`,
   },
   {
-    lineNumber: 6,
-    variables: [
-      { name: 'client', value: 'OpenAI()' },
-      { name: 'run_command', value: 'function(command) → subprocess.run(command)', isNew: true },
-      { name: 'read_file', value: 'function(path) → open(path).read()', isNew: true },
-      { name: 'write_file', value: 'function(path, content) → open(path).write()', isNew: true },
-    ],
-    output: '',
-    explanation: 'Three file system tools defined: run_command (execute any shell command), read_file (read file contents), write_file (create/edit files). These give the AI real control over the filesystem.',
+    line: 4,
+    set: { client: 'OpenAI()' },
+    text: `client is our connection to OpenAI. Every request to the AI goes through it.`,
   },
   {
-    lineNumber: 22,
-    variables: [
-      { name: 'client', value: 'OpenAI()' },
-      { name: 'run_command', value: 'function(command) → subprocess.run(command)' },
-      { name: 'read_file', value: 'function(path) → open(path).read()' },
-      { name: 'write_file', value: 'function(path, content) → open(path).write()' },
-      { name: 'tools', value: '[run_command, read_file, write_file]', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'defineTools',
-    explanation: 'Three-tool menu. The AI will pick run_command for "list files", read_file for "show me what\'s in X", and write_file for "create a file". Natural language → right tool.',
+    line: 7,
+    anim: 'defineTools',
+    set: { add: 'function(a, b)' },
+    text: `Tool 1: add. A normal Python function that returns a + b. The AI can't run it; only our code can.`,
   },
   {
-    lineNumber: 35,
-    variables: [
-      { name: 'tools', value: '[run_command, read_file, write_file]' },
-      { name: 'system_prompt', value: '"You are a helpful terminal assistant. Translate natural language into shell commands..."', isNew: true },
-      { name: 'messages', value: '[system, {role:"user", content:"What files are in the current directory?"}]', isNew: true },
-    ],
-    output: 'User: What files are in the current directory?',
-    animationTrigger: 'addSystemMsg',
-    explanation: 'System prompt instructs the AI to act as a terminal assistant. The user asks in plain English — no need to know shell commands. The AI will translate this into "ls".',
+    line: 10,
+    anim: 'defineTools',
+    set: { lookup: 'function(query)' },
+    text: `Tool 2: lookup. It takes one input called query: the word to search for, like "LangChain".`,
   },
   {
-    lineNumber: 40,
-    variables: [
-      { name: 'tools', value: '[run_command, read_file, write_file]' },
-      { name: 'messages', value: '[system, {role:"user", content:"What files are in the current directory?"}]' },
-    ],
-    output: '--- Sending to AI (with tools)... ---',
-    animationTrigger: 'agentLoop-send',
-    explanation: 'First API call: the AI receives the natural language question and the three file system tools. It must decide which tool lists directory contents.',
+    line: 13,
+    anim: 'defineTools',
+    text: `lookup reads the notes file and checks each line: does it contain the query? Both sides are lowercased, so "langchain" still matches "LangChain".`,
   },
   {
-    lineNumber: 40,
-    variables: [
-      { name: 'messages', value: '[system, {role:"user", content:"What files are in the current directory?"}]' },
-    ],
-    output: '',
-    animationTrigger: 'apiProcessing',
-    explanation: 'The AI maps "What files are in the current directory?" to the shell command "ls". It picks run_command as the tool since listing files requires executing a command.',
+    line: 15,
+    anim: 'defineTools',
+    text: `If no line matches, lookup returns "Sorry, I don't know that." So the tool always gives back some text.`,
   },
   {
-    lineNumber: 45,
-    variables: [
-      { name: 'message', value: '<AssistantMessage: tool_calls=[run_command("ls")]>', isNew: true },
-      { name: 'message.content', value: 'null', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-decide',
-    explanation: 'The AI chose run_command with argument "ls"! It translated "What files are in the current directory?" into the exact Unix shell command. This is natural language to code translation.',
+    line: 18,
+    anim: 'defineTools',
+    set: { tools: '[add, lookup]' },
+    text: `tools is the menu we show the AI, with one entry per function. The AI only sees this menu, never our Python code.`,
   },
   {
-    lineNumber: 50,
-    variables: [
-      { name: 'message.tool_calls', value: '[{function: run_command, args: {command:"ls"}}]' },
-      { name: 'function_name', value: '"run_command"', isNew: true },
-    ],
-    output: '--- AI decided to call: run_command ---',
-    animationTrigger: 'toolSelect-run_command',
-    explanation: 'Tool selected: run_command. The AI correctly matched the task (listing directory contents) to the tool that can execute shell commands.',
+    line: 21,
+    anim: 'defineTools',
+    text: `The add entry's description: "Add two numbers together." The AI reads this sentence to decide when add is useful.`,
   },
   {
-    lineNumber: 53,
-    variables: [
-      { name: 'function_name', value: '"run_command"' },
-      { name: 'arguments', value: '{"command": "ls"}', isNew: true },
-    ],
-    output: '',
-    explanation: 'Arguments parsed: command = "ls". The AI translated natural language into the correct Unix command. The function will now execute this using Python\'s subprocess module.',
+    line: 28,
+    anim: 'defineTools',
+    text: `The lookup description: "Search for a concept or term in the notes file." It is very different from add, so the AI can tell them apart.`,
   },
   {
-    lineNumber: 55,
-    variables: [
-      { name: 'function_name', value: '"run_command"' },
-      { name: 'arguments', value: '{"command": "ls"}' },
-      { name: 'result', value: '"main.py\\nrequirements.txt\\nREADME.md\\ndata/\\noutputs/"', isNew: true },
-    ],
-    output: '[Debug: Running REAL shell command: ls]\n--- Command output: main.py requirements.txt README.md data/ outputs/ ---',
-    animationTrigger: 'agentLoop-execute',
-    explanation: 'subprocess.run("ls") actually ran on the real filesystem and returned the directory listing. This is REAL execution — the agent has genuine system access.',
+    line: 30,
+    anim: 'defineTools',
+    text: `lookup needs one parameter: query, a string. If the AI picks lookup, it must fill in query itself.`,
   },
   {
-    lineNumber: 58,
-    variables: [
-      { name: 'result', value: '"main.py\\nrequirements.txt\\nREADME.md\\ndata/\\noutputs/"' },
-      { name: 'messages', value: '[system, user, assistant(run_command), tool(result=file_listing)]', isChanged: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-return',
-    explanation: 'The actual file listing is appended to messages. The AI will now interpret these results and present them in a human-friendly format with context.',
+    line: 35,
+    anim: 'addSystemMsg',
+    set: { system_prompt: '"You are StudyBuddy - a friendly AI assistant..."' },
+    text: `The system prompt gives the AI its role: a friendly study helper.`,
   },
   {
-    lineNumber: 62,
-    variables: [
-      { name: 'result', value: '"main.py\\nrequirements.txt\\nREADME.md\\ndata/\\noutputs/"' },
-      { name: 'messages', value: '[system, user, assistant(run_command), tool(result=file_listing)]' },
-    ],
-    output: '--- Sending result back to AI... ---',
-    animationTrigger: 'agentLoop-send2',
-    explanation: 'Second API call: the AI receives the real directory listing. It will now format and explain the results in plain English for the user.',
+    line: 37,
+    text: `Lines 36–37 add simple rules: math question → calculator (add), concept question → lookup. Hints plus descriptions make the choice easy.`,
   },
   {
-    lineNumber: 70,
-    variables: [
-      { name: 'final_answer', value: '"The directory contains 5 items..."', isNew: true },
-    ],
-    output: '--- Final Answer from AI: ---\nThe current directory contains 5 items:\n- main.py — your main Python script\n- requirements.txt — project dependencies\n- README.md — project documentation\n- data/ — a folder (likely contains input data)\n- outputs/ — a folder (likely contains results)\n\nWould you like me to read any of these files?',
-    animationTrigger: 'agentLoop-finalAnswer',
-    explanation: 'Terminal assistant complete! Plain English question → AI picks "ls" → real shell execution → AI explains results in plain English. No terminal knowledge required from the user.',
+    line: 38,
+    set: { user_query: '"What is LangChain?"' },
+    text: `The student's question: "What is LangChain?" It's a concept question, not a math question.`,
   },
-];
+  {
+    line: 40,
+    set: { messages: `[system, ${MT_USER}]` },
+    text: `messages is the chat history we send: the system prompt first, then the user's question.`,
+  },
+  {
+    line: 46,
+    anim: 'agentLoop-send',
+    text: `We send the messages AND the tools menu to the AI. Nothing runs on our side yet; the AI only reads.`,
+  },
+  {
+    line: 47,
+    anim: 'apiProcessing',
+    text: `The AI compares the question with each description. "Add two numbers" doesn't fit. "Search for a concept" fits "What is LangChain?".`,
+  },
+  {
+    line: 49,
+    anim: 'agentLoop-decide',
+    set: { assistant_message: '<tool_calls=[lookup(query="LangChain")], content=None>' },
+    text: `The AI replies with a tool request, not text: "please call lookup with query = LangChain". Its content is empty for now.`,
+  },
+  {
+    line: 52,
+    anim: 'toolSelect-lookup',
+    set: { tool_call: '<id="call_1", function=lookup>' },
+    text: `tool_calls is a list, because the AI may ask for several tools at once. [0] takes the first (and only) request.`,
+  },
+  {
+    line: 53,
+    anim: 'toolSelect-lookup',
+    set: { tool_name: '"lookup"' },
+    text: `tool_name is "lookup". Look at the tools panel: the AI chose lookup, not add.`,
+  },
+  {
+    line: 54,
+    anim: 'toolSelect-lookup',
+    set: { args: '{"query": "LangChain"}' },
+    text: `The arguments arrive as JSON text. json.loads turns them into a Python dict: {"query": "LangChain"}.`,
+  },
+  {
+    line: 58,
+    anim: 'toolSelect-lookup',
+    text: `Now our code runs the request. tool_name is not "add", so Python skips the first branch. tool_name == "lookup" is True, so we land here.`,
+  },
+  {
+    line: 59,
+    anim: 'agentLoop-execute',
+    set: { result: `"${LC_LINE}"` },
+    text: `**args unpacks the dict, so lookup(**args) means lookup(query="LangChain"). It returns the matching line from the notes.`,
+  },
+  {
+    line: 62,
+    anim: 'agentLoop-execute',
+    out: `Tool result: ${LC_LINE}`,
+    text: `We print the tool's result so we can see it in the console.`,
+  },
+  {
+    line: 65,
+    anim: 'agentLoop-execute',
+    set: { messages: `[system, ${MT_USER}, assistant(tool_calls)]` },
+    text: `We add the AI's tool request to the history. The AI must see its own request before it sees the answer.`,
+  },
+  {
+    line: 66,
+    anim: 'agentLoop-return',
+    set: { messages: `[system, ${MT_USER}, assistant(tool_calls), tool("LangChain is a framework...")]` },
+    text: `Then we add the result with role "tool". tool_call_id links this answer to the exact request it answers.`,
+  },
+  {
+    line: 72,
+    anim: 'agentLoop-send2',
+    text: `Second API call with the updated history. No tools this time: we only want a friendly written answer.`,
+  },
+  {
+    line: 75,
+    anim: 'agentLoop-finalAnswer',
+    set: { response_final: '<ChatCompletion>', final_answer: MT_FINAL },
+    text: `The AI replies with normal text. We take .content and store it in final_answer.`,
+  },
+  {
+    line: 76,
+    anim: 'agentLoop-final',
+    out: `StudyBuddy: ${MT_FINAL.slice(1, -1)}`,
+    text: `We print the answer. The AI turned the plain notes line into a friendly explanation.`,
+  },
+  {
+    line: 76,
+    anim: 'agentLoop-final',
+    text: `What you learned: 1) The AI picks a tool by reading the descriptions. 2) We run the chosen function ourselves. 3) A second call turns the result into an answer.`,
+  },
+]);
+
+// ===========================================================================
+// Lesson 9: studyBuddyProTrace — 7 tools, simple interest question
+// ===========================================================================
+const SI_USER = '{role:"user", content:"Find the simple interest on 1000 at 5% for 2 years"}';
+const SI_FINAL = '"The simple interest is 100 💰. Formula: (1000 × 5 × 2) / 100 = 100. Great job practising! 🎉"';
+
+export const studyBuddyProTrace: TraceStep[] = build([
+  {
+    line: 1,
+    text: `StudyBuddy Pro works like StudyBuddy, but with SEVEN tools. New: instead of a long if/elif chain, we pick the function from a dictionary (a lookup table).`,
+  },
+  {
+    line: 3,
+    anim: 'import',
+    text: `Same imports as before: OpenAI (line 2) to talk to the AI, and json to read its arguments.`,
+  },
+  {
+    line: 4,
+    set: { client: 'OpenAI()' },
+    text: `client is our connection to OpenAI, just like last lesson.`,
+  },
+  {
+    line: 7,
+    anim: 'defineTools',
+    set: {
+      add: 'function(a, b)',
+      subtract: 'function(a, b)',
+      multiply: 'function(a, b)',
+      divide: 'function(a, b)',
+      percentage: 'function(part, total)',
+    },
+    text: `Lines 7–11 are five short math tools: add, subtract, multiply, divide and percentage. Each fits on one line.`,
+  },
+  {
+    line: 12,
+    anim: 'defineTools',
+    set: { simple_interest: 'function(principal, rate, time)' },
+    text: `simple_interest takes three inputs and returns (principal × rate × time) / 100. Our question will need this one.`,
+  },
+  {
+    line: 13,
+    anim: 'defineTools',
+    set: { lookup: 'function(query)' },
+    text: `lookup is the notes search from last lesson, unchanged. That makes 7 tools in total.`,
+  },
+  {
+    line: 21,
+    anim: 'defineTools',
+    set: { tools: '[add, subtract, multiply, divide, percentage, simple_interest, lookup]' },
+    text: `The menu now has 7 entries. {...} only hides the parameters to save space; the real file writes them out.`,
+  },
+  {
+    line: 29,
+    anim: 'defineTools',
+    text: `The simple_interest description even includes the formula. Clear descriptions help the AI choose correctly among many similar math tools.`,
+  },
+  {
+    line: 31,
+    anim: 'defineTools',
+    text: `It needs three numbers: principal, rate and time. All three are required, so the AI must find each one in the question.`,
+  },
+  {
+    line: 39,
+    anim: 'addSystemMsg',
+    set: { system_prompt: '"You are StudyBuddy Pro - a smart and friendly AI tutor..."' },
+    text: `The system prompt lists what the tutor can do and asks it to always choose the correct function.`,
+  },
+  {
+    line: 43,
+    set: { user_query: '"Find the simple interest on 1000 at 5% for 2 years"' },
+    text: `The question hides three numbers: 1000 (principal), 5% (rate) and 2 years (time).`,
+  },
+  {
+    line: 45,
+    set: { messages: `[system, ${SI_USER}]` },
+    text: `messages holds the system prompt and the user's question, the same shape as before.`,
+  },
+  {
+    line: 50,
+    anim: 'agentLoop-send',
+    text: `We send the messages and all 7 tool descriptions to the AI.`,
+  },
+  {
+    line: 51,
+    anim: 'apiProcessing',
+    text: `The AI scans the 7 descriptions. "Simple interest" matches one exactly. It also maps 1000 → principal, 5 → rate, 2 → time.`,
+  },
+  {
+    line: 53,
+    anim: 'agentLoop-decide',
+    set: { assistant_message: '<tool_calls=[simple_interest(principal=1000, rate=5, time=2)], content=None>' },
+    text: `The AI replies with a tool request: call simple_interest with those three numbers. No text answer yet.`,
+  },
+  {
+    line: 54,
+    anim: 'toolSelect-simple_interest',
+    set: { tool_call: '<id="call_1", function=simple_interest>' },
+    text: `We take the first (and only) request from the tool_calls list.`,
+  },
+  {
+    line: 55,
+    anim: 'toolSelect-simple_interest',
+    set: { tool_name: '"simple_interest"' },
+    text: `tool_name is "simple_interest". Out of 7 tools, the AI picked the right one.`,
+  },
+  {
+    line: 56,
+    anim: 'toolSelect-simple_interest',
+    set: { args: '{"principal": 1000, "rate": 5, "time": 2}' },
+    text: `json.loads turns the AI's argument text into a Python dict with three keys: principal, rate and time.`,
+  },
+  {
+    line: 59,
+    anim: 'toolSelect-simple_interest',
+    set: { available_functions: '{"add": add, "subtract": subtract, ... "lookup": lookup}' },
+    text: `available_functions is a dictionary: names on the left, functions on the right. Think of a phone contact list: name → number.`,
+  },
+  {
+    line: 60,
+    anim: 'toolSelect-simple_interest',
+    text: `Look closely: "add" in quotes is just text. add without quotes is the real function. The dict links the text the AI sends to our code.`,
+  },
+  {
+    line: 64,
+    anim: 'toolSelect-simple_interest',
+    set: { function_to_call: 'simple_interest' },
+    text: `available_functions["simple_interest"] gives back the simple_interest function itself. One lookup replaces seven if/elif checks.`,
+  },
+  {
+    line: 65,
+    anim: 'agentLoop-execute',
+    text: `**args unpacks the dict: {"principal": 1000, "rate": 5, "time": 2} becomes principal=1000, rate=5, time=2.`,
+  },
+  {
+    line: 65,
+    anim: 'agentLoop-execute',
+    set: { result: '100.0' },
+    text: `So this runs simple_interest(principal=1000, rate=5, time=2) = (1000 × 5 × 2) / 100 = 100.0. Real Python did the math, not the AI.`,
+  },
+  {
+    line: 66,
+    anim: 'agentLoop-execute',
+    out: 'Tool result: 100.0',
+    text: `We print the result so we can check it: 100.0.`,
+  },
+  {
+    line: 69,
+    anim: 'agentLoop-execute',
+    set: { messages: `[system, ${SI_USER}, assistant(tool_calls)]` },
+    text: `We add the AI's tool request to the history first.`,
+  },
+  {
+    line: 70,
+    anim: 'agentLoop-return',
+    set: { messages: `[system, ${SI_USER}, assistant(tool_calls), tool("100.0")]` },
+    text: `Then the result, with role "tool" and the matching tool_call_id. str(result) turns 100.0 into text, because message content must be text.`,
+  },
+  {
+    line: 76,
+    anim: 'agentLoop-send2',
+    text: `Second API call: the AI now sees the question, its own request, and the result 100.0.`,
+  },
+  {
+    line: 79,
+    anim: 'agentLoop-finalAnswer',
+    set: { response_final: '<ChatCompletion>', final_answer: SI_FINAL },
+    text: `The AI writes a friendly explanation using the real result. We store the text in final_answer.`,
+  },
+  {
+    line: 80,
+    anim: 'agentLoop-final',
+    out: `StudyBuddy Pro: ${SI_FINAL.slice(1, -1)}`,
+    text: `We print the tutor's answer.`,
+  },
+  {
+    line: 80,
+    anim: 'agentLoop-final',
+    text: `What you learned: 1) Good descriptions let the AI pick from many tools. 2) A dict maps names to functions. 3) **args turns a dict into named inputs.`,
+  },
+]);
+
+// ===========================================================================
+// Lesson 10: terminalAssistantTrace — "What files are in this folder?" → ls
+// ===========================================================================
+const TA_Q = 'What files are in this folder?';
+const TA_USER = `{role:"user", content:"${TA_Q}"}`;
+const LS_OUT = '"main.py\\nnotes.txt\\nREADME.md\\n"';
+const TA_ANSWER = 'This folder has 3 files: main.py, notes.txt and README.md.';
+
+export const terminalAssistantTrace: TraceStep[] = build([
+  {
+    line: 1,
+    text: `Our last agent works on your real computer: it runs commands, reads files and writes files. New: a chat loop that keeps going, and an agent loop that can use tools many times.`,
+  },
+  {
+    line: 3,
+    anim: 'import',
+    text: `subprocess is new. It is Python's built-in way to run terminal commands, as if you typed them yourself. (Line 5 creates the usual OpenAI client.)`,
+  },
+  {
+    line: 8,
+    anim: 'defineTools',
+    set: { run_command: 'function(command)' },
+    text: `Tool 1: run_command takes a command like "ls" and returns what the terminal prints. We'll look inside when it actually runs.`,
+  },
+  {
+    line: 16,
+    anim: 'defineTools',
+    set: { read_file: 'function(path)', write_file: 'function(path, content)' },
+    text: `Tools 2 and 3: read_file returns a file's text, and write_file (line 20) saves text into a file.`,
+  },
+  {
+    line: 26,
+    anim: 'defineTools',
+    set: { tools: '[run_command, read_file, write_file]' },
+    text: `The menu lists these three tools. The descriptions tell the AI when each one is useful.`,
+  },
+  {
+    line: 33,
+    anim: 'defineTools',
+    set: { available_functions: '{"run_command": run_command, "read_file": read_file, "write_file": write_file}' },
+    text: `Same trick as Study Buddy Pro: a dictionary from each tool's name (text) to the real Python function.`,
+  },
+  {
+    line: 41,
+    anim: 'addSystemMsg',
+    set: { system_prompt: '"You are a friendly terminal assistant..."' },
+    text: `The system prompt (from line 39) describes the assistant. This line asks it to confirm before destructive commands like rm (delete). Helpful, but only a request.`,
+  },
+  {
+    line: 42,
+    set: { messages: '[system]' },
+    text: `messages starts with only the system prompt. It grows with every question, tool result and answer; it is the assistant's memory.`,
+  },
+  {
+    line: 45,
+    text: `The OUTER loop is the chat loop. It repeats: ask the user, answer, ask again, until the user types exit.`,
+  },
+  {
+    line: 46,
+    set: { user_input: `"${TA_Q}"` },
+    out: `You: ${TA_Q}`,
+    text: `input() pauses and waits for you to type. The user types: "What files are in this folder?"`,
+  },
+  {
+    line: 47,
+    text: `Is it "exit"? strip() removes extra spaces and lower() ignores capitals. It isn't, so we keep going (the empty-input check on line 50 also passes).`,
+  },
+  {
+    line: 52,
+    set: { messages: `[system, ${TA_USER}]` },
+    text: `We add the user's question to messages.`,
+  },
+  {
+    line: 55,
+    text: `The INNER loop is the agent loop. It keeps calling the AI until the AI answers with plain text instead of a tool request.`,
+  },
+  {
+    line: 56,
+    anim: 'agentLoop-send',
+    text: `We send the whole history plus the tools menu to the AI.`,
+  },
+  {
+    line: 57,
+    anim: 'apiProcessing',
+    text: `The AI reads the question and the menu. Listing files is a terminal job, so it picks run_command and writes the command "ls".`,
+  },
+  {
+    line: 59,
+    anim: 'agentLoop-decide',
+    set: { message: '<content=None, tool_calls=[run_command(command="ls")]>' },
+    text: `The reply is a tool request, not text. Line 60 saves it into messages right away so the history stays complete.`,
+  },
+  {
+    line: 62,
+    anim: 'toolSelect-run_command',
+    set: { messages: `[system, ${TA_USER}, assistant(tool_calls)]` },
+    text: `Did the AI ask for tools? Yes, tool_calls has one request. So "not message.tool_calls" is False and we do NOT break yet.`,
+  },
+  {
+    line: 66,
+    anim: 'toolSelect-run_command',
+    set: { tool_call: '<id="call_1", function=run_command>' },
+    text: `The AI may ask for several tools in one reply, so we loop over message.tool_calls. This time there is just one.`,
+  },
+  {
+    line: 67,
+    anim: 'toolSelect-run_command',
+    set: { function_name: '"run_command"' },
+    text: `function_name is "run_command": the AI chose the terminal tool.`,
+  },
+  {
+    line: 68,
+    anim: 'toolSelect-run_command',
+    set: { arguments: '{"command": "ls"}' },
+    text: `json.loads turns the arguments into a dict: {"command": "ls"}. The AI translated "what files" into the shell command ls.`,
+  },
+  {
+    line: 69,
+    anim: 'toolSelect-run_command',
+    out: '  [Using tool: run_command]',
+    text: `We print which tool is being used, so the user can see what the assistant is doing.`,
+  },
+  {
+    line: 71,
+    anim: 'toolSelect-run_command',
+    set: { function_to_call: 'run_command' },
+    text: `We look up "run_command" in available_functions and get the real run_command function.`,
+  },
+  {
+    line: 72,
+    anim: 'agentLoop-execute',
+    text: `function_to_call(**arguments) means run_command(command="ls"). Python now jumps into the run_command function.`,
+  },
+  {
+    line: 10,
+    anim: 'agentLoop-execute',
+    set: { command: '"ls"' },
+    text: `Inside run_command, subprocess.run runs "ls" in a real shell. capture_output collects the printed text; timeout=30 stops it after 30 seconds.`,
+  },
+  {
+    line: 10,
+    anim: 'agentLoop-execute',
+    text: `Safety note: shell=True runs ANY command the AI writes, even one that deletes files. In real apps, show the command and ask the user to confirm first.`,
+  },
+  {
+    line: 11,
+    anim: 'agentLoop-execute',
+    set: { output: LS_OUT },
+    text: `stdout is the normal output and stderr is any error text. We join them so the AI sees both.`,
+  },
+  {
+    line: 72,
+    anim: 'agentLoop-execute',
+    set: { command: null, output: null, result: LS_OUT },
+    text: `run_command returns the text, and we are back in the loop. result now holds the file list.`,
+  },
+  {
+    line: 74,
+    anim: 'agentLoop-return',
+    set: { messages: `[system, ${TA_USER}, assistant(tool_calls), tool("main.py...")]` },
+    text: `We append the result with role "tool" and the tool_call_id, so the AI knows which request it answers.`,
+  },
+  {
+    line: 56,
+    anim: 'agentLoop-send2',
+    text: `The for loop is done, so the inner while loops back. We call the AI again; now messages includes the ls output.`,
+  },
+  {
+    line: 63,
+    anim: 'agentLoop-finalAnswer',
+    set: {
+      message: `<content="${TA_ANSWER}", tool_calls=None>`,
+      'message.content': `"${TA_ANSWER}"`,
+      messages: `[system, ${TA_USER}, assistant(tool_calls), tool("main.py..."), assistant("This folder has 3 files...")]`,
+    },
+    out: `Assistant: ${TA_ANSWER}`,
+    text: `This reply is plain text with no tool_calls, so the if on line 62 is True. We print the AI's answer.`,
+  },
+  {
+    line: 64,
+    anim: 'agentLoop-final',
+    text: `break leaves the INNER agent loop only. The outer chat loop keeps running and asks for the next question.`,
+  },
+  {
+    line: 46,
+    set: { user_input: '"exit"' },
+    out: 'You: exit',
+    text: `Back at the top of the chat loop, input() waits again. This time the user types exit.`,
+  },
+  {
+    line: 48,
+    out: 'Goodbye!',
+    text: `The exit check on line 47 is True, so we print Goodbye. The break on the next line leaves the OUTER loop and the program ends.`,
+  },
+  {
+    line: 45,
+    text: `What you learned: 1) The chat loop asks questions; the agent loop runs tools until there's a text answer. 2) One reply can hold many tool calls. 3) Always confirm risky commands.`,
+  },
+]);

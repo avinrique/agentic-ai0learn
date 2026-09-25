@@ -140,7 +140,7 @@ export default function AgentDataFlow({
       station = 'final';
       phase = 'done';
       isFinalAnswer = true;
-      const msgV = variables.find(v => v.name === 'assistant_msg' || v.name === 'final_answer' || v.name === 'content');
+      const msgV = variables.find(v => v.name === 'assistant_msg' || v.name === 'final_answer' || v.name === 'content' || v.name === 'message.content');
       if (msgV) finalAnswerVal = msgV.value;
       statusText = 'AI generated final answer';
     } else {

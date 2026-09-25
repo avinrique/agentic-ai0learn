@@ -1,161 +1,376 @@
-import { TraceStep, TraceVariant } from '@/stores/tracerStore';
+import { TraceStep, TraceVariant, Variable } from '@/stores/tracerStore';
 
-// Export 2: simpleAgentTrace — Calculator agent with add tool (18 steps)
-export const simpleAgentTrace: TraceStep[] = [
-  {
-    lineNumber: 2,
-    variables: [{ name: 'module', value: 'json, openai', isNew: true }],
-    output: '',
-    animationTrigger: 'import',
-    explanation: 'Importing json (to parse tool arguments) and OpenAI (for the API).',
-  },
-  {
-    lineNumber: 3,
-    variables: [
-      { name: 'module', value: 'json, openai' },
-      { name: 'client', value: 'OpenAI()', isNew: true },
-    ],
-    output: '',
-    explanation: 'Creating the OpenAI client.',
-  },
-  {
-    lineNumber: 5,
-    variables: [
-      { name: 'client', value: 'OpenAI()' },
-      { name: 'add', value: 'function(a, b) → a + b', isNew: true },
-    ],
-    output: '',
-    explanation: 'We define a REAL Python function called add(). The AI doesn\'t run code — but OUR program can. This is the "tool" the AI will ask us to execute.',
-  },
-  {
-    lineNumber: 10,
-    variables: [
-      { name: 'client', value: 'OpenAI()' },
-      { name: 'add', value: 'function(a, b) → a + b' },
-      { name: 'tools', value: '[{name:"add", desc:"Add two numbers", params:{a,b}}]', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'defineTools',
-    explanation: 'The tools list is a MENU for the AI. Each tool has: name, description (how AI knows WHEN to use it), and parameter schema (what inputs it needs). The AI reads this menu to decide which tool fits.',
-  },
-  {
-    lineNumber: 25,
-    variables: [
-      { name: 'tools', value: '[{name:"add"}]' },
-      { name: 'messages', value: '[{role:"user", content:"What is 45 + 13?"}]', isNew: true },
-    ],
-    output: 'User: What is 45 + 13?',
-    explanation: 'The user asks a math question. We store it in the messages list.',
-  },
-  {
-    lineNumber: 29,
-    variables: [
-      { name: 'tools', value: '[{name:"add"}]' },
-      { name: 'messages', value: '[{role:"user", content:"What is 45 + 13?"}]' },
-    ],
-    output: '--- 1. Sending to AI (with tools)... ---',
-    animationTrigger: 'agentLoop-send',
-    explanation: 'First API call: we send the user message AND the tools menu. tool_choice="auto" lets the AI decide whether to use a tool or answer directly.',
-  },
-  {
-    lineNumber: 29,
-    variables: [
-      { name: 'messages', value: '[{role:"user", content:"What is 45 + 13?"}]' },
-    ],
-    output: '',
-    animationTrigger: 'apiProcessing',
-    explanation: 'The AI reads: "What is 45 + 13?" and sees the add tool on the menu. It thinks: "I need to add 45 and 13. I have an add tool. I should use it!"',
-  },
-  {
-    lineNumber: 35,
-    variables: [
-      { name: 'message', value: '<AssistantMessage: tool_calls=[add(45,13)]>', isNew: true },
-      { name: 'message.content', value: 'null (no text!)', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-decide',
-    explanation: 'The AI did NOT return text! Instead, message.tool_calls contains a request: "Please call add(a=45, b=13)". The AI DECIDED what to call, but it can\'t run code itself.',
-  },
-  {
-    lineNumber: 40,
-    variables: [
-      { name: 'message.tool_calls', value: '[{function: add, args: {a:45, b:13}}]' },
-      { name: 'function_name', value: '"add"', isNew: true },
-    ],
-    output: '--- 2. AI decided to call a function: add ---',
-    animationTrigger: 'toolSelect-add',
-    explanation: 'We check message.tool_calls — the AI chose "add" from our menu! It correctly identified this as an addition problem.',
-  },
-  {
-    lineNumber: 46,
-    variables: [
-      { name: 'function_name', value: '"add"' },
-      { name: 'arguments', value: '{"a": 45, "b": 13}', isNew: true },
-    ],
-    output: '',
-    explanation: 'The AI provided arguments as a JSON string. json.loads() parses it into a Python dict: {a: 45, b: 13}. The AI extracted these numbers from the question!',
-  },
-  {
-    lineNumber: 48,
-    variables: [
-      { name: 'function_name', value: '"add"' },
-      { name: 'arguments', value: '{"a": 45, "b": 13}' },
-      { name: 'result', value: '58', isNew: true },
-    ],
-    output: '[Debug: Running REAL Python code: add(a=45, b=13)]',
-    animationTrigger: 'agentLoop-execute',
-    explanation: 'NOW our real Python code runs: add(45, 13) → 58. The AI DECIDED what to call, our code EXECUTED it. This is the agent pattern!',
-  },
-  {
-    lineNumber: 49,
-    variables: [
-      { name: 'function_name', value: '"add"' },
-      { name: 'result', value: '58' },
-    ],
-    output: '--- 3. Ran function, result: 58 ---',
-    explanation: 'The function returned 58. Now we need to tell the AI the result.',
-  },
-  {
-    lineNumber: 52,
-    variables: [
-      { name: 'result', value: '58' },
-      { name: 'messages', value: '[user, assistant(tool_call), tool(result=58)]', isChanged: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-return',
-    explanation: 'We add the tool result to the messages with role="tool" and the tool_call_id. This tells the AI: "Here\'s the answer to the function you asked for."',
-  },
-  {
-    lineNumber: 58,
-    variables: [
-      { name: 'result', value: '58' },
-      { name: 'messages', value: '[user, assistant(tool_call), tool(result=58)]' },
-    ],
-    output: '--- 4. Sending result back to AI... ---',
-    animationTrigger: 'agentLoop-send2',
-    explanation: 'Second API call: the AI now has the original question AND the tool result (58). It can now formulate a final human-friendly answer.',
-  },
-  {
-    lineNumber: 59,
-    variables: [
-      { name: 'messages', value: '[user, assistant(tool_call), tool(result=58)]' },
-    ],
-    output: '',
-    animationTrigger: 'apiProcessing',
-    explanation: 'The AI sees: question was "45 + 13", tool returned 58. It will now write a natural language answer.',
-  },
-  {
-    lineNumber: 65,
-    variables: [
-      { name: 'final_answer', value: '45 + 13 is 58.', isNew: true },
-    ],
-    output: '--- 5. Final Answer from AI: ---\n45 + 13 is 58.',
-    animationTrigger: 'agentLoop-finalAnswer',
-    explanation: 'Complete agent loop! User → AI (decides tool) → Code (runs tool) → AI (final answer) → User. The AI provided REASONING, your code provided the CAPABILITY.',
-  },
-];
+// ---------------------------------------------------------------------------
+// Helper: build a trace from short step definitions.
+// Variables carry forward from step to step (a variable stays until it is
+// reassigned). `isNew` / `isChanged` are computed automatically.
+// ---------------------------------------------------------------------------
+interface StepDef {
+  line: number;
+  set?: Record<string, string>;
+  out?: string;
+  anim?: string;
+  say: string;
+}
 
-// Export 3: simpleAgentVariants
+function buildTrace(defs: StepDef[]): TraceStep[] {
+  const vars = new Map<string, string>();
+  return defs.map((d) => {
+    const fresh = new Set<string>();
+    const changed = new Set<string>();
+    for (const [name, value] of Object.entries(d.set ?? {})) {
+      if (!vars.has(name)) fresh.add(name);
+      else if (vars.get(name) !== value) changed.add(name);
+      vars.set(name, value);
+    }
+    const variables: Variable[] = Array.from(vars, ([name, value]) => ({
+      name,
+      value,
+      ...(fresh.has(name) ? { isNew: true } : {}),
+      ...(changed.has(name) ? { isChanged: true } : {}),
+    }));
+    const step: TraceStep = { lineNumber: d.line, variables, output: d.out ?? '', explanation: d.say };
+    if (d.anim) step.animationTrigger = d.anim;
+    return step;
+  });
+}
+
+// Animation triggers (see AgentLoopPanel → AgentDataFlow / MessageTimeline / ToolSelectionAnim).
+// HOLD: our code is working between stages. AgentDataFlow shows the neutral User → AI flow;
+//       MessageTimeline and the loop dots ignore it.
+// DONE: after the final answer. AgentDataFlow keeps the final-answer view (it matches "final");
+//       MessageTimeline and the loop dots ignore it, so the answer is not added twice.
+const HOLD = 'agentLoop-hold';
+const DONE = 'agentLoop-finalDone';
+
+// ===========================================================================
+// Lesson 6: Simple Agent (calculator_agent.py) — one tool: add
+// ===========================================================================
+const SA_USER = (q: string) => `[{role:"user", content:"${q}"}]`;
+const SA_WITH_ASST = (q: string, a: number, b: number) =>
+  `[{role:"user", content:"${q}"}, {role:"assistant", tool_calls:[add(${a}, ${b})]}]`;
+const SA_WITH_TOOL = (q: string, a: number, b: number, r: string) =>
+  `[{role:"user", content:"${q}"}, {role:"assistant", tool_calls:[add(${a}, ${b})]}, {role:"tool", tool_call_id:"call_abc123", content:"${r}"}]`;
+const SA_MESSAGE = (a: number, b: number) =>
+  `{role:"assistant", content:None, tool_calls:[{id:"call_abc123", name:"add", arguments:'{"a": ${a}, "b": ${b}}'}]}`;
+const SA_TOOL_CALL = (a: number, b: number) =>
+  `{id:"call_abc123", function:{name:"add", arguments:'{"a": ${a}, "b": ${b}}'}}`;
+
+export const simpleAgentTrace: TraceStep[] = buildTrace([
+  {
+    line: 1,
+    say: 'In this lesson we build our first agent: a calculator. What is new since Part 1: the AI can ask OUR code to run a Python function for it.',
+  },
+  {
+    line: 2,
+    set: { json: 'module' },
+    anim: 'import',
+    say: 'We import json. Later the AI will send us the function inputs as JSON text, and json turns that text into a Python dictionary.',
+  },
+  {
+    line: 4,
+    set: { client: 'OpenAI()' },
+    say: 'Line 3 imports OpenAI, and this line creates the client, exactly like in Part 1. The client is how we talk to the AI.',
+  },
+  {
+    line: 7,
+    set: { add: 'function add(a, b) → a + b' },
+    anim: 'defineTools',
+    say: 'This is our tool. A "tool" is just a normal Python function: add(a, b) returns a + b. Nothing special about it.',
+  },
+  {
+    line: 13,
+    set: { tools: '[{type:"function", function:{name:"add", description:..., parameters:...}}]' },
+    anim: 'defineTools',
+    say: 'Now the tools list. Think of it as a menu we hand to the AI: it lists what our code can do. The AI reads the menu, but it never runs the code.',
+  },
+  {
+    line: 17,
+    anim: 'defineTools',
+    say: 'The "name" is "add". When the AI wants this tool, it sends back this exact name, so it should match our function name.',
+  },
+  {
+    line: 18,
+    anim: 'defineTools',
+    say: 'The "description" says what the tool does. The AI reads this sentence to decide WHEN to use the tool, so write it clearly.',
+  },
+  {
+    line: 19,
+    anim: 'defineTools',
+    say: 'The "parameters" part lists the inputs: a and b, both numbers (lines 22–23). The AI must fill in these values when it asks for the tool.',
+  },
+  {
+    line: 32,
+    set: { messages: SA_USER('What is 45 + 13?') },
+    say: 'The conversation starts. messages is the chat history we send to the AI. Right now it holds one user question: "What is 45 + 13?"',
+  },
+  {
+    line: 33,
+    out: 'User: What is 45 + 13?',
+    say: 'We print the question so we can follow along in the console.',
+  },
+  {
+    line: 36,
+    out: '--- 1. Sending to AI (with tools)... ---',
+    say: 'A label for the console. The next lines make the first call to the AI.',
+  },
+  {
+    line: 40,
+    say: 'This call looks like Part 1, with one new part: tools=tools. We send the menu along with the chat history.',
+  },
+  {
+    line: 41,
+    say: 'tool_choice="auto" means the AI chooses for itself: use a tool, or just answer with text. We do not force it.',
+  },
+  {
+    line: 37,
+    anim: 'agentLoop-send',
+    say: 'Now the request goes out: the messages list plus the tools menu, together in one call.',
+  },
+  {
+    line: 37,
+    set: { response: 'ChatCompletion(...)' },
+    anim: 'apiProcessing',
+    say: 'The AI reads "What is 45 + 13?" and sees the add tool on the menu. It decides that add fits this question.',
+  },
+  {
+    line: 44,
+    set: { message: SA_MESSAGE(45, 13) },
+    anim: 'agentLoop-decide',
+    say: 'The reply is different this time. message.content is None: no text! Instead, message.tool_calls holds a request: "please run add with a=45, b=13". Look at the Variables panel.',
+  },
+  {
+    line: 45,
+    set: { messages: SA_WITH_ASST('What is 45 + 13?', 45, 13) },
+    anim: HOLD,
+    say: 'We add the AI\'s reply to the history. The next call must show that the AI asked for add, or the tool result will make no sense to it.',
+  },
+  {
+    line: 48,
+    anim: HOLD,
+    say: 'Did the AI ask for a tool? Yes, tool_calls is not empty, so we go inside the if. (If the AI had answered with text, the else part would print it.)',
+  },
+  {
+    line: 49,
+    out: '--- 2. AI decided to call: add ---',
+    anim: 'toolSelect-add',
+    say: 'We print the name of the tool the AI picked from our menu: add.',
+  },
+  {
+    line: 51,
+    set: { tool_call: SA_TOOL_CALL(45, 13) },
+    anim: 'toolSelect-add',
+    say: 'tool_calls is a list, so we take the first request. It has three parts: an id, a function name, and the arguments.',
+  },
+  {
+    line: 52,
+    set: { function_name: '"add"' },
+    anim: 'toolSelect-add',
+    say: 'We read the name: function_name = "add". This tells our code WHICH function to run.',
+  },
+  {
+    line: 53,
+    set: { arguments: "{'a': 45, 'b': 13}" },
+    anim: 'toolSelect-add',
+    say: 'The AI can only send text, so the arguments arrive as a string: \'{"a": 45, "b": 13}\'. json.loads turns that string into a real Python dict.',
+  },
+  {
+    line: 55,
+    set: { result: '58' },
+    out: '[Debug: Running REAL Python code: add(a=45, b=13)]',
+    anim: 'agentLoop-execute',
+    say: 'Now OUR code runs the real add function with a=45 and b=13. The Debug line comes from the print inside add. result = 58.',
+  },
+  {
+    line: 56,
+    out: '--- 3. Ran function, result: 58 ---',
+    anim: 'agentLoop-execute',
+    say: 'We print the result. The AI does not know it yet, so next we send it back.',
+  },
+  {
+    line: 60,
+    anim: 'agentLoop-execute',
+    say: 'We add a new message to the history. Its role is "tool", which means: "this is a tool\'s answer", not the user and not the AI.',
+  },
+  {
+    line: 61,
+    anim: 'agentLoop-execute',
+    say: 'tool_call_id copies the id of the AI\'s request ("call_abc123"). The AI can ask for several tools at once, so the id says which request this answer belongs to.',
+  },
+  {
+    line: 62,
+    set: { messages: SA_WITH_TOOL('What is 45 + 13?', 45, 13, '58') },
+    anim: 'agentLoop-return',
+    say: 'The content is the result as text: "58". Now the history holds three messages: the question, the AI\'s request, and the tool\'s answer.',
+  },
+  {
+    line: 65,
+    out: '--- 4. Sending result back to AI... ---',
+    anim: 'agentLoop-send2',
+    say: 'Second call to the AI. We send the whole history again, now including the tool\'s answer.',
+  },
+  {
+    line: 66,
+    set: { final_response: 'ChatCompletion(...)' },
+    anim: 'apiProcessing',
+    say: 'This call passes only messages, no tools. The AI reads the result "58" and writes a normal answer for the user.',
+  },
+  {
+    line: 71,
+    set: { final_answer: '45 + 13 is 58.' },
+    out: '--- 5. Final Answer from AI: ---',
+    anim: 'agentLoop-finalAnswer',
+    say: 'This time the reply is plain text, not a tool request. We print a header for the final answer.',
+  },
+  {
+    line: 72,
+    out: '45 + 13 is 58.',
+    anim: DONE,
+    say: 'We print the AI\'s answer: "45 + 13 is 58." The AI wrote the sentence, but the math was done by our Python code.',
+  },
+  {
+    line: 72,
+    anim: DONE,
+    say: 'What you learned: (1) a tool is a normal function plus a menu entry; (2) the AI replies with a tool_call and our code runs it; (3) we send the result back with role "tool".',
+  },
+]);
+
+const simpleAgent100Plus200Steps: TraceStep[] = buildTrace([
+  {
+    line: 1,
+    say: 'Same calculator agent, new question: "What is 100 + 200?" Watch how the same code handles different numbers.',
+  },
+  {
+    line: 4,
+    set: { json: 'module', client: 'OpenAI()' },
+    anim: 'import',
+    say: 'Lines 2–4: import json and OpenAI, then create the client. Same as before.',
+  },
+  {
+    line: 7,
+    set: { add: 'function add(a, b) → a + b' },
+    anim: 'defineTools',
+    say: 'Our tool: a normal Python function that adds two numbers.',
+  },
+  {
+    line: 13,
+    set: { tools: '[{type:"function", function:{name:"add", description:..., parameters:...}}]' },
+    anim: 'defineTools',
+    say: 'The tools menu with one entry, add. The AI uses the description to decide when to use it.',
+  },
+  {
+    line: 32,
+    set: { messages: SA_USER('What is 100 + 200?') },
+    say: 'The history starts with the new question: "What is 100 + 200?"',
+  },
+  {
+    line: 33,
+    out: 'User: What is 100 + 200?',
+    say: 'We print the question.',
+  },
+  {
+    line: 36,
+    out: '--- 1. Sending to AI (with tools)... ---',
+    say: 'A label for the first call.',
+  },
+  {
+    line: 37,
+    anim: 'agentLoop-send',
+    say: 'First call: we send the history and the tools menu.',
+  },
+  {
+    line: 37,
+    set: { response: 'ChatCompletion(...)' },
+    anim: 'apiProcessing',
+    say: 'The AI reads "100 + 200" and decides the add tool fits.',
+  },
+  {
+    line: 44,
+    set: { message: SA_MESSAGE(100, 200) },
+    anim: 'agentLoop-decide',
+    say: 'Again no text. message.tool_calls asks us to run add with a=100, b=200.',
+  },
+  {
+    line: 45,
+    set: { messages: SA_WITH_ASST('What is 100 + 200?', 100, 200) },
+    anim: HOLD,
+    say: 'We save the AI\'s request in the history.',
+  },
+  {
+    line: 49,
+    out: '--- 2. AI decided to call: add ---',
+    anim: 'toolSelect-add',
+    say: 'tool_calls is not empty, so we are inside the if. We print the tool name: add.',
+  },
+  {
+    line: 51,
+    set: { tool_call: SA_TOOL_CALL(100, 200) },
+    anim: 'toolSelect-add',
+    say: 'We take the first (and only) request: its id, name and arguments.',
+  },
+  {
+    line: 52,
+    set: { function_name: '"add"' },
+    anim: 'toolSelect-add',
+    say: 'function_name = "add".',
+  },
+  {
+    line: 53,
+    set: { arguments: "{'a': 100, 'b': 200}" },
+    anim: 'toolSelect-add',
+    say: 'json.loads turns the text \'{"a": 100, "b": 200}\' into a Python dict.',
+  },
+  {
+    line: 55,
+    set: { result: '300' },
+    out: '[Debug: Running REAL Python code: add(a=100, b=200)]',
+    anim: 'agentLoop-execute',
+    say: 'Our Python code runs add(100, 200). result = 300.',
+  },
+  {
+    line: 56,
+    out: '--- 3. Ran function, result: 300 ---',
+    anim: 'agentLoop-execute',
+    say: 'We print the result.',
+  },
+  {
+    line: 61,
+    anim: 'agentLoop-execute',
+    say: 'We build a role "tool" message. tool_call_id links this answer to the AI\'s request.',
+  },
+  {
+    line: 62,
+    set: { messages: SA_WITH_TOOL('What is 100 + 200?', 100, 200, '300') },
+    anim: 'agentLoop-return',
+    say: 'The content is "300". The history now has the question, the request and the answer.',
+  },
+  {
+    line: 65,
+    out: '--- 4. Sending result back to AI... ---',
+    anim: 'agentLoop-send2',
+    say: 'Second call: we send the whole history back.',
+  },
+  {
+    line: 66,
+    set: { final_response: 'ChatCompletion(...)' },
+    anim: 'apiProcessing',
+    say: 'No tools this time. The AI reads the result and writes an answer.',
+  },
+  {
+    line: 71,
+    set: { final_answer: '100 + 200 is 300.' },
+    out: '--- 5. Final Answer from AI: ---',
+    anim: 'agentLoop-finalAnswer',
+    say: 'The reply is plain text. We print a header.',
+  },
+  {
+    line: 72,
+    out: '100 + 200 is 300.',
+    anim: DONE,
+    say: 'Done: same agent, different numbers. The AI chose the tool; our code did the math.',
+  },
+]);
+
 export const simpleAgentVariants: TraceVariant[] = [
   {
     id: 'default',
@@ -167,427 +382,311 @@ export const simpleAgentVariants: TraceVariant[] = [
     id: 'variant2',
     label: 'What is 100 + 200?',
     inputValue: 'What is 100 + 200?',
-    steps: [
-      { lineNumber: 2, variables: [{ name: 'module', value: 'json, openai', isNew: true }], output: '', animationTrigger: 'import', explanation: 'Importing json and OpenAI.' },
-      { lineNumber: 3, variables: [{ name: 'module', value: 'json, openai' }, { name: 'client', value: 'OpenAI()', isNew: true }], output: '', explanation: 'Creating OpenAI client.' },
-      { lineNumber: 5, variables: [{ name: 'client', value: 'OpenAI()' }, { name: 'add', value: 'function(a, b) → a + b', isNew: true }], output: '', explanation: 'Defining the add function.' },
-      { lineNumber: 10, variables: [{ name: 'add', value: 'function(a, b)' }, { name: 'tools', value: '[{name:"add"}]', isNew: true }], output: '', animationTrigger: 'defineTools', explanation: 'The tools menu — same as before.' },
-      { lineNumber: 25, variables: [{ name: 'tools', value: '[{name:"add"}]' }, { name: 'messages', value: '[{role:"user", content:"What is 100 + 200?"}]', isNew: true }], output: 'User: What is 100 + 200?', explanation: 'Different question this time — bigger numbers!' },
-      { lineNumber: 29, variables: [{ name: 'messages', value: '[{role:"user", content:"What is 100 + 200?"}]' }], output: '--- 1. Sending to AI (with tools)... ---', animationTrigger: 'agentLoop-send', explanation: 'Sending to AI with the tools menu.' },
-      { lineNumber: 29, variables: [{ name: 'messages', value: '[...]' }], output: '', animationTrigger: 'apiProcessing', explanation: 'AI reads "100 + 200" and matches it to the add tool.' },
-      { lineNumber: 35, variables: [{ name: 'message', value: '<tool_calls=[add(100,200)]>', isNew: true }], output: '', animationTrigger: 'agentLoop-decide', explanation: 'AI requests: add(a=100, b=200).' },
-      { lineNumber: 40, variables: [{ name: 'function_name', value: '"add"', isNew: true }], output: '--- 2. AI decided to call: add ---', animationTrigger: 'toolSelect-add', explanation: 'Tool selected: add.' },
-      { lineNumber: 46, variables: [{ name: 'function_name', value: '"add"' }, { name: 'arguments', value: '{"a": 100, "b": 200}', isNew: true }], output: '', explanation: 'Arguments parsed from JSON.' },
-      { lineNumber: 48, variables: [{ name: 'arguments', value: '{"a": 100, "b": 200}' }, { name: 'result', value: '300', isNew: true }], output: '[Debug: Running REAL Python code: add(a=100, b=200)]', animationTrigger: 'agentLoop-execute', explanation: 'add(100, 200) = 300!' },
-      { lineNumber: 49, variables: [{ name: 'result', value: '300' }], output: '--- 3. Ran function, result: 300 ---', explanation: 'Result: 300.' },
-      { lineNumber: 52, variables: [{ name: 'result', value: '300' }, { name: 'messages', value: '[user, assistant, tool(300)]', isChanged: true }], output: '', animationTrigger: 'agentLoop-return', explanation: 'Sending result back.' },
-      { lineNumber: 58, variables: [{ name: 'messages', value: '[user, assistant, tool(300)]' }], output: '--- 4. Sending result back to AI... ---', animationTrigger: 'agentLoop-send2', explanation: 'Second API call with result.' },
-      { lineNumber: 59, variables: [], output: '', animationTrigger: 'apiProcessing', explanation: 'AI formulates final answer.' },
-      { lineNumber: 65, variables: [{ name: 'final_answer', value: '100 + 200 is 300.', isNew: true }], output: '--- 5. Final Answer: ---\n100 + 200 is 300.', animationTrigger: 'agentLoop-finalAnswer', explanation: 'Done! Same agent loop, different numbers.' },
-    ],
+    steps: simpleAgent100Plus200Steps,
   },
 ];
 
-// Export 4: multiFunctionTrace — (50 * 2) - 15 needs multiply then subtract (20 steps)
-export const multiFunctionTrace: TraceStep[] = [
-  {
-    lineNumber: 1,
-    variables: [{ name: 'module', value: 'json, openai', isNew: true }],
-    output: '',
-    animationTrigger: 'import',
-    explanation: 'Importing json and OpenAI. We will need json to parse the arguments the AI sends back for each tool call.',
-  },
-  {
-    lineNumber: 3,
-    variables: [
-      { name: 'module', value: 'json, openai' },
-      { name: 'client', value: 'OpenAI()', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'createClient',
-    explanation: 'Creating the OpenAI client. This is the same first step as always.',
-  },
-  {
-    lineNumber: 5,
-    variables: [
-      { name: 'client', value: 'OpenAI()' },
-      { name: 'add', value: 'function(a, b) → a + b', isNew: true },
-      { name: 'subtract', value: 'function(a, b) → a - b', isNew: true },
-      { name: 'multiply', value: 'function(a, b) → a * b', isNew: true },
-      { name: 'divide', value: 'function(a, b) → a / b', isNew: true },
-    ],
-    output: '',
-    explanation: 'We define FOUR real Python functions: add, subtract, multiply, divide. These are the actual tools the AI can request. The more tools you define, the more capable your agent becomes.',
-  },
-  {
-    lineNumber: 20,
-    variables: [
-      { name: 'client', value: 'OpenAI()' },
-      { name: 'add', value: 'function(a, b) → a + b' },
-      { name: 'subtract', value: 'function(a, b) → a - b' },
-      { name: 'multiply', value: 'function(a, b) → a * b' },
-      { name: 'divide', value: 'function(a, b) → a / b' },
-      { name: 'tools', value: '[add, subtract, multiply, divide]', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'defineTools',
-    explanation: 'The tools menu now has FOUR options. The AI will read this menu and pick the right tool(s) for the job. For "(50 * 2) - 15", it will need multiply first, then subtract.',
-  },
-  {
-    lineNumber: 40,
-    variables: [
-      { name: 'tools', value: '[add, subtract, multiply, divide]' },
-      { name: 'messages', value: '[{role:"system", content:"You are a calculator..."}, {role:"user", content:"What is (50 * 2) - 15?"}]', isNew: true },
-    ],
-    output: 'User: What is (50 * 2) - 15?',
-    animationTrigger: 'addSystemMsg',
-    explanation: 'We set up a system prompt telling the AI it is a calculator agent, and add the user question. This multi-step expression requires two operations in sequence.',
-  },
-  {
-    lineNumber: 45,
-    variables: [
-      { name: 'tools', value: '[add, subtract, multiply, divide]' },
-      { name: 'messages', value: '[system, {role:"user", content:"What is (50 * 2) - 15?"}]' },
-    ],
-    output: '--- Loop 1: Sending to AI (with tools)... ---',
-    animationTrigger: 'agentLoop-send',
-    explanation: 'LOOP ITERATION 1: First API call with the user question and four tools. The AI must figure out the order of operations: multiply first (50 * 2), then subtract 15.',
-  },
-  {
-    lineNumber: 45,
-    variables: [
-      { name: 'messages', value: '[system, {role:"user", content:"What is (50 * 2) - 15?"}]' },
-    ],
-    output: '',
-    animationTrigger: 'apiProcessing',
-    explanation: 'The AI analyzes "(50 * 2) - 15" and follows order of operations. It recognizes it must multiply 50 by 2 first before it can do the subtraction.',
-  },
-  {
-    lineNumber: 50,
-    variables: [
-      { name: 'message', value: '<AssistantMessage: tool_calls=[multiply(50,2)]>', isNew: true },
-      { name: 'message.content', value: 'null', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-decide',
-    explanation: 'The AI chose multiply(a=50, b=2) as the first step! It did NOT choose subtract yet — it knows it needs the result of the multiplication before it can subtract.',
-  },
-  {
-    lineNumber: 55,
-    variables: [
-      { name: 'message.tool_calls', value: '[{function: multiply, args: {a:50, b:2}}]' },
-      { name: 'function_name', value: '"multiply"', isNew: true },
-    ],
-    output: '--- AI decided to call: multiply ---',
-    animationTrigger: 'toolSelect-multiply',
-    explanation: 'Tool selected: multiply. The AI correctly identified this as the first operation needed to solve "(50 * 2) - 15".',
-  },
-  {
-    lineNumber: 58,
-    variables: [
-      { name: 'function_name', value: '"multiply"' },
-      { name: 'arguments', value: '{"a": 50, "b": 2}', isNew: true },
-    ],
-    output: '',
-    explanation: 'Parsing the arguments the AI provided: a=50, b=2. The AI extracted these exact values from the expression "(50 * 2) - 15".',
-  },
-  {
-    lineNumber: 60,
-    variables: [
-      { name: 'function_name', value: '"multiply"' },
-      { name: 'arguments', value: '{"a": 50, "b": 2}' },
-      { name: 'result', value: '100', isNew: true },
-    ],
-    output: '[Debug: Running REAL Python code: multiply(a=50, b=2)]\n--- Ran function, result: 100 ---',
-    animationTrigger: 'agentLoop-execute',
-    explanation: 'multiply(50, 2) = 100. Our Python code runs the actual calculation. Now we must send this intermediate result back to the AI so it can complete the second step.',
-  },
-  {
-    lineNumber: 63,
-    variables: [
-      { name: 'result', value: '100' },
-      { name: 'messages', value: '[system, user, assistant(multiply), tool(result=100)]', isChanged: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-return',
-    explanation: 'We append the tool result (100) to messages. The conversation now shows: user asked → AI requested multiply → we ran it → result is 100. The AI will continue from here.',
-  },
-  {
-    lineNumber: 45,
-    variables: [
-      { name: 'result', value: '100' },
-      { name: 'messages', value: '[system, user, assistant(multiply), tool(result=100)]' },
-    ],
-    output: '--- Loop 2: Sending to AI again... ---',
-    animationTrigger: 'agentLoop-send',
-    explanation: 'LOOP ITERATION 2: We loop back and call the AI again with the updated message history. The AI now knows multiply(50,2)=100. It still needs to subtract 15.',
-  },
-  {
-    lineNumber: 45,
-    variables: [
-      { name: 'messages', value: '[system, user, assistant(multiply), tool(result=100)]' },
-    ],
-    output: '',
-    animationTrigger: 'apiProcessing',
-    explanation: 'The AI reviews the conversation: "User asked (50 * 2) - 15. I called multiply and got 100. Now I need subtract(100, 15) to finish."',
-  },
-  {
-    lineNumber: 50,
-    variables: [
-      { name: 'message', value: '<AssistantMessage: tool_calls=[subtract(100,15)]>', isChanged: true },
-      { name: 'message.content', value: 'null', isChanged: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-decide',
-    explanation: 'The AI now requests subtract(a=100, b=15). It used the result of the previous multiplication (100) as the first argument. Multi-step reasoning in action!',
-  },
-  {
-    lineNumber: 55,
-    variables: [
-      { name: 'message.tool_calls', value: '[{function: subtract, args: {a:100, b:15}}]' },
-      { name: 'function_name', value: '"subtract"', isChanged: true },
-    ],
-    output: '--- AI decided to call: subtract ---',
-    animationTrigger: 'toolSelect-subtract',
-    explanation: 'Tool selected: subtract. The AI is now on the second step of the calculation, using 100 (the result from multiply) minus 15.',
-  },
-  {
-    lineNumber: 60,
-    variables: [
-      { name: 'function_name', value: '"subtract"' },
-      { name: 'arguments', value: '{"a": 100, "b": 15}', isChanged: true },
-      { name: 'result', value: '85', isChanged: true },
-    ],
-    output: '[Debug: Running REAL Python code: subtract(a=100, b=15)]\n--- Ran function, result: 85 ---',
-    animationTrigger: 'agentLoop-execute',
-    explanation: 'subtract(100, 15) = 85. The second real Python calculation executes. We now have the final numeric answer.',
-  },
-  {
-    lineNumber: 63,
-    variables: [
-      { name: 'result', value: '85' },
-      { name: 'messages', value: '[system, user, asst(multiply), tool(100), asst(subtract), tool(result=85)]', isChanged: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-return',
-    explanation: 'We append the subtract result (85) to messages. The conversation now has the full chain: multiply gave 100, subtract gave 85. Time for the AI to write its final answer.',
-  },
-  {
-    lineNumber: 45,
-    variables: [
-      { name: 'result', value: '85' },
-      { name: 'messages', value: '[system, user, asst(multiply), tool(100), asst(subtract), tool(85)]' },
-    ],
-    output: '--- Loop 3: Sending to AI for final answer... ---',
-    animationTrigger: 'agentLoop-send',
-    explanation: 'LOOP ITERATION 3: Final API call. This time the AI has all the results it needs and will NOT request another tool — it will write the final answer.',
-  },
-  {
-    lineNumber: 70,
-    variables: [
-      { name: 'final_answer', value: '"(50 * 2) - 15 = 85"', isNew: true },
-    ],
-    output: '--- Final Answer from AI: ---\n(50 * 2) - 15 = 85. First, 50 multiplied by 2 equals 100, and then subtracting 15 gives us 85.',
-    animationTrigger: 'agentLoop-finalAnswer',
-    explanation: 'Two-loop agent complete! The AI orchestrated multiply → subtract across two iterations. This is how real agents handle complex multi-step problems — one tool at a time.',
-  },
-];
+// ===========================================================================
+// Lesson 7: Multi-Function Agent (math_tutor.py) — 4 tools + while True loop
+// Both variants are built from one template, so their line numbers match.
+// ===========================================================================
+interface ToolStep {
+  op: string;
+  a: number;
+  b: number;
+  result: string; // what Python returns, as shown by print / str()
+  id: string;
+}
 
-// Export 5: multiFunctionVariants
-const multiFunction100Div5Plus3Steps: TraceStep[] = [
-  {
-    lineNumber: 1,
-    variables: [{ name: 'module', value: 'json, openai', isNew: true }],
-    output: '',
-    animationTrigger: 'import',
-    explanation: 'Importing json and OpenAI for a new multi-step problem: 100 / 5 + 3.',
-  },
-  {
-    lineNumber: 3,
-    variables: [
-      { name: 'module', value: 'json, openai' },
-      { name: 'client', value: 'OpenAI()', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'createClient',
-    explanation: 'Creating the OpenAI client.',
-  },
-  {
-    lineNumber: 5,
-    variables: [
-      { name: 'client', value: 'OpenAI()' },
-      { name: 'add', value: 'function(a, b) → a + b', isNew: true },
-      { name: 'subtract', value: 'function(a, b) → a - b', isNew: true },
-      { name: 'multiply', value: 'function(a, b) → a * b', isNew: true },
-      { name: 'divide', value: 'function(a, b) → a / b', isNew: true },
-    ],
-    output: '',
-    explanation: 'Defining four calculator functions. This time divide and add will be used.',
-  },
-  {
-    lineNumber: 20,
-    variables: [
-      { name: 'client', value: 'OpenAI()' },
-      { name: 'add', value: 'function(a, b) → a + b' },
-      { name: 'subtract', value: 'function(a, b) → a - b' },
-      { name: 'multiply', value: 'function(a, b) → a * b' },
-      { name: 'divide', value: 'function(a, b) → a / b' },
-      { name: 'tools', value: '[add, subtract, multiply, divide]', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'defineTools',
-    explanation: 'Same four-tool menu. The AI will pick divide first, then add, for "100 / 5 + 3".',
-  },
-  {
-    lineNumber: 40,
-    variables: [
-      { name: 'tools', value: '[add, subtract, multiply, divide]' },
-      { name: 'messages', value: '[{role:"system", content:"You are a calculator..."}, {role:"user", content:"What is 100 / 5 + 3?"}]', isNew: true },
-    ],
-    output: 'User: What is 100 / 5 + 3?',
-    animationTrigger: 'addSystemMsg',
-    explanation: 'User asks "What is 100 / 5 + 3?". Division before addition — the AI must follow order of operations.',
-  },
-  {
-    lineNumber: 45,
-    variables: [
-      { name: 'tools', value: '[add, subtract, multiply, divide]' },
-      { name: 'messages', value: '[system, {role:"user", content:"What is 100 / 5 + 3?"}]' },
-    ],
-    output: '--- Loop 1: Sending to AI (with tools)... ---',
-    animationTrigger: 'agentLoop-send',
-    explanation: 'LOOP ITERATION 1: First call. AI receives the question and the tools menu.',
-  },
-  {
-    lineNumber: 45,
-    variables: [
-      { name: 'messages', value: '[system, {role:"user", content:"What is 100 / 5 + 3?"}]' },
-    ],
-    output: '',
-    animationTrigger: 'apiProcessing',
-    explanation: 'The AI analyzes "100 / 5 + 3". Division has higher precedence, so it picks divide(100, 5) first.',
-  },
-  {
-    lineNumber: 50,
-    variables: [
-      { name: 'message', value: '<AssistantMessage: tool_calls=[divide(100,5)]>', isNew: true },
-      { name: 'message.content', value: 'null', isNew: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-decide',
-    explanation: 'AI requests divide(a=100, b=5). It correctly starts with division before addition.',
-  },
-  {
-    lineNumber: 55,
-    variables: [
-      { name: 'message.tool_calls', value: '[{function: divide, args: {a:100, b:5}}]' },
-      { name: 'function_name', value: '"divide"', isNew: true },
-    ],
-    output: '--- AI decided to call: divide ---',
-    animationTrigger: 'toolSelect-divide',
-    explanation: 'Tool selected: divide. The correct first step for this expression.',
-  },
-  {
-    lineNumber: 60,
-    variables: [
-      { name: 'function_name', value: '"divide"' },
-      { name: 'arguments', value: '{"a": 100, "b": 5}', isNew: true },
-      { name: 'result', value: '20', isNew: true },
-    ],
-    output: '[Debug: Running REAL Python code: divide(a=100, b=5)]\n--- Ran function, result: 20 ---',
-    animationTrigger: 'agentLoop-execute',
-    explanation: 'divide(100, 5) = 20. Our Python code executes the real division.',
-  },
-  {
-    lineNumber: 63,
-    variables: [
-      { name: 'result', value: '20' },
-      { name: 'messages', value: '[system, user, assistant(divide), tool(result=20)]', isChanged: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-return',
-    explanation: 'Tool result (20) appended to messages. The AI will see: divide(100,5)=20. Now it needs add(20, 3).',
-  },
-  {
-    lineNumber: 45,
-    variables: [
-      { name: 'result', value: '20' },
-      { name: 'messages', value: '[system, user, assistant(divide), tool(result=20)]' },
-    ],
-    output: '--- Loop 2: Sending to AI again... ---',
-    animationTrigger: 'agentLoop-send',
-    explanation: 'LOOP ITERATION 2: Second call with updated history. AI knows divide returned 20 and must now add 3.',
-  },
-  {
-    lineNumber: 45,
-    variables: [
-      { name: 'messages', value: '[system, user, assistant(divide), tool(result=20)]' },
-    ],
-    output: '',
-    animationTrigger: 'apiProcessing',
-    explanation: 'AI reviews: "divide gave 20. Now I need add(20, 3) to complete 100 / 5 + 3."',
-  },
-  {
-    lineNumber: 50,
-    variables: [
-      { name: 'message', value: '<AssistantMessage: tool_calls=[add(20,3)]>', isChanged: true },
-      { name: 'message.content', value: 'null', isChanged: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-decide',
-    explanation: 'AI requests add(a=20, b=3). It used the divide result (20) as the first argument.',
-  },
-  {
-    lineNumber: 55,
-    variables: [
-      { name: 'message.tool_calls', value: '[{function: add, args: {a:20, b:3}}]' },
-      { name: 'function_name', value: '"add"', isChanged: true },
-    ],
-    output: '--- AI decided to call: add ---',
-    animationTrigger: 'toolSelect-add',
-    explanation: 'Tool selected: add. Second and final operation for this expression.',
-  },
-  {
-    lineNumber: 60,
-    variables: [
-      { name: 'function_name', value: '"add"' },
-      { name: 'arguments', value: '{"a": 20, "b": 3}', isChanged: true },
-      { name: 'result', value: '23', isChanged: true },
-    ],
-    output: '[Debug: Running REAL Python code: add(a=20, b=3)]\n--- Ran function, result: 23 ---',
-    animationTrigger: 'agentLoop-execute',
-    explanation: 'add(20, 3) = 23. Final numeric result computed.',
-  },
-  {
-    lineNumber: 63,
-    variables: [
-      { name: 'result', value: '23' },
-      { name: 'messages', value: '[system, user, asst(divide), tool(20), asst(add), tool(result=23)]', isChanged: true },
-    ],
-    output: '',
-    animationTrigger: 'agentLoop-return',
-    explanation: 'Appending the add result (23) to messages. Full calculation chain is recorded.',
-  },
-  {
-    lineNumber: 45,
-    variables: [
-      { name: 'result', value: '23' },
-      { name: 'messages', value: '[system, user, asst(divide), tool(20), asst(add), tool(23)]' },
-    ],
-    output: '--- Loop 3: Sending to AI for final answer... ---',
-    animationTrigger: 'agentLoop-send',
-    explanation: 'LOOP ITERATION 3: Final call. No more tools needed — the AI will write a natural language answer.',
-  },
-  {
-    lineNumber: 70,
-    variables: [
-      { name: 'final_answer', value: '"100 / 5 + 3 = 23"', isNew: true },
-    ],
-    output: '--- Final Answer from AI: ---\n100 / 5 + 3 = 23. Dividing 100 by 5 gives 20, then adding 3 results in 23.',
-    animationTrigger: 'agentLoop-finalAnswer',
-    explanation: 'Two-loop agent complete with divide then add! Same pattern, different operations. Any complex expression can be broken into steps.',
-  },
-];
+interface MathCase {
+  question: string;
+  first: ToolStep;
+  second: ToolStep;
+  whyFirst: string; // why the AI asks for the first operation first
+  answer: string;
+  resultNote?: string; // extra note for the first result (e.g. 20.0)
+}
+
+function buildMathTutorTrace(c: MathCase): TraceStep[] {
+  const { question: q, first: s1, second: s2 } = c;
+  const user = `{role:"user", content:"${q}"}`;
+  const call = (s: ToolStep) => `${s.op}(${s.a}, ${s.b})`;
+  const asst = (s: ToolStep) => `assistant→${call(s)}`;
+  const tool = (s: ToolStep) => `tool:"${s.result}"`;
+  const hist = (...rest: string[]) => `[system, ${[user, ...rest].join(', ')}]`;
+  const toolCall = (s: ToolStep) =>
+    `{id:"${s.id}", function:{name:"${s.op}", arguments:'{"a": ${s.a}, "b": ${s.b}}'}}`;
+  const argsDict = (s: ToolStep) => `{'a': ${s.a}, 'b': ${s.b}}`;
+  const toolMsg = (s: ToolStep) => `{role:"tool", tool_call_id:"${s.id}", content:"${s.result}"}`;
+
+  return buildTrace([
+    // ---------------- Setup ----------------
+    {
+      line: 1,
+      say: 'This lesson builds a math tutor agent. What is new: four tools instead of one, and a loop, so the AI can use tools again and again until it is finished.',
+    },
+    {
+      line: 4,
+      set: { json: 'module', client: 'OpenAI()' },
+      anim: 'import',
+      say: 'Lines 2–4 are the same as last lesson: import json and OpenAI, then create the client.',
+    },
+    {
+      line: 7,
+      set: {
+        add: 'function add(a, b) → a + b',
+        subtract: 'function subtract(a, b) → a - b',
+        multiply: 'function multiply(a, b) → a * b',
+        divide: 'function divide(a, b) → a / b',
+      },
+      anim: 'defineTools',
+      say: 'Lines 7–22 define four tools: add, subtract, multiply and divide. Each one is still just a normal Python function.',
+    },
+    {
+      line: 25,
+      set: { tools: '[add, subtract, multiply, divide]' },
+      anim: 'defineTools',
+      say: 'The tools menu now has four entries. The "..." is shortened here: each entry has a name, a description and parameters, like the add entry last lesson.',
+    },
+    {
+      line: 33,
+      set: { messages: hist() },
+      anim: 'addSystemMsg',
+      say: `The history starts with two messages: a system message (act as a math tutor, use tools) and the user's question, "${q}"`,
+    },
+    {
+      line: 37,
+      out: `User: ${q}`,
+      say: 'messages[-1] is the last message in the list, the user\'s question. We print it.',
+    },
+    {
+      line: 40,
+      say: 'while True means "repeat forever", until a break inside stops it. This loop is the heart of the agent: ask the AI, run the tools it asks for, repeat.',
+    },
+
+    // ---------------- Loop turn 1 ----------------
+    {
+      line: 41,
+      out: '--- 1. Sending to AI (with tools)... ---',
+      anim: 'agentLoop-send',
+      say: 'Loop turn 1. We print a label; the call to the AI comes next.',
+    },
+    {
+      line: 42,
+      set: { response: 'ChatCompletion (turn 1)' },
+      anim: 'apiProcessing',
+      say: 'We send the history and all four tools. The AI reads the question and picks which tool to use first.',
+    },
+    {
+      line: 46,
+      set: { message: `{role:"assistant", content:None, tool_calls:[${call(s1)}]}` },
+      anim: HOLD,
+      say: `The reply has no text. It has one tool request: ${call(s1)}. ${c.whyFirst}`,
+    },
+    {
+      line: 47,
+      set: { messages: hist(asst(s1)) },
+      anim: HOLD,
+      say: 'As in the last lesson, we save the AI\'s reply in the history, so it remembers what it asked for.',
+    },
+    {
+      line: 49,
+      anim: HOLD,
+      say: 'The exit check: are there no tool_calls? False, the AI asked for a tool. So we do NOT break. We skip this block and keep going.',
+    },
+    {
+      line: 54,
+      out: '--- 2. AI calls 1 function(s) ---',
+      anim: HOLD,
+      say: 'We print how many tool requests the AI sent. This time: 1.',
+    },
+    {
+      line: 55,
+      set: { tool_call: toolCall(s1) },
+      anim: HOLD,
+      say: 'The AI may ask for several tools at once, so we loop over every request with a for loop. Here there is just one.',
+    },
+    {
+      line: 57,
+      set: { function_name: `"${s1.op}"`, arguments: argsDict(s1) },
+      anim: 'agentLoop-decide',
+      say: `Line 56 reads the name, "${s1.op}". This line uses json.loads to turn the argument text into a dict: ${argsDict(s1)}.`,
+    },
+    {
+      line: 58,
+      set: { available_functions: '{"add": add, "subtract": subtract, "multiply": multiply, "divide": divide}' },
+      anim: `toolSelect-${s1.op}`,
+      say: 'With four tools, we need to find the right one. This dictionary maps each name (text) to its real Python function.',
+    },
+    {
+      line: 60,
+      set: { result: s1.result },
+      out: `[Debug: ${s1.op}(a=${s1.a}, b=${s1.b})]`,
+      anim: 'agentLoop-execute',
+      say: `available_functions["${s1.op}"] gives us the ${s1.op} function. **arguments passes a=${s1.a} and b=${s1.b} into it. result = ${s1.result}.${c.resultNote ? ' ' + c.resultNote : ''}`,
+    },
+    {
+      line: 61,
+      out: `--- 3. ${s1.op}(${argsDict(s1)}) = ${s1.result} ---`,
+      anim: 'agentLoop-execute',
+      say: 'We print which function ran, its arguments, and its result.',
+    },
+    {
+      line: 63,
+      set: { messages: hist(asst(s1), tool(s1)) },
+      anim: 'agentLoop-return',
+      say: `We append a role "tool" message: ${toolMsg(s1)}. The matching tool_call_id tells the AI this is the answer to its ${s1.op} request.`,
+    },
+    {
+      line: 40,
+      anim: HOLD,
+      say: 'The for loop is done (only one request). We reach the end of the while block, so Python jumps back to the top: while True. Turn 2 begins.',
+    },
+
+    // ---------------- Loop turn 2 ----------------
+    {
+      line: 41,
+      out: '--- 1. Sending to AI (with tools)... ---',
+      anim: 'agentLoop-send2',
+      say: `Loop turn 2. Same code as before, but the history is longer now: it contains the ${s1.op} result, ${s1.result}.`,
+    },
+    {
+      line: 42,
+      set: { response: 'ChatCompletion (turn 2)' },
+      anim: 'apiProcessing',
+      say: `The AI reads the whole history. It sees the first step is done, so it plans the next one: ${call(s2)}.`,
+    },
+    {
+      line: 46,
+      set: { message: `{role:"assistant", content:None, tool_calls:[${call(s2)}]}` },
+      anim: HOLD,
+      say: `Again no text, just a tool request: ${call(s2)}. Notice the AI used the result we sent back.`,
+    },
+    {
+      line: 47,
+      set: { messages: hist(asst(s1), tool(s1), asst(s2)) },
+      anim: HOLD,
+      say: 'We save this reply in the history too.',
+    },
+    {
+      line: 49,
+      anim: HOLD,
+      say: 'Exit check again: are there no tool_calls? False, there is one. So no break; the loop keeps going.',
+    },
+    {
+      line: 54,
+      out: '--- 2. AI calls 1 function(s) ---',
+      anim: HOLD,
+      say: 'Again, one tool request.',
+    },
+    {
+      line: 57,
+      set: { tool_call: toolCall(s2), function_name: `"${s2.op}"`, arguments: argsDict(s2) },
+      anim: 'agentLoop-decide',
+      say: `The for loop takes the new request. Now function_name is "${s2.op}" and arguments is ${argsDict(s2)}.`,
+    },
+    {
+      line: 58,
+      anim: `toolSelect-${s2.op}`,
+      say: `The same dictionary finds the ${s2.op} function. Adding a new tool later only means adding one entry here, no long if/else chain.`,
+    },
+    {
+      line: 60,
+      set: { result: s2.result },
+      out: `[Debug: ${s2.op}(a=${s2.a}, b=${s2.b})]`,
+      anim: 'agentLoop-execute',
+      say: `Our code runs ${call(s2)}. result = ${s2.result}.`,
+    },
+    {
+      line: 61,
+      out: `--- 3. ${s2.op}(${argsDict(s2)}) = ${s2.result} ---`,
+      anim: 'agentLoop-execute',
+      say: 'We print the second result.',
+    },
+    {
+      line: 63,
+      set: { messages: hist(asst(s1), tool(s1), asst(s2), tool(s2)) },
+      anim: 'agentLoop-return',
+      say: `The result "${s2.result}" goes into the history as a tool message, with the id of the ${s2.op} request (${s2.id}).`,
+    },
+    {
+      line: 40,
+      anim: HOLD,
+      say: 'End of the loop body again, so back to the top of while True. Turn 3 begins.',
+    },
+
+    // ---------------- Loop turn 3 ----------------
+    {
+      line: 41,
+      out: '--- 1. Sending to AI (with tools)... ---',
+      anim: 'agentLoop-send3',
+      say: `Loop turn 3. The history now holds both results: ${s1.result} and ${s2.result}.`,
+    },
+    {
+      line: 42,
+      set: { response: 'ChatCompletion (turn 3)' },
+      anim: 'apiProcessing',
+      say: 'The AI sees all the math is done. This time it writes a text answer instead of asking for a tool.',
+    },
+    {
+      line: 46,
+      set: { message: `{role:"assistant", content:"${c.answer.split('.')[0]}...", tool_calls:None}` },
+      anim: HOLD,
+      say: 'The reply has text in message.content, and tool_calls is None (empty).',
+    },
+    {
+      line: 47,
+      set: { messages: hist(asst(s1), tool(s1), asst(s2), tool(s2), 'assistant:"text answer"') },
+      anim: HOLD,
+      say: 'We save the answer in the history, like every reply.',
+    },
+    {
+      line: 49,
+      anim: HOLD,
+      say: 'The exit check: are there no tool_calls? TRUE this time. So we go inside the if. This is how the loop knows the AI is finished.',
+    },
+    {
+      line: 50,
+      out: '--- Final Answer from AI: ---',
+      anim: HOLD,
+      say: 'We print a header for the final answer.',
+    },
+    {
+      line: 51,
+      set: { final_answer: c.answer },
+      out: c.answer,
+      anim: 'agentLoop-finalAnswer',
+      say: 'We print message.content, the AI\'s answer. It explains the steps in plain English, like a tutor.',
+    },
+    {
+      line: 52,
+      anim: DONE,
+      say: 'break stops the while True loop. Without it, the loop would never end. In total the AI was called 3 times: two tool turns and one answer turn.',
+    },
+    {
+      line: 40,
+      anim: DONE,
+      say: 'What you learned: (1) while True keeps calling the AI; (2) each turn we run every tool it asks for and send the results back; (3) no tool_calls means done, so we break.',
+    },
+  ]);
+}
+
+export const multiFunctionTrace: TraceStep[] = buildMathTutorTrace({
+  question: 'What is (50 * 2) - 15?',
+  first: { op: 'multiply', a: 50, b: 2, result: '100', id: 'call_abc' },
+  second: { op: 'subtract', a: 100, b: 15, result: '85', id: 'call_xyz' },
+  whyFirst: 'Brackets come first, so it asks only for this step now.',
+  answer: '(50 * 2) - 15 = 85. First, 50 times 2 is 100. Then 100 minus 15 is 85.',
+});
+
+const multiFunction100Div5Plus3Steps: TraceStep[] = buildMathTutorTrace({
+  question: 'What is 100 / 5 + 3?',
+  first: { op: 'divide', a: 100, b: 5, result: '20.0', id: 'call_abc' },
+  second: { op: 'add', a: 20, b: 3, result: '23', id: 'call_xyz' },
+  whyFirst: 'Division comes before addition, so it asks only for this step now.',
+  resultNote: 'In Python, / always gives a decimal number, so it is 20.0.',
+  answer: '100 / 5 + 3 = 23. First, 100 divided by 5 is 20. Then 20 plus 3 is 23.',
+});
 
 export const multiFunctionVariants: TraceVariant[] = [
   {
@@ -603,4 +702,3 @@ export const multiFunctionVariants: TraceVariant[] = [
     steps: multiFunction100Div5Plus3Steps,
   },
 ];
-
