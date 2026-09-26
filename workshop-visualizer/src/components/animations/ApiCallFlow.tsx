@@ -1,263 +1,277 @@
 'use client';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { ReactNode, useMemo } from 'react';
 import { useTracerStore } from '@/stores/tracerStore';
 
-const spring = { type: 'spring' as const, damping: 20, stiffness: 100 };
+// ─────────────────────────────────────────────────────────────────────────────
+// ApiCallFlow: compact round trip for the JSON Output lesson.
+// Laptop packs a request (model + system/user messages + JSON-mode stamp) →
+// it travels to the OpenAI server → a JSON reply travels back.
+// Everything is derived from the step index, so Prev/Next/jumps render correctly.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const spring = { type: 'spring' as const, damping: 22, stiffness: 140 };
+
+// Shared with JsonParseAnim (it also understands the challenge's triggers).
+export const JSON_RANK: Record<string, number> = {
+  intro: 0,
+  jsonIntro: 1,
+  import: 2,
+  createClient: 3,
+  printStart: 4,
+  addSystemMsg: 5,
+  addUserMsg: 6,
+  highlightKeys: 7,
+  startRequest: 8,
+  selectModel: 9,
+  packSystem: 10,
+  packUser: 11,
+  buildMessages: 12,
+  whyBoth: 13,
+  apiCall: 14,
+  apiProcessing: 15,
+  apiCallComplete: 16,
+  printHeading: 17,
+  extractContent: 18,
+  isString: 19,
+  jsonParse: 20,
+  printOutput: 21,
+  summary: 22,
+};
+
+export function reachedRank(steps: { animationTrigger?: string }[], currentStep: number) {
+  let r = 0;
+  for (let i = 0; i <= currentStep && i < steps.length; i++) {
+    const t = steps[i].animationTrigger;
+    if (t && JSON_RANK[t] !== undefined) r = Math.max(r, JSON_RANK[t]);
+  }
+  return r;
+}
+
+function Envelope({ color, size = 32 }: { color: string; size?: number }) {
+  return (
+    <svg width={size} height={size * 0.7} viewBox="0 0 40 28" fill="none">
+      <rect x="1" y="1" width="38" height="26" rx="3" fill={`${color}33`} stroke={color} strokeWidth="2" />
+      <path d="M2 3 L20 16 L38 3" stroke={color} strokeWidth="2" fill="none" />
+    </svg>
+  );
+}
+
+function Pop({ on, color, children, className = '' }: { on: boolean; color: string; children: ReactNode; className?: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        boxShadow: on ? `0 0 0 1px ${color}, 0 0 14px ${color}55` : '0 0 0 0px rgba(0,0,0,0)',
+      }}
+      transition={spring}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function unquote(s?: string) {
+  return (s ?? '').replace(/^("""|")|("""|")$/g, '');
+}
 
 export default function ApiCallFlow() {
-  const { currentStep, steps } = useTracerStore();
-  const trigger = steps[currentStep]?.animationTrigger;
-  const variables = steps[currentStep]?.variables ?? [];
+  const { currentStep, steps, activeVariantId } = useTracerStore();
+  const step = steps[currentStep];
+  const cur = step?.animationTrigger ?? '';
+  const at = (t: string) => cur === t;
+  const reached = useMemo(() => reachedRank(steps, currentStep), [steps, currentStep]);
+  const resetKey = `${activeVariantId}-${currentStep}`;
 
-  // Animation states based on trigger
-  const phase = (() => {
-    if (!trigger) return 'idle';
-    if (trigger === 'import') return 'import';
-    if (trigger === 'createClient') return 'client';
-    if (trigger === 'selectModel') return 'model';
-    if (trigger === 'buildMessages') return 'messages';
-    if (trigger === 'apiCall') return 'sending';
-    if (trigger === 'apiProcessing') return 'processing';
-    if (trigger === 'apiCallComplete') return 'response';
-    if (trigger === 'extractContent') return 'extract';
-    if (trigger === 'printOutput') return 'output';
-    return 'idle';
-  })();
+  const vars = step?.variables ?? [];
+  const finalVars = steps[steps.length - 1]?.variables ?? [];
+  const get = (n: string) => vars.find((v) => v.name === n)?.value ?? finalVars.find((v) => v.name === n)?.value;
+  const model = unquote(get('model') ?? '"gpt-4o-mini"');
+  const systemPrompt = unquote(get('system_prompt'));
+  const userPrompt = unquote(get('user_prompt'));
 
-  const showClient = ['client', 'model', 'messages', 'sending', 'processing', 'response', 'extract', 'output'].includes(phase);
-  const showModel = ['model', 'messages', 'sending', 'processing', 'response', 'extract', 'output'].includes(phase);
-  const showMessages = ['messages', 'sending', 'processing', 'response', 'extract', 'output'].includes(phase);
-  const isSending = phase === 'sending';
-  const isProcessing = phase === 'processing';
-  const hasResponse = ['response', 'extract', 'output'].includes(phase);
-  const isExtracting = phase === 'extract' || phase === 'output';
-
-  // Get current variable values for display
-  const modelVar = variables.find(v => v.name === 'model');
-  const contentVar = variables.find(v => v.name === 'content');
+  const sent = reached >= JSON_RANK.apiCall;
+  const received = reached >= JSON_RANK.apiCallComplete;
+  const jsonMode = reached >= JSON_RANK.buildMessages;
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* Top: Your Code → OpenAI flow */}
-      <div className="flex-1 flex items-center justify-center px-6 py-4 relative">
-
-        {/* YOUR CODE side */}
-        <div className="flex flex-col items-center gap-3 w-48 flex-shrink-0">
-          <motion.div
-            animate={{
-              scale: isSending ? 1.05 : 1,
-              borderColor: isSending ? '#4a9eff' : 'rgba(74,158,255,0.3)',
-            }}
-            transition={spring}
-            className="w-full rounded-xl bg-accent-blue/10 border-2 p-4 relative"
-          >
-            <div className="text-accent-blue font-bold text-sm mb-2">Your Python Code</div>
-
-            {/* Client created */}
-            <AnimatePresence>
-              {showClient && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  transition={spring}
-                  className="text-[10px] font-mono text-white/50 mb-1"
-                >
-                  client = OpenAI()
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Model selection */}
-            <AnimatePresence>
-              {showModel && (
-                <motion.div
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={spring}
-                  className="mt-1"
-                >
-                  <div className="text-[9px] text-white/30 uppercase">model</div>
-                  <motion.div
-                    animate={{ boxShadow: phase === 'model' ? '0 0 12px rgba(74,158,255,0.4)' : 'none' }}
-                    className="inline-block px-2 py-0.5 rounded bg-accent-blue/20 border border-accent-blue/40 text-accent-blue text-[11px] font-mono font-bold"
-                  >
-                    {modelVar?.value || 'gpt-4o-mini'}
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Messages being built */}
-            <AnimatePresence>
-              {showMessages && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ ...spring, delay: 0.1 }}
-                  className="mt-2 space-y-1"
-                >
-                  <div className="text-[9px] text-white/30 uppercase">messages</div>
-                  <motion.div
-                    animate={{ boxShadow: phase === 'messages' ? '0 0 12px rgba(167,139,250,0.3)' : 'none' }}
-                    className="rounded bg-black/20 p-1.5 text-[10px] font-mono space-y-0.5"
-                  >
-                    <div className="text-accent-purple/80">{'{'}&quot;role&quot;: &quot;user&quot;,</div>
-                    <div className="text-accent-blue/80 pl-1">&quot;content&quot;: &quot;Write a funny...&quot;{'}'}</div>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+    <div className="h-full flex gap-2 p-3 overflow-hidden text-white">
+      {/* LAPTOP */}
+      <motion.div
+        animate={{ borderColor: reached >= 2 && !sent ? 'rgba(74,158,255,0.6)' : 'rgba(74,158,255,0.25)' }}
+        className="flex-[1.4] min-w-0 rounded-xl border-2 bg-accent-blue/5 p-2 flex flex-col gap-1.5 overflow-hidden"
+      >
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
+          <span className="text-sm font-bold text-accent-blue">Your laptop</span>
+          {reached >= 2 && (
+            <Pop on={at('import')} color="#a78bfa" className="rounded px-1.5 bg-accent-purple/10 border border-accent-purple/30 text-xs font-mono text-accent-purple">
+              openai
+            </Pop>
+          )}
+          {reached >= 3 && (
+            <Pop on={at('createClient')} color="#4a9eff" className="rounded px-1.5 bg-accent-blue/10 border border-accent-blue/30 text-xs font-mono text-accent-blue">
+              client <span className="font-sans text-white/45">(phone line)</span>
+            </Pop>
+          )}
         </div>
 
-        {/* CONNECTION / INTERNET zone */}
-        <div className="flex-1 relative mx-4 min-w-[120px]">
-          {/* Connection lines */}
-          <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-            {/* Top line (request path) */}
-            <line x1="0" y1="40%" x2="100%" y2="40%" stroke="rgba(255,255,255,0.08)" strokeWidth="2" strokeDasharray="6 4" />
-            {/* Bottom line (response path) */}
-            <line x1="100%" y1="60%" x2="0" y2="60%" stroke="rgba(255,255,255,0.08)" strokeWidth="2" strokeDasharray="6 4" />
-          </svg>
-
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[9px] text-white/15 uppercase tracking-[0.2em]">
-            HTTPS Request
+        {reached < JSON_RANK.startRequest && (
+          <div className="text-xs text-white/40 leading-snug">
+            {reached >= JSON_RANK.addSystemMsg
+              ? 'First we write the two prompts (see below). Then we pack them into a request.'
+              : 'Goal: ask the AI for data that a program can read, not a chatty paragraph.'}
           </div>
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] text-white/15 uppercase tracking-[0.2em]">
-            HTTPS Response
-          </div>
+        )}
 
-          {/* Request packet flying right */}
-          <AnimatePresence>
-            {isSending && (
-              <motion.div
-                key="req-packet"
-                initial={{ left: '0%', opacity: 0 }}
-                animate={{ left: '85%', opacity: [0, 1, 1, 0.8] }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 1.5, ease: [0.4, 0, 0.2, 1] }}
-                className="absolute top-[32%] -translate-y-1/2"
-                style={{ zIndex: 20 }}
-              >
-                <div className="px-3 py-2 rounded-lg bg-accent-blue shadow-glow-blue text-navy-900 text-[10px] font-bold whitespace-nowrap">
-                  <div className="text-[8px] opacity-60">POST /v1/chat/completions</div>
-                  <div>model + messages</div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Processing indicator */}
-          <AnimatePresence>
-            {isProcessing && (
-              <motion.div
-                key="processing"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                transition={spring}
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20"
-              >
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                  className="w-8 h-8 rounded-full border-2 border-accent-gold/30 border-t-accent-gold"
-                />
-                <div className="text-[9px] text-accent-gold text-center mt-1">Thinking...</div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Response packet flying left */}
-          <AnimatePresence>
-            {hasResponse && (
-              <motion.div
-                key="res-packet"
-                initial={{ left: '85%', opacity: 0 }}
-                animate={{ left: '0%', opacity: [0, 1, 1, 0.8] }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 1.5, ease: [0.4, 0, 0.2, 1] }}
-                className="absolute top-[58%] -translate-y-1/2"
-                style={{ zIndex: 20 }}
-              >
-                <div className="px-3 py-2 rounded-lg bg-accent-green shadow-glow-green text-navy-900 text-[10px] font-bold whitespace-nowrap">
-                  <div className="text-[8px] opacity-60">200 OK</div>
-                  <div>choices[0].message</div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* OPENAI SERVER side */}
-        <div className="flex flex-col items-center gap-3 w-48 flex-shrink-0">
-          <motion.div
-            animate={{
-              scale: isProcessing ? 1.05 : 1,
-              borderColor: isProcessing
-                ? '#fbbf24'
-                : hasResponse
-                ? '#4ade80'
-                : 'rgba(74,222,128,0.3)',
-              boxShadow: isProcessing
-                ? '0 0 30px rgba(251,191,36,0.2)'
-                : hasResponse
-                ? '0 0 20px rgba(74,222,128,0.15)'
-                : 'none',
-            }}
-            transition={spring}
-            className="w-full rounded-xl bg-accent-green/10 border-2 p-4"
+        {reached >= JSON_RANK.startRequest && !sent && (
+          <Pop
+            on={at('startRequest')}
+            color="#4a9eff"
+            className="flex-1 min-h-0 rounded-lg border border-dashed border-accent-blue/40 bg-navy-900/60 p-1.5 flex flex-col gap-1 overflow-hidden relative"
           >
-            <div className="text-accent-green font-bold text-sm mb-2">OpenAI API Server</div>
-            <div className="text-[10px] font-mono text-white/40 space-y-1">
-              <div>Endpoint: /v1/chat/completions</div>
-              <AnimatePresence>
-                {isProcessing && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                    className="text-accent-gold"
-                  >
-                    Processing with gpt-4o-mini...
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <AnimatePresence>
-                {hasResponse && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={spring}
-                    className="text-accent-green"
-                  >
-                    Response generated!
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            <div className="flex items-center gap-2 shrink-0">
+              <Envelope color="#4a9eff" size={22} />
+              <span className="text-xs font-bold text-white/85">The request</span>
+              {reached >= JSON_RANK.selectModel && (
+                <Pop on={at('selectModel')} color="#4a9eff" className="rounded px-1.5 bg-accent-blue/20 border border-accent-blue/50 text-xs font-mono text-accent-blue font-bold">
+                  {model}
+                </Pop>
+              )}
             </div>
+            {reached >= JSON_RANK.packSystem && (
+              <Pop on={at('packSystem')} color="#a78bfa" className="rounded-md bg-accent-purple/10 border border-accent-purple/30 px-1.5 py-0.5 text-xs truncate">
+                <span className="font-mono font-bold text-accent-purple">system</span>
+                <span className="text-white/40 font-mono"> = system_prompt: </span>
+                <span className="text-white/70">{systemPrompt}</span>
+              </Pop>
+            )}
+            {reached >= JSON_RANK.packUser && (
+              <Pop on={at('packUser')} color="#4a9eff" className="rounded-md bg-accent-blue/10 border border-accent-blue/30 px-1.5 py-0.5 text-xs truncate">
+                <span className="font-mono font-bold text-accent-blue">user</span>
+                <span className="text-white/40 font-mono"> = user_prompt: </span>
+                <span className="text-white/70">{userPrompt}</span>
+              </Pop>
+            )}
+            {jsonMode && (
+              <motion.div
+                initial={{ opacity: 0, scale: 1.8, rotate: -12 }}
+                animate={{ opacity: 1, scale: 1, rotate: -4 }}
+                transition={{ type: 'spring', damping: 12, stiffness: 180 }}
+                className="self-end rounded-md border-2 border-accent-gold bg-accent-gold/15 px-2 py-0.5 text-xs font-bold text-accent-gold"
+              >
+                JSON MODE ON
+                <span className="font-mono font-normal text-white/60"> response_format</span>
+              </motion.div>
+            )}
+          </Pop>
+        )}
+
+        {sent && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-xs text-white/55">
+            <Envelope color="rgba(255,255,255,0.4)" size={18} />
+            Request sent: {model} + 2 messages + JSON mode
           </motion.div>
+        )}
+        {(at('apiCall') || at('apiProcessing')) && (
+          <motion.div
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 1.4, repeat: Infinity }}
+            className="text-xs text-accent-gold"
+          >
+            Line 11 is waiting for the answer…
+          </motion.div>
+        )}
+        {received && (
+          <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 text-xs text-accent-green">
+            <span className="rounded bg-accent-green/20 border border-accent-green/50 px-1 font-mono font-bold">{'{ }'}</span>
+            response arrived: its content is JSON text (see below)
+          </motion.div>
+        )}
+      </motion.div>
+
+      {/* INTERNET LANE */}
+      <div className="flex-[0.45] min-w-[80px] flex flex-col justify-center gap-5">
+        <div className="text-[11px] text-center text-white/35 uppercase tracking-widest">internet</div>
+        <div className="relative h-8">
+          <div className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-accent-blue/25" />
+          {at('apiCall') && (
+            <motion.div
+              key={`req-${resetKey}`}
+              initial={{ left: '0%', opacity: 0 }}
+              animate={{ left: '50%', opacity: 1 }}
+              transition={{ duration: 1.5, ease: 'easeInOut' }}
+              className="absolute top-0 flex flex-col items-center"
+            >
+              <Envelope color="#4a9eff" size={30} />
+            </motion.div>
+          )}
+          <div className="absolute inset-x-0 -bottom-4 text-center text-[11px] text-white/40">{sent ? '✓ sent' : 'request →'}</div>
+        </div>
+        <div className="relative h-8">
+          <div className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-accent-green/25" />
+          {at('apiCallComplete') && (
+            <motion.div
+              key={`res-${resetKey}`}
+              initial={{ left: '50%', opacity: 0 }}
+              animate={{ left: '0%', opacity: 1 }}
+              transition={{ duration: 1.5, ease: 'easeInOut' }}
+              className="absolute top-1 rounded bg-accent-green/25 border-2 border-accent-green px-1 font-mono text-[11px] font-bold text-accent-green"
+            >
+              {'{ }'}
+            </motion.div>
+          )}
+          <div className="absolute inset-x-0 -bottom-4 text-center text-[11px] text-white/40">{received ? '✓ received' : '← response'}</div>
         </div>
       </div>
 
-      {/* Bottom: Extracted content display */}
-      <AnimatePresence>
-        {isExtracting && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            transition={spring}
-            className="border-t border-white/10 px-6 py-3 bg-navy-800/50"
-          >
-            <div className="text-[10px] text-white/30 uppercase tracking-wider mb-1">
-              response.choices[0].message.content
-            </div>
-            <div className="px-3 py-2 rounded-lg bg-accent-green/10 border border-accent-green/20 text-accent-green text-sm font-mono">
-              {contentVar?.value || '"Oh AI, you slice through data with ease..."'}
-            </div>
-          </motion.div>
+      {/* OPENAI SERVER */}
+      <motion.div
+        animate={{
+          borderColor: at('apiProcessing') ? '#fbbf24' : sent ? 'rgba(74,222,128,0.6)' : 'rgba(74,222,128,0.2)',
+          boxShadow: at('apiProcessing') ? '0 0 24px rgba(251,191,36,0.2)' : 'none',
+        }}
+        className="flex-1 min-w-0 rounded-xl border-2 bg-accent-green/5 p-2 flex flex-col gap-1.5 overflow-hidden"
+      >
+        <span className="text-sm font-bold text-accent-green shrink-0">OpenAI server</span>
+        {!sent ? (
+          <div className="text-xs text-white/40 leading-snug">Waits for your request and runs the AI model.</div>
+        ) : (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-white/70">
+              Running <span className="font-mono text-accent-blue">{model}</span>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="rounded-md border border-accent-gold/40 bg-accent-gold/10 px-1.5 py-1 text-xs text-accent-gold"
+            >
+              JSON mode rule: the reply must be valid JSON. No chatty sentences.
+            </motion.div>
+            {reached >= JSON_RANK.apiProcessing && (
+              <div className="flex items-center gap-1.5 text-xs text-white/70">
+                {at('apiProcessing') ? (
+                  <>
+                    {[0, 1, 2].map((i) => (
+                      <motion.span
+                        key={i}
+                        animate={{ opacity: [0.2, 1, 0.2] }}
+                        transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                        className="w-1.5 h-1.5 rounded-full bg-accent-gold"
+                      />
+                    ))}
+                    <span className="text-accent-gold">writing JSON…</span>
+                  </>
+                ) : (
+                  <span className="text-accent-green">✓ JSON reply sent back</span>
+                )}
+              </div>
+            )}
+          </>
         )}
-      </AnimatePresence>
+      </motion.div>
     </div>
   );
 }

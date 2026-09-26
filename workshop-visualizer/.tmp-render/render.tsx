@@ -4,6 +4,7 @@ import { useTracerStore } from '@/stores/tracerStore';
 import ConversationLoopAnim from '@/components/animations/ConversationLoopAnim';
 import ChallengePipelineAnim from '@/components/animations/ChallengePipelineAnim';
 import { conversationLoopVariants, challengeVariants } from '@/data/traces';
+(useTracerStore as any).getServerState = useTracerStore.getState; (useTracerStore as any).getInitialState = useTracerStore.getState;
 for (const [name, C, vs] of [['conv', ConversationLoopAnim, conversationLoopVariants], ['ch', ChallengePipelineAnim, challengeVariants]] as const) {
   for (const v of vs as any[]) {
     v.steps.forEach((_: any, i: number) => {
