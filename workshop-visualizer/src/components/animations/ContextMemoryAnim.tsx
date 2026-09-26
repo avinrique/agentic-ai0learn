@@ -365,6 +365,7 @@ export default function ContextMemoryAnim() {
         animate={{ opacity: s === 3 ? 1 : 0 }}
         transition={spring}
       >
+        <SceneChips active={exIdx} onPick={setExIdx} visible={s === 3} />
         <div className="flex items-center gap-6 w-full max-w-2xl">
           {/* Left: Messages array */}
           <motion.div
@@ -465,6 +466,7 @@ export default function ContextMemoryAnim() {
         animate={{ opacity: s === 4 ? 1 : 0 }}
         transition={spring}
       >
+        <SceneChips active={exIdx} onPick={setExIdx} visible={s === 4} />
         <div className="flex items-center gap-6 w-full max-w-2xl">
           {/* Center-left: Messages array with new assistant message */}
           <motion.div
@@ -586,6 +588,7 @@ export default function ContextMemoryAnim() {
         animate={{ opacity: s === 5 ? 1 : 0 }}
         transition={spring}
       >
+        <SceneChips active={exIdx} onPick={setExIdx} visible={s === 5} />
         <div className="flex items-center gap-6 w-full max-w-2xl">
           {/* Left: Messages array with amber re-send highlight */}
           <motion.div
@@ -681,6 +684,16 @@ export default function ContextMemoryAnim() {
             >
               Sees it all fresh — zero memory of Call #1
             </motion.p>
+            <motion.div
+              key={`ans-${exIdx}`}
+              className="px-3 py-2 rounded-lg border max-w-[190px]"
+              style={{ borderColor: '#4ade8040', backgroundColor: '#4ade8008' }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: s === 5 ? 1 : 0, y: s === 5 ? 0 : 10 }}
+              transition={{ ...spring, delay: 1.1 }}
+            >
+              <span className="text-xs text-accent-green">&quot;{ex.followUpAnswer}&quot;</span>
+            </motion.div>
           </motion.div>
         </div>
 
@@ -741,9 +754,6 @@ export default function ContextMemoryAnim() {
                 }}
                 transition={{ ...smooth, delay: i * 0.12 }}
               >
-                {bar.cost && (
-                  <span className="text-xs text-white/40">{bar.cost}</span>
-                )}
                 <motion.div
                   className="w-10 rounded-t-md"
                   style={{ backgroundColor: colorStop }}
@@ -763,32 +773,21 @@ export default function ContextMemoryAnim() {
           })}
         </div>
 
-        {/* Real-world cost example */}
+        {/* Why long chats cost more */}
         <motion.div
           className="mt-4 max-w-md w-full rounded-xl border border-accent-gold/30 bg-accent-gold/5 px-4 py-3"
           animate={{ opacity: s === 6 ? 1 : 0, y: s === 6 ? 0 : 10 }}
           transition={{ ...spring, delay: 1.2 }}
         >
-          <p className="text-xs text-white/50 text-center mb-2">Real-world example: GPT-4 customer support bot</p>
-          <div className="flex items-center justify-between text-center">
-            <div>
-              <p className="text-sm font-mono text-accent-blue">20 msgs/chat</p>
-              <p className="text-sm text-white/30">~$0.36/chat</p>
-            </div>
-            <span className="text-white/20">×</span>
-            <div>
-              <p className="text-sm font-mono text-accent-gold">1,000 chats/day</p>
-              <p className="text-sm text-white/30">$360/day</p>
-            </div>
-            <span className="text-white/20">=</span>
-            <motion.div
-              animate={{ scale: s === 6 ? [1, 1.05, 1] : 1 }}
-              transition={{ duration: 1.5, repeat: Infinity, delay: 2 }}
-            >
-              <p className="text-lg font-bold font-mono text-red-400">$10,800</p>
-              <p className="text-sm text-red-400/60">/month</p>
-            </motion.div>
-          </div>
+          <p className="text-sm text-white/70 text-center font-medium">
+            You pay per token, and every call re-sends the whole chat.
+          </p>
+          <p className="text-sm text-accent-gold text-center mt-1">
+            So long chats cost more with every single turn.
+          </p>
+          <p className="text-xs text-white/35 text-center mt-2">
+            Illustrative token counts. Prices differ by model and change over time.
+          </p>
         </motion.div>
       </motion.div>
 
@@ -809,13 +808,19 @@ export default function ContextMemoryAnim() {
             Every model has a <span className="text-red-400 font-semibold">maximum context window</span>
           </motion.p>
 
-          {/* Real model comparison */}
+          {/* Rough examples of context sizes (qualitative, dated) */}
+          <motion.p
+            className="text-xs text-white/35 mb-2 text-center"
+            animate={{ opacity: s === 7 ? 1 : 0 }}
+            transition={{ ...spring, delay: 0.1 }}
+          >
+            Rough examples of context sizes over time (bars not to scale; check your model&apos;s docs):
+          </motion.p>
           <div className="space-y-2 mb-5">
             {[
-              { name: 'GPT-3.5', tokens: '4K', pct: 3, color: '#10a37f', pages: '~6 pages' },
-              { name: 'GPT-4', tokens: '8K', pct: 6, color: '#10a37f', pages: '~12 pages' },
-              { name: 'Claude 3', tokens: '200K', pct: 100, color: '#d97706', pages: '~300 pages (a novel!)' },
-              { name: 'GPT-4 Turbo', tokens: '128K', pct: 64, color: '#10a37f', pages: '~200 pages' },
+              { name: 'Early chat models (2022)', tokens: 'a few thousand', pct: 12, color: '#4a9eff', pages: 'a few pages' },
+              { name: 'Many models by 2024', tokens: '100K+', pct: 55, color: '#fbbf24', pages: 'a long novel' },
+              { name: 'Some newer models', tokens: '~1M', pct: 100, color: '#a78bfa', pages: 'several books' },
             ].map((model, i) => (
               <motion.div
                 key={model.name}
@@ -823,7 +828,7 @@ export default function ContextMemoryAnim() {
                 animate={{ opacity: s === 7 ? 1 : 0, x: s === 7 ? 0 : -15 }}
                 transition={{ ...spring, delay: 0.2 + i * 0.15 }}
               >
-                <span className="text-xs text-white/50 w-24 text-right font-mono">{model.name}</span>
+                <span className="text-xs text-white/60 w-40 text-right">{model.name}</span>
                 <div className="flex-1 h-5 bg-navy-900 rounded-full overflow-hidden border border-white/10">
                   <motion.div
                     className="h-full rounded-full"
@@ -832,11 +837,18 @@ export default function ContextMemoryAnim() {
                     transition={{ duration: 1.5, ease: 'easeOut', delay: 0.5 + i * 0.15 }}
                   />
                 </div>
-                <span className="text-xs text-white/40 w-16">{model.tokens}</span>
-                <span className="text-sm text-white/25 w-32">{model.pages}</span>
+                <span className="text-xs text-white/50 w-24 font-mono">{model.tokens}</span>
+                <span className="text-xs text-white/35 w-24">{model.pages}</span>
               </motion.div>
             ))}
           </div>
+          <motion.p
+            className="text-xs text-white/45 mb-4 text-center"
+            animate={{ opacity: s === 7 ? 1 : 0 }}
+            transition={{ ...spring, delay: 1.2 }}
+          >
+            However big it is, it is always a limit, and a fuller window means a bigger bill per call.
+          </motion.p>
 
           {/* What happens when full */}
           <motion.div
@@ -847,7 +859,7 @@ export default function ContextMemoryAnim() {
             <span className="px-3 py-1.5 rounded-lg bg-red-400/10 border border-red-400/30 text-red-400 text-sm font-bold">
               CONTEXT FULL?
             </span>
-            <span className="text-xs text-white/30">→ API returns an error. Your app crashes.</span>
+            <span className="text-xs text-white/40">→ the API rejects the call (or old text gets cut). Plan for it.</span>
           </motion.div>
         </div>
       </motion.div>
@@ -1016,11 +1028,14 @@ export default function ContextMemoryAnim() {
               <div className="h-3 rounded bg-accent-blue/20 mb-1" />
               <div className="h-3 rounded bg-accent-green/20" />
               <p className="text-sm text-accent-green mt-2 text-right">380 tokens (saved 84%!)</p>
+              <p className="text-xs text-white/30 mt-0.5 text-right">illustrative numbers</p>
             </motion.div>
           </div>
         </div>
       </motion.div>
 
+      {/* "Try it yourself" playground (mounted only on its step) */}
+      {trigger === 'playground' && <ContextMemoryPlayground />}
     </div>
   );
 }
