@@ -180,7 +180,7 @@ export default function AssemblyLineAnim() {
       </div>
 
       {/* Stage: desks, belt, sticky note */}
-      <div className="relative flex-shrink-0 h-[252px]">
+      <div className="relative flex-shrink-0 h-[262px]">
         {/* Rita */}
         <div className="absolute left-0 top-0 w-[34%] flex flex-col items-center">
           <AgentBot {...TEAM.researcher} size={70} mood={ritaMood} active={ritaActive} dimmed={ritaDim} />
@@ -259,13 +259,13 @@ export default function AssemblyLineAnim() {
               rotate: noteAtWally ? 2 : -2,
             }}
             transition={{ left: { duration: carrying ? 1.6 : 0.4, ease: 'easeInOut' }, default: { duration: 0.4 } }}
-            className="absolute bottom-0 w-[32%] rounded-md p-2 text-[11.5px] leading-snug shadow-xl"
+            className="absolute bottom-0 w-[33%] rounded-md p-2 text-[11.5px] leading-snug shadow-xl"
             style={{ background: '#fde68a', color: '#3b2f05', boxShadow: carrying ? `0 0 18px ${ACCENT}` : undefined }}
           >
             <div className="font-bold text-[11px] mb-0.5">
               📌 {noteAtWally ? "Wally's task:" : "Rita's facts"} <span className="font-mono font-normal">facts</span>
             </div>
-            <div className="whitespace-pre-line max-h-[112px] overflow-hidden">{facts}</div>
+            <div className="whitespace-pre-line max-h-[118px] overflow-hidden">{facts}</div>
           </motion.div>
         )}
       </div>

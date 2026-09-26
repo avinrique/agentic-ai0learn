@@ -318,7 +318,7 @@ export default function BossAgentAnim() {
               name={TEAM.boss.name}
               role={TEAM.boss.role}
               mood={maxMood(s)}
-              size={70}
+              size={60}
               active={s.focus === 'max' && !finished}
               dimmed={!maxFocus}
             />
