@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from openai import OpenAI
 client = OpenAI()
 
-# Same helper as before: one agent = one API call with its own job card.
+# Same helper as before: one agent = one API call with its own system prompt.
 def run_agent(system_prompt, task):
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -39,10 +39,6 @@ with ThreadPoolExecutor() as pool:
 print(f"All at once: {time.time() - start:.1f} seconds")
 
 # Wally needs ALL the facts, so he waits until the whole team is done
-fact_list = "
-".join(facts)
-poster = run_agent(writer_prompt, f"Facts:
-{fact_list}")
-print("
-Wally's poster:
-" + poster)`;
+fact_list = "\n".join(facts)
+poster = run_agent(writer_prompt, f"Facts:\n{fact_list}")
+print("\nWally's poster:\n" + poster)`;
