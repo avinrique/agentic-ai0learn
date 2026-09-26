@@ -56,7 +56,8 @@ export default function ChallengePipelineAnim() {
     const get = (n: string) => vars.find((v) => v.name === n)?.value;
     const trig = step?.animationTrigger ?? '';
     const line = step?.lineNumber ?? 0;
-    const stage = triggerStage[trig] ?? 0;
+    // On the very last step every stage gets its tick.
+    const stage = currentStep === steps.length - 1 ? STAGES.length : triggerStage[trig] ?? 0;
 
     const userPrompt = unquote(get('user_prompt'));
     const raw = get('raw_json') ?? '';
@@ -288,7 +289,13 @@ export default function ChallengePipelineAnim() {
             color="#fbbf24"
             title="raw_json"
             plain="type: str (just text)"
-            empty={s.hasResponse ? 'reply arrived: next we take out the text' : 'raw reply text goes here'}
+            empty={
+              s.line === 26
+                ? 'heading printed: --- Raw JSON Response ---'
+                : s.hasResponse
+                  ? 'reply arrived: next we take out the text'
+                  : 'raw reply text goes here'
+            }
             badge={s.line >= 28 && s.stage === 5 ? 'printed' : undefined}
           >
             <div className="font-mono text-[11px] leading-snug text-accent-gold/90 break-all line-clamp-3">
@@ -330,12 +337,12 @@ export default function ChallengePipelineAnim() {
           {/* Dict + cards */}
           <Slot
             filled={s.hasParsed}
-            active={s.stage >= 6 && s.line >= 32}
+            active={s.stage >= 6 && s.stage < STAGES.length && s.line >= 32}
             color="#4ade80"
             title={s.hasPretty ? 'pretty cards' : 'parsed_json'}
             plain={s.hasPretty ? 'one card per recommendation' : 'type: dict (keys you can use)'}
             empty="the parsed data goes here"
-            badge={s.stage === 7 ? 'printed' : s.line === 33 ? 'json.dumps(indent=2)' : undefined}
+            badge={s.stage >= 7 ? 'printed' : s.line === 33 ? 'json.dumps(indent=2)' : undefined}
             grow
           >
             {s.hasPretty ? (

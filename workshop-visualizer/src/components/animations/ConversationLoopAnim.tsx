@@ -125,6 +125,9 @@ export default function ConversationLoopAnim() {
       newestIdx,
       setup,
       station: stationFor(line),
+      // Same line as the previous step = the lesson is pausing to make a point.
+      repeat: currentStep > 0 && steps[currentStep - 1]?.lineNumber === line && steps[currentStep - 1]?.animationTrigger === trigger,
+      reply: step?.variables.find((v) => v.name === 'assistant_msg')?.value ?? '',
       inLoop: line >= 9,
       tokens: estimateTokens(messages),
       totalSent: calls.reduce((a, c) => a + c.tokens, 0),
@@ -132,13 +135,27 @@ export default function ConversationLoopAnim() {
     };
   }, [step, steps, currentStep, trigger, line]);
 
+  const pileSpot = s.repeat && (s.station === 4 || s.station === 5);
+
   return (
     <div className="h-full flex flex-col p-3 gap-3 overflow-hidden text-white">
       {/* ── Top row ─────────────────────────────────────────────── */}
       <div className="flex gap-3 shrink-0" style={{ height: 176 }}>
-        <LoopTrack station={s.station} inLoop={s.inLoop} turn={s.turn} />
+        <LoopTrack
+          station={s.station}
+          inLoop={s.inLoop}
+          turn={s.turn}
+          hint={line === 12 ? 'no break' : line === 21 ? 'got reply' : undefined}
+        />
         <AiMemory memory={s.memory} count={s.isCalling ? s.messages.length : 0} calls={s.calls.length} />
-        <TokenMeter tokens={s.tokens} max={s.maxTokens} calls={s.calls} totalSent={s.totalSent} active={s.isCalling} />
+        <TokenMeter
+          tokens={s.tokens}
+          max={s.maxTokens}
+          calls={s.calls}
+          totalSent={s.totalSent}
+          active={s.isCalling}
+          spotlight={s.isCalling && s.repeat}
+        />
       </div>
 
       {/* ── Bottom row ──────────────────────────────────────────── */}
@@ -210,18 +227,23 @@ export default function ConversationLoopAnim() {
               <motion.div
                 key={`typing-${currentStep}`}
                 initial={{ opacity: 0 }}
-                animate={{ opacity: [0.4, 1, 0.4] }}
-                transition={{ duration: 1.2, repeat: Infinity }}
+                animate={{ opacity: 1 }}
                 className="self-end text-[11px] text-accent-blue/80"
               >
-                input() is waiting for you to type...
+                ↑ input() read what you typed
               </motion.div>
             )}
           </div>
         </div>
 
         {/* Messages pile */}
-        <div className="flex-1 min-w-0 flex flex-col rounded-xl border border-white/10 bg-navy-800/60 overflow-hidden">
+        <motion.div
+          animate={{
+            borderColor: pileSpot ? '#fbbf24' : 'rgba(255,255,255,0.1)',
+            boxShadow: pileSpot ? '0 0 18px rgba(251,191,36,0.3)' : 'none',
+          }}
+          className="flex-1 min-w-0 flex flex-col rounded-xl border bg-navy-800/60 overflow-hidden"
+        >
           <div className="flex items-center gap-2 px-3 py-1.5 border-b border-white/10 bg-white/[0.03]">
             <span className="font-mono text-xs text-accent-gold">messages</span>
             <span className="text-[11px] text-white/45">(the chat history)</span>
@@ -294,7 +316,29 @@ export default function ConversationLoopAnim() {
                   <motion.span animate={{ y: [0, -4, 0] }} transition={{ duration: 0.8, repeat: Infinity }}>
                     ↑
                   </motion.span>
-                  The WHOLE pile ({s.messages.length} papers) goes to the AI, not just the newest one.
+                  {line === 18
+                    ? `messages=messages: the WHOLE pile (${s.messages.length} papers) goes to the AI.`
+                    : `create() is called. It will take the pile with it.`}
+                </motion.div>
+              ) : pileSpot ? (
+                <motion.div
+                  key="spot"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-accent-gold/10 border border-accent-gold/30 text-[12px] text-accent-gold"
+                >
+                  {s.station === 5
+                    ? 'This list IS the memory. The AI itself remembers nothing.'
+                    : "This pile is the AI's only memory of the chat."}
+                </motion.div>
+              ) : s.station === 3 ? (
+                <motion.div
+                  key={`reply-${line}`}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-accent-green/10 border border-accent-green/30 text-[12px] text-accent-green truncate"
+                >
+                  {line === 21 && s.reply ? `assistant_msg = ${s.reply}` : 'Reply arrived, saved in response. Not in the pile yet!'}
                 </motion.div>
               ) : (
                 <div className="w-full flex flex-wrap gap-1.5 text-[11px] text-white/50">
@@ -311,7 +355,7 @@ export default function ConversationLoopAnim() {
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
@@ -320,7 +364,7 @@ export default function ConversationLoopAnim() {
 // ─────────────────────────────────────────────────────────────────────────────
 // while True: a circular track with six stops. The glowing dot is "you are here".
 // ─────────────────────────────────────────────────────────────────────────────
-function LoopTrack({ station, inLoop, turn }: { station: number; inLoop: boolean; turn: number }) {
+function LoopTrack({ station, inLoop, turn, hint }: { station: number; inLoop: boolean; turn: number; hint?: string }) {
   const size = 176;
   const r = 60;
   const c = size / 2;
@@ -405,7 +449,7 @@ function LoopTrack({ station, inLoop, turn }: { station: number; inLoop: boolean
         <motion.span key={turn} initial={{ scale: 1.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-sm font-bold text-white/85">
           {turn > 0 ? `Turn ${turn}` : inLoop ? 'Loop' : 'Setup'}
         </motion.span>
-        {station >= 0 && <span className="text-[10px] text-white/45">{STATIONS[station].hint}</span>}
+        {station >= 0 && <span className="text-[10px] text-white/45">{hint ?? STATIONS[station].hint}</span>}
       </div>
     </div>
   );
@@ -496,17 +540,25 @@ function TokenMeter({
   calls,
   totalSent,
   active,
+  spotlight,
 }: {
   tokens: number;
   max: number;
   calls: CallRecord[];
   totalSent: number;
   active: boolean;
+  spotlight?: boolean;
 }) {
   const pct = Math.min(100, (tokens / max) * 100);
   const maxCall = Math.max(1, ...calls.map((c) => c.tokens), max);
   return (
-    <div className="shrink-0 w-[150px] rounded-xl border border-white/10 bg-navy-800/60 p-2.5 flex flex-col gap-2">
+    <motion.div
+      animate={{
+        borderColor: spotlight ? '#fbbf24' : 'rgba(255,255,255,0.1)',
+        boxShadow: spotlight ? '0 0 18px rgba(251,191,36,0.35)' : 'none',
+      }}
+      className="shrink-0 w-[150px] rounded-xl border bg-navy-800/60 p-2.5 flex flex-col gap-2"
+    >
       <div>
         <div className="text-xs font-semibold text-white/80">Token meter</div>
         <div className="text-[11px] text-white/45 leading-tight">tokens = pieces of text</div>
@@ -545,6 +597,7 @@ function TokenMeter({
       <div className="text-[11px] text-white/55">
         sent in total: <span className="font-mono text-accent-gold">~{totalSent}</span>
       </div>
-    </div>
+      {spotlight && <div className="text-[11px] text-accent-gold leading-snug">Bigger list, more tokens, every turn.</div>}
+    </motion.div>
   );
 }

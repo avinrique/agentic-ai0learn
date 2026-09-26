@@ -45,7 +45,7 @@ const MODEL_CHOICES = ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1'];
 
 // Rough tokenizer: words (with their leading space) and single punctuation marks.
 function tokenize(text: string): string[] {
-  return text.match(/\s*[\p{L}\p{N}']+|\s*[^\s\p{L}\p{N}]/gu) ?? [];
+  return text.match(/\s*[A-Za-z0-9\u00C0-\u024F']+|\s*[^\sA-Za-z0-9\u00C0-\u024F]/g) ?? [];
 }
 
 // Counts from 0 up to `total` while `active`; returns `total` when not active.
