@@ -109,7 +109,7 @@ export default function SystemPromptStageAnim({ noSystemReply }: Props) {
   const replyFocus = !!reply || arrived;
 
   return (
-    <div className="h-full flex flex-col px-5 py-4 gap-4 overflow-hidden">
+    <div className={`h-full flex flex-col px-5 py-4 gap-4 overflow-hidden ${compare || !reply ? 'justify-center' : ''}`}>
       {/* Setup checklist: only while setting up */}
       {setupPhase && (
         <div className="flex flex-wrap justify-center gap-2 shrink-0">
@@ -138,7 +138,7 @@ export default function SystemPromptStageAnim({ noSystemReply }: Props) {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={spring}
-          className="flex-1 min-h-0 flex flex-col gap-3"
+          className="min-h-0 flex flex-col gap-3"
         >
           {isLast && (
             <div className="flex justify-center gap-2 text-[13px] font-semibold flex-wrap shrink-0">
@@ -154,7 +154,7 @@ export default function SystemPromptStageAnim({ noSystemReply }: Props) {
               ))}
             </div>
           )}
-          <div className="flex-1 min-h-0 grid grid-cols-2 gap-4">
+          <div className="min-h-0 grid grid-cols-2 gap-4">
             <div className="rounded-2xl bg-white/[0.04] px-4 py-3 flex flex-col gap-2 min-h-0">
               <div className="text-[14px] font-semibold text-white/55">🤖 no system prompt</div>
               <div className="text-[15px] text-white/70 whitespace-pre-wrap overflow-hidden leading-snug">{noSystemReply}</div>
@@ -178,7 +178,7 @@ export default function SystemPromptStageAnim({ noSystemReply }: Props) {
           {/* The stage: card -> AI <- question */}
           <motion.div
             animate={{ opacity: replyFocus ? 0.5 : 1 }}
-            className={`flex items-stretch gap-3 ${setupPhase ? 'flex-1 min-h-0 items-center justify-center' : 'min-h-[190px] shrink-0'}`}
+            className={`flex gap-3 ${setupPhase ? 'items-center justify-center' : 'items-stretch min-h-[190px] shrink-0'}`}
           >
             {!setupPhase && (
               <>
@@ -285,7 +285,11 @@ export default function SystemPromptStageAnim({ noSystemReply }: Props) {
 
           {/* The trip to OpenAI */}
           {tripStarted && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: replyFocus ? 0.6 : 1, y: 0 }} className="flex items-center gap-3 text-[13px] shrink-0">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: replyFocus ? 0.6 : 1, y: 0 }}
+              className="flex items-center gap-3 text-[13px] shrink-0"
+            >
               <span className="text-white/60">💻 laptop</span>
               <div className="relative flex-1 h-7 flex items-center">
                 <div className="w-full border-t-2 border-dashed border-white/15" />
@@ -307,42 +311,55 @@ export default function SystemPromptStageAnim({ noSystemReply }: Props) {
           )}
 
           {/* The reply */}
-          <div className="flex-1 min-h-0">
-            {reply ? (
-              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="h-full flex flex-col gap-2">
-                <div className="flex items-center gap-1 text-[13px] font-mono">
-                  {['response', 'choices[0]', 'message', 'content'].map((p, i) => (
-                    <span key={p} className="flex items-center gap-1">
-                      {i > 0 && <span className="text-white/30">→</span>}
-                      <span className={`px-1.5 py-0.5 rounded ${i === 3 ? 'bg-accent-green/20 text-accent-green font-bold' : 'text-white/45'}`}>
-                        {p}
-                      </span>
-                    </span>
-                  ))}
-                  {printed && <span className="ml-auto font-sans text-accent-green">✓ printed</span>}
-                </div>
-                <div
-                  className="flex-1 min-h-0 rounded-2xl rounded-tl-none border-2 px-4 py-3 overflow-hidden"
-                  style={{ borderColor: `${persona.color}88`, backgroundColor: `${persona.color}14` }}
+          {(reply || arrived) && (
+            <div className={reply ? 'flex-1 min-h-0' : 'shrink-0 py-6'}>
+              {reply ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={spring}
+                  className="h-full flex flex-col gap-2"
                 >
-                  <div className="text-[14px] font-semibold mb-1.5" style={{ color: persona.color }}>
-                    {persona.icon} {persona.name}
+                  <div className="flex items-center gap-1 text-[13px] font-mono">
+                    {['response', 'choices[0]', 'message', 'content'].map((p, i) => (
+                      <span key={p} className="flex items-center gap-1">
+                        {i > 0 && <span className="text-white/30">→</span>}
+                        <span
+                          className={`px-1.5 py-0.5 rounded ${i === 3 ? 'bg-accent-green/20 text-accent-green font-bold' : 'text-white/45'}`}
+                        >
+                          {p}
+                        </span>
+                      </span>
+                    ))}
+                    {printed && <span className="ml-auto font-sans text-accent-green">✓ printed</span>}
                   </div>
-                  <div className={`text-[16px] text-white/90 whitespace-pre-wrap leading-snug ${persona.replyClass}`}>
-                    {extracting ? typed : reply}
-                    {extracting && typed.length < reply.length && <span className="animate-pulse">▌</span>}
+                  <div
+                    className="min-h-0 rounded-2xl rounded-tl-none border-2 px-4 py-3 overflow-hidden"
+                    style={{ borderColor: `${persona.color}88`, backgroundColor: `${persona.color}14` }}
+                  >
+                    <div className="text-[14px] font-semibold mb-1.5" style={{ color: persona.color }}>
+                      {persona.icon} {persona.name}
+                    </div>
+                    <div className={`text-[16px] text-white/90 whitespace-pre-wrap leading-snug ${persona.replyClass}`}>
+                      {extracting ? typed : reply}
+                      {extracting && typed.length < reply.length && <span className="animate-pulse">▌</span>}
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ) : arrived ? (
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="h-full flex items-center justify-center">
-                <div className="rounded-2xl border-2 border-accent-green/50 bg-accent-green/5 px-10 py-6 flex flex-col items-center gap-2">
-                  <div className="text-3xl">📦</div>
-                  <div className="text-[18px] font-mono text-accent-green">response</div>
-                </div>
-              </motion.div>
-            ) : null}
-          </div>
+                </motion.div>
+              ) : arrived ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="h-full flex items-center justify-center"
+                >
+                  <div className="rounded-2xl border-2 border-accent-green/50 bg-accent-green/5 px-10 py-6 flex flex-col items-center gap-2">
+                    <div className="text-3xl">📦</div>
+                    <div className="text-[18px] font-mono text-accent-green">response</div>
+                  </div>
+                </motion.div>
+              ) : null}
+            </div>
+          )}
         </>
       )}
     </div>
