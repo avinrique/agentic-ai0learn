@@ -306,7 +306,7 @@ export default function TeamShapesPlayground() {
     x: pos[w]!.x,
     y: pos[w]!.y,
     active: !done && w === cur.who && cur.call,
-    dimmed: !usedSoFar.has(w) || (done && w !== cur.to && w !== 'you' && !usedSoFar.has(w)),
+    dimmed: !usedSoFar.has(w),
     mood: done && w === cur.who ? 'proud' : !usedSoFar.has(w) && done ? 'sleeping' : w === cur.to ? 'thinking' : undefined,
   }));
 
@@ -343,7 +343,7 @@ export default function TeamShapesPlayground() {
     ...(cur.also ?? []).map((a, j) => mkNote(cur.who, a.to, a.text, `${runId}-${reqIdx}-${shape}-${idx}-${j}`, undefined, 0.3 + j * 0.2)),
   ];
   // Fanned-out notes from the boss would overlap: spread them sideways.
-  if (notes.length > 1) notes.forEach((n) => (n.width = 170));
+  if (notes.length > 1) notes.forEach((n) => (n.width = 130));
 
   const verdict = VERDICT[combo.verdict.kind];
 
