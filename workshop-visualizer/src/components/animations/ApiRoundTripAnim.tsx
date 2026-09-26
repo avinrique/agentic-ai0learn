@@ -210,7 +210,6 @@ export default function ApiRoundTripAnim() {
   })();
   const reply = getVar('content') ?? finalVar('content') ?? '';
   const tokens = useMemo(() => tokenize(reply), [reply]);
-  const promptTokens = useMemo(() => tokenize(prompt).length, [prompt]);
 
   // Typewriters
   const promptShown = useTicker(prompt.length, at('msgContent'), 28, resetKey);
@@ -230,7 +229,6 @@ export default function ApiRoundTripAnim() {
   const sent = reached >= RANK.apiCall;
   const received = reached >= RANK.apiCallComplete;
   const opened = reached >= RANK.extractContent;
-  const waiting = at('apiCall') || at('apiProcessing');
 
   // After the reply lands, the round trip shrinks to a strip and the bottom
   // area shows ONE thing: the response object, then (when printing) the terminal.
@@ -277,182 +275,203 @@ export default function ApiRoundTripAnim() {
         </motion.div>
       ) : (
         /* Row 1: laptop — internet — server (the whole panel until the reply lands) */
-        <div className="flex-1 min-h-0 flex gap-3">
-          {/* LAPTOP */}
-          <motion.div
-            animate={{ borderColor: reached <= 9 && reached >= 1 ? 'rgba(74,158,255,0.55)' : 'rgba(74,158,255,0.2)' }}
-            className="flex-[1.3] min-w-0 rounded-2xl border-2 bg-accent-blue/5 px-4 py-3 flex flex-col gap-3 overflow-hidden"
-          >
-            <div className="flex items-center gap-2 shrink-0">
-              <LaptopIcon />
-              <span className="text-[16px] font-semibold text-accent-blue">Your laptop</span>
-            </div>
+        <div className="flex-1 min-h-0 flex flex-col justify-center">
+          <div className="h-full max-h-[440px] min-h-0 flex gap-3">
+            {/* LAPTOP */}
+            <motion.div
+              animate={{
+                borderColor: reached <= 9 && reached >= 1 ? 'rgba(74,158,255,0.55)' : 'rgba(74,158,255,0.2)',
+              }}
+              className="flex-[1.3] min-w-0 rounded-2xl border-2 bg-accent-blue/5 px-4 py-3 flex flex-col gap-3 overflow-hidden"
+            >
+              <div className="flex items-center gap-2 shrink-0">
+                <LaptopIcon />
+                <span className="text-[16px] font-semibold text-accent-blue">Your laptop</span>
+              </div>
 
-            {/* Setup chips */}
-            <div className="flex flex-wrap gap-2 shrink-0">
-              {reached >= 1 && (
-                <Glow on={at('import')} color="#a78bfa" className="rounded-lg px-2.5 py-1 bg-accent-purple/10">
-                  <span className="font-mono text-[14px] text-accent-purple">openai</span>
-                </Glow>
-              )}
-              {reached >= 2 && (
-                <Glow on={at('createClient')} color="#4a9eff" className="rounded-lg px-2.5 py-1 bg-accent-blue/10">
-                  <span className="font-mono text-[14px] text-accent-blue">client</span>
-                  {at('createClient') && <span className="text-[13px] text-white/55"> phone line</span>}
-                </Glow>
-              )}
-              {reached >= 3 && (
-                <Glow on={at('apiKey')} color="#fbbf24" className="rounded-lg px-2.5 py-1 bg-accent-gold/10 flex items-center gap-1.5">
-                  <KeyIcon color="#fbbf24" />
-                  <span className="font-mono text-[14px] text-white/70 tracking-widest">sk-••••</span>
-                </Glow>
-              )}
-            </div>
-
-            {/* Request envelope being packed */}
-            {reached >= 5 && !sent && (
-              <Glow
-                on={at('startRequest')}
-                color="#4a9eff"
-                className="flex-1 min-h-0 rounded-xl bg-navy-900/60 px-3 py-3 flex flex-col gap-3 overflow-hidden"
-              >
-                <div className="flex items-center gap-2 shrink-0">
-                  <Envelope color="#4a9eff" size={28} />
-                  <span className="text-[15px] font-semibold text-white/85">request</span>
-                </div>
-
-                {reached >= 6 && (
-                  <div className="flex items-center gap-2 flex-wrap shrink-0">
-                    <span className="font-mono text-[14px] text-white/50">model</span>
-                    {(at('selectModel') ? MODEL_CHOICES : [model]).map((m) => {
-                      const chosen = m === model;
-                      return (
-                        <motion.span
-                          key={m}
-                          layout
-                          animate={{
-                            opacity: chosen ? 1 : 0.35,
-                            scale: chosen ? 1.05 : 0.95,
-                            boxShadow: chosen && at('selectModel') ? '0 0 12px rgba(74,158,255,0.5)' : 'none',
-                          }}
-                          className={`px-2 py-0.5 rounded-md font-mono text-[14px] ${
-                            chosen ? 'bg-accent-blue/20 text-accent-blue font-bold' : 'text-white/50'
-                          }`}
-                        >
-                          {m}
-                        </motion.span>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {reached >= 7 && (
-                  <Glow on={at('buildMessages')} color="#a78bfa" className="rounded-xl bg-accent-purple/5 px-3 py-2 flex flex-col gap-2 min-h-0">
-                    <span className="font-mono text-[14px] text-accent-purple">messages</span>
-                    {reached >= 8 && (
-                      <motion.div
-                        initial={{ opacity: 0, x: -12 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={spring}
-                        className="self-end max-w-[95%] rounded-2xl rounded-br-sm bg-accent-blue/15 px-3 py-2"
-                      >
-                        <motion.div
-                          animate={{ boxShadow: at('msgRole') ? '0 0 10px rgba(74,158,255,0.6)' : 'none' }}
-                          className="inline-block rounded px-1.5 text-[13px] font-bold font-mono bg-accent-blue text-navy-900 mb-1"
-                        >
-                          role: user
-                        </motion.div>
-                        <div className="text-[15px] text-white/90 leading-snug min-h-[1em]">
-                          {reached >= 9 ? (
-                            <>
-                              {prompt.slice(0, promptShown)}
-                              {at('msgContent') && promptShown < prompt.length && (
-                                <span className="inline-block w-1.5 h-4 bg-white/70 ml-0.5 animate-pulse" />
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-white/30 italic">content …</span>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
+              {/* Setup chips */}
+              <div className="flex flex-wrap gap-2 shrink-0">
+                {reached >= 1 && (
+                  <Glow on={at('import')} color="#a78bfa" className="rounded-lg px-2.5 py-1 bg-accent-purple/10">
+                    <span className="font-mono text-[14px] text-accent-purple">openai</span>
                   </Glow>
                 )}
-              </Glow>
-            )}
+                {reached >= 2 && (
+                  <Glow on={at('createClient')} color="#4a9eff" className="rounded-lg px-2.5 py-1 bg-accent-blue/10">
+                    <span className="font-mono text-[14px] text-accent-blue">client</span>
+                    {at('createClient') && <span className="text-[13px] text-white/55"> phone line</span>}
+                  </Glow>
+                )}
+                {reached >= 3 && (
+                  <Glow on={at('apiKey')} color="#fbbf24" className="rounded-lg px-2.5 py-1 bg-accent-gold/10 flex items-center gap-1.5">
+                    <KeyIcon color="#fbbf24" />
+                    <span className="font-mono text-[14px] text-white/70 tracking-widest">sk-••••</span>
+                  </Glow>
+                )}
+              </div>
 
-            {sent && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-[14px] text-white/45">
-                <Envelope color="rgba(255,255,255,0.35)" size={22} />
-                sent
-              </motion.div>
-            )}
-          </motion.div>
-
-          {/* INTERNET LANE */}
-          <div className="flex-[0.45] min-w-[80px] flex flex-col justify-center gap-8 relative">
-            <div className="relative h-10">
-              <div className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-accent-blue/25" />
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 text-accent-blue/50 text-sm">▶</div>
-              {at('apiCall') && (
-                <motion.div
-                  key={`req-${resetKey}`}
-                  initial={{ left: '0%', opacity: 0 }}
-                  animate={{ left: '50%', opacity: 1 }}
-                  transition={{ duration: 1.6, ease: 'easeInOut' }}
-                  className="absolute top-0"
+              {/* Request envelope being packed */}
+              {reached >= 5 && !sent && (
+                <Glow
+                  on={at('startRequest')}
+                  color="#4a9eff"
+                  className="flex-1 min-h-0 rounded-xl bg-navy-900/60 px-3 py-3 flex flex-col gap-3 overflow-hidden"
                 >
-                  <Envelope color="#4a9eff" size={36} />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Envelope color="#4a9eff" size={28} />
+                    <span className="text-[15px] font-semibold text-white/85">request</span>
+                  </div>
+
+                  {reached >= 6 && (
+                    <div className="flex items-center gap-2 flex-wrap shrink-0">
+                      <span className="font-mono text-[14px] text-white/50">model</span>
+                      {(at('selectModel') ? MODEL_CHOICES : [model]).map((m) => {
+                        const chosen = m === model;
+                        return (
+                          <motion.span
+                            key={m}
+                            layout
+                            animate={{
+                              opacity: chosen ? 1 : 0.35,
+                              scale: chosen ? 1.05 : 0.95,
+                              boxShadow: chosen && at('selectModel') ? '0 0 12px rgba(74,158,255,0.5)' : 'none',
+                            }}
+                            className={`px-2 py-0.5 rounded-md font-mono text-[14px] ${
+                              chosen ? 'bg-accent-blue/20 text-accent-blue font-bold' : 'text-white/50'
+                            }`}
+                          >
+                            {m}
+                          </motion.span>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {reached >= 7 && (
+                    <Glow
+                      on={at('buildMessages')}
+                      color="#a78bfa"
+                      className="rounded-xl bg-accent-purple/5 px-3 py-2 flex flex-col gap-2 min-h-0"
+                    >
+                      <span className="font-mono text-[14px] text-accent-purple">messages</span>
+                      {reached >= 8 && (
+                        <motion.div
+                          initial={{ opacity: 0, x: -12 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={spring}
+                          className="self-end max-w-[95%] rounded-2xl rounded-br-sm bg-accent-blue/15 px-3 py-2"
+                        >
+                          <motion.div
+                            animate={{
+                              boxShadow: at('msgRole') ? '0 0 10px rgba(74,158,255,0.6)' : 'none',
+                            }}
+                            className="inline-block rounded px-1.5 text-[13px] font-bold font-mono bg-accent-blue text-navy-900 mb-1"
+                          >
+                            role: user
+                          </motion.div>
+                          <div className="text-[15px] text-white/90 leading-snug min-h-[1em]">
+                            {reached >= 9 ? (
+                              <>
+                                {prompt.slice(0, promptShown)}
+                                {at('msgContent') && promptShown < prompt.length && (
+                                  <span className="inline-block w-1.5 h-4 bg-white/70 ml-0.5 animate-pulse" />
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-white/30 italic">content …</span>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </Glow>
+                  )}
+                </Glow>
+              )}
+
+              {sent && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-[14px] text-white/45">
+                  <Envelope color="rgba(255,255,255,0.35)" size={22} />
+                  sent
                 </motion.div>
               )}
-            </div>
-            <div className="relative h-10">
-              <div className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-accent-green/25" />
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 text-accent-green/50 text-sm">◀</div>
-            </div>
-          </div>
+            </motion.div>
 
-          {/* OPENAI SERVER */}
-          <motion.div
-            animate={{
-              borderColor: at('apiProcessing') ? '#fbbf24' : sent ? 'rgba(74,222,128,0.55)' : 'rgba(74,222,128,0.15)',
-              boxShadow: at('apiProcessing') ? '0 0 26px rgba(251,191,36,0.2)' : 'none',
-            }}
-            className="flex-1 min-w-0 rounded-2xl border-2 bg-accent-green/5 px-4 py-3 flex flex-col gap-3 overflow-hidden"
-          >
-            <div className="flex items-center gap-2 shrink-0">
-              <ServerIcon color="#4ade80" />
-              <span className="text-[16px] font-semibold text-accent-green">OpenAI</span>
+            {/* INTERNET LANE */}
+            <div className="flex-[0.45] min-w-[80px] flex flex-col justify-center gap-8 relative">
+              <div className="relative h-10">
+                <div className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-accent-blue/25" />
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 text-accent-blue/50 text-sm">▶</div>
+                {at('apiCall') && (
+                  <motion.div
+                    key={`req-${resetKey}`}
+                    initial={{ left: '0%', opacity: 0 }}
+                    animate={{ left: '50%', opacity: 1 }}
+                    transition={{ duration: 1.6, ease: 'easeInOut' }}
+                    className="absolute top-0"
+                  >
+                    <Envelope color="#4a9eff" size={36} />
+                  </motion.div>
+                )}
+              </div>
+              <div className="relative h-10">
+                <div className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-accent-green/25" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 text-accent-green/50 text-sm">◀</div>
+              </div>
             </div>
 
-            {sent && reached < RANK.apiProcessing && (
-              <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={spring} className="flex items-center gap-2 text-[14px] text-white/75">
-                <Envelope color="#4a9eff" size={22} />
-                <span className="font-mono text-accent-blue">{model}</span>
-              </motion.div>
-            )}
+            {/* OPENAI SERVER */}
+            <motion.div
+              animate={{
+                borderColor: at('apiProcessing') ? '#fbbf24' : sent ? 'rgba(74,222,128,0.55)' : 'rgba(74,222,128,0.15)',
+                boxShadow: at('apiProcessing') ? '0 0 26px rgba(251,191,36,0.2)' : 'none',
+              }}
+              className="flex-1 min-w-0 rounded-2xl border-2 bg-accent-green/5 px-4 py-3 flex flex-col gap-3 overflow-hidden"
+            >
+              <div className="flex items-center gap-2 shrink-0">
+                <ServerIcon color="#4ade80" />
+                <span className="text-[16px] font-semibold text-accent-green">OpenAI</span>
+              </div>
 
-            {reached >= RANK.apiProcessing && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
-                <div className="flex items-center justify-between shrink-0 text-[13px]">
-                  <span className="text-accent-gold font-semibold">writing</span>
-                  <span className="font-mono text-white/55">
-                    tokens <span className="text-accent-gold font-bold">{tokensShown}</span>
-                  </span>
-                </div>
-                <div className="text-[15px] leading-relaxed text-white/90 overflow-hidden whitespace-pre-wrap">
-                  {tokens.slice(0, tokensShown).map((t, i) => (
-                    <span
-                      key={i}
-                      className={i === tokensShown - 1 && at('apiProcessing') ? 'bg-accent-gold/40 rounded-sm' : i % 2 ? 'bg-white/[0.06]' : ''}
-                    >
-                      {t}
+              {sent && reached < RANK.apiProcessing && (
+                <motion.div
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={spring}
+                  className="flex items-center gap-2 text-[14px] text-white/75"
+                >
+                  <Envelope color="#4a9eff" size={22} />
+                  <span className="font-mono text-accent-blue">{model}</span>
+                </motion.div>
+              )}
+
+              {reached >= RANK.apiProcessing && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden"
+                >
+                  <div className="flex items-center justify-between shrink-0 text-[13px]">
+                    <span className="text-accent-gold font-semibold">writing</span>
+                    <span className="font-mono text-white/55">
+                      tokens <span className="text-accent-gold font-bold">{tokensShown}</span>
                     </span>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </motion.div>
+                  </div>
+                  <div className="text-[15px] leading-relaxed text-white/90 overflow-hidden whitespace-pre-wrap">
+                    {tokens.slice(0, tokensShown).map((t, i) => (
+                      <span
+                        key={i}
+                        className={
+                          i === tokensShown - 1 && at('apiProcessing') ? 'bg-accent-gold/40 rounded-sm' : i % 2 ? 'bg-white/[0.06]' : ''
+                        }
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </motion.div>
+          </div>
         </div>
       )}
 
@@ -469,37 +488,48 @@ export default function ApiRoundTripAnim() {
                 <motion.span
                   key={seg}
                   initial={{ opacity: 0.2 }}
-                  animate={{ opacity: 1, color: i === 3 ? '#4ade80' : '#a78bfa' }}
-                  transition={{ delay: at('extractContent') ? 0.2 + i * 0.35 : 0 }}
+                  animate={{
+                    opacity: 1,
+                    color: i === 3 ? '#4ade80' : '#a78bfa',
+                  }}
+                  transition={{
+                    delay: at('extractContent') ? 0.2 + i * 0.35 : 0,
+                  }}
                 >
                   {seg}
                 </motion.span>
               ))}
             </div>
           )}
-          <Layer
-            name="response"
-            plain={opened ? '' : 'the text is buried inside'}
-            open={opened}
-            lit={at('apiCallComplete') || at('extractContent')}
-            delay={0}
-            color="#a78bfa"
-          >
-            <Layer name="choices[0]" plain="" open lit={at('extractContent')} delay={at('extractContent') ? 0.35 : 0} color="#a78bfa">
-              <Layer name="message" plain="" open lit={at('extractContent')} delay={at('extractContent') ? 0.7 : 0} color="#a78bfa">
-                <Layer
-                  name="content"
-                  plain=""
-                  open
-                  lit={reached >= RANK.extractContent}
-                  delay={at('extractContent') ? 1.05 : 0}
-                  color="#4ade80"
-                >
-                  <div className="text-[15px] text-accent-green leading-snug whitespace-pre-wrap">{reply}</div>
+          {!opened ? (
+            <motion.div
+              animate={{
+                boxShadow: at('apiCallComplete') ? '0 0 28px rgba(167,139,250,0.3)' : '0 0 0 rgba(0,0,0,0)',
+              }}
+              className="self-center rounded-2xl border-2 border-accent-purple/60 bg-accent-purple/10 px-10 py-8 flex flex-col items-center gap-2"
+            >
+              <span className="text-4xl">📦</span>
+              <span className="font-mono text-[20px] font-bold text-accent-purple">response</span>
+              <span className="font-mono text-[13px] text-white/50">&lt;ChatCompletion object&gt;</span>
+            </motion.div>
+          ) : (
+            <Layer name="response" plain="" open={opened} lit={at('apiCallComplete') || at('extractContent')} delay={0} color="#a78bfa">
+              <Layer name="choices[0]" plain="" open lit={at('extractContent')} delay={at('extractContent') ? 0.35 : 0} color="#a78bfa">
+                <Layer name="message" plain="" open lit={at('extractContent')} delay={at('extractContent') ? 0.7 : 0} color="#a78bfa">
+                  <Layer
+                    name="content"
+                    plain=""
+                    open
+                    lit={reached >= RANK.extractContent}
+                    delay={at('extractContent') ? 1.05 : 0}
+                    color="#4ade80"
+                  >
+                    <div className="text-[15px] text-accent-green leading-snug whitespace-pre-wrap">{reply}</div>
+                  </Layer>
                 </Layer>
               </Layer>
             </Layer>
-          </Layer>
+          )}
         </motion.div>
       )}
 

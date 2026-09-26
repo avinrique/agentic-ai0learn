@@ -1,4 +1,4 @@
-"use client";
+'use client';
 /**
  * AgentLoopPanel — the animation panel for all agent lessons (Parts 2 & 3).
  *
@@ -7,15 +7,11 @@
  *   bottom: the messages list as a quiet chip row (MessageTimeline); on the steps that
  *           append to it, it becomes the focal item instead of the stage
  */
-import { useMemo } from "react";
-import { useTracerStore } from "@/stores/tracerStore";
-import AgentDataFlow from "./AgentDataFlow";
-import MessageTimeline from "./MessageTimeline";
-import AgentLoopDiagram, {
-  ToolCard,
-  buildAgentModel,
-  sceneAt,
-} from "./AgentLoopDiagram";
+import { useMemo } from 'react';
+import { useTracerStore } from '@/stores/tracerStore';
+import AgentDataFlow from './AgentDataFlow';
+import MessageTimeline from './MessageTimeline';
+import AgentLoopDiagram, { ToolCard, buildAgentModel, sceneAt } from './AgentLoopDiagram';
 
 interface AgentLoopPanelProps {
   agentName: string;
@@ -38,17 +34,9 @@ export default function AgentLoopPanel({
   const steps = useTracerStore((s) => s.steps);
 
   const toolNames = useMemo(() => tools.map((t) => t.name), [tools]);
-  const model = useMemo(
-    () => buildAgentModel(steps, toolNames),
-    [steps, toolNames],
-  );
+  const model = useMemo(() => buildAgentModel(steps, toolNames), [steps, toolNames]);
   const scene = useMemo(
-    () =>
-      sceneAt(
-        model,
-        steps,
-        Math.min(currentStep, Math.max(0, steps.length - 1)),
-      ),
+    () => sceneAt(model, steps, Math.min(currentStep, Math.max(0, steps.length - 1))),
     [model, steps, currentStep],
   );
 
@@ -59,12 +47,7 @@ export default function AgentLoopPanel({
 
   return (
     <div className="h-full flex flex-col gap-3 p-4 overflow-hidden">
-      <AgentLoopDiagram
-        scene={scene}
-        agentName={agentName}
-        accentColor={accentColor}
-        loop={loop}
-      />
+      <AgentLoopDiagram scene={scene} agentName={agentName} accentColor={accentColor} loop={loop} />
       {appended ? (
         <>
           <AgentDataFlow
