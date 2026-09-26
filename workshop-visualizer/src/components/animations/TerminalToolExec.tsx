@@ -1,148 +1,120 @@
 'use client';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useTracerStore } from '@/stores/tracerStore';
-import { useMemo } from 'react';
+/**
+ * TerminalToolExec — a real-looking terminal for the Terminal Assistant lesson.
+ * Shows the program's console output so far, with each tool run drawn inline
+ * ($ command + its output, or the file that was read / written), plus a safety badge.
+ */
+import { motion } from 'framer-motion';
+import { AgentCall, AgentScene, unescape, unquote } from './AgentLoopDiagram';
 
-const spring = { type: 'spring' as const, damping: 20, stiffness: 100 };
+type Line = { key: string; text: string; kind: 'out' | 'user' | 'assistant' | 'cmd' | 'result' | 'file' | 'info'; active?: boolean };
 
-export default function TerminalToolExec() {
-  const { currentStep, steps } = useTracerStore();
-  const trigger = steps[currentStep]?.animationTrigger;
-  const variables = useMemo(() => steps[currentStep]?.variables ?? [], [steps, currentStep]);
+function argVal(c: AgentCall, k: string): string {
+  return unescape(unquote(c.args.find(([n]) => n === k)?.[1] ?? ''));
+}
 
-  const { phase, command, output, toolName } = useMemo(() => {
-    let phase: 'idle' | 'command' | 'running' | 'output' = 'idle';
-    let command = '';
-    let output = '';
-    let toolName = '';
+export function safetyFor(name: string): { text: string; color: string } {
+  if (name === 'run_command') return { text: '⚠️ shell=True: runs ANY command the AI writes. Confirm risky ones (rm)!', color: '#f87171' };
+  if (name === 'read_file') return { text: '🔒 read_file only reads: no shell, nothing changes', color: '#4ade80' };
+  if (name === 'write_file') return { text: '✏️ write_file changes your disk: it overwrites the file!', color: '#fbbf24' };
+  return { text: '', color: '#fff' };
+}
 
-    if (!trigger) return { phase, command, output, toolName };
+export default function TerminalToolExec({ scene }: { scene: AgentScene }) {
+  const s = scene.step;
+  const calls = scene.model.turns.flatMap((t) => t.calls).filter((c) => c.execStep <= s);
 
-    if (trigger.startsWith('toolSelect-')) {
-      toolName = trigger.replace('toolSelect-', '');
-      phase = 'command';
-      const argsV = variables.find(v => v.name === 'arguments' || v.name === 'args');
-      if (argsV) {
-        try {
-          const parsed = JSON.parse(argsV.value);
-          command = parsed.command || parsed.path || parsed.filename || argsV.value;
-        } catch {
-          command = argsV.value;
-        }
-      }
-    } else if (trigger.includes('execute')) {
-      phase = 'running';
-      const argsV = variables.find(v => v.name === 'arguments' || v.name === 'args');
-      if (argsV) {
-        try {
-          const parsed = JSON.parse(argsV.value);
-          command = parsed.command || parsed.path || parsed.filename || argsV.value;
-        } catch {
-          command = argsV.value;
-        }
-      }
-      const resultV = variables.find(v => v.name === 'result' || v.name === 'function_result');
-      if (resultV) {
-        output = resultV.value;
-        phase = 'output';
-      }
-    } else if (trigger.includes('return')) {
-      phase = 'output';
-      const resultV = variables.find(v => v.name === 'result' || v.name === 'function_result');
-      if (resultV) output = resultV.value;
+  const events: { step: number; order: number; lines: Line[] }[] = [];
+  for (const o of scene.outputsSoFar) {
+    const kind: Line['kind'] = o.text.startsWith('You:') ? 'user' : o.text.startsWith('Assistant:') ? 'assistant' : 'out';
+    events.push({ step: o.step, order: 0, lines: [{ key: `o${o.step}`, text: o.text, kind }] });
+  }
+  for (const c of calls) {
+    const isActive = c === scene.call && ['select', 'execute', 'return'].includes(scene.phase);
+    const done = c.resultStep <= s;
+    const liveOut = isActive && !done ? scene.vars.output : undefined;
+    const body = done ? unescape(unquote(c.result)) : liveOut ? unescape(unquote(liveOut)) : '';
+    const lines: Line[] = [];
+    if (c.name === 'run_command') {
+      lines.push({ key: `${c.id}c`, text: `$ ${argVal(c, 'command')}`, kind: 'cmd', active: isActive });
+    } else if (c.name === 'read_file') {
+      lines.push({ key: `${c.id}c`, text: `📖 open("${argVal(c, 'path')}").read()`, kind: 'cmd', active: isActive });
+    } else if (c.name === 'write_file') {
+      lines.push({ key: `${c.id}c`, text: `✏️ open("${argVal(c, 'path')}", "w").write(...)`, kind: 'cmd', active: isActive });
+      argVal(c, 'content')
+        .split('\n')
+        .filter(Boolean)
+        .forEach((l, k) => lines.push({ key: `${c.id}w${k}`, text: `   │ ${l}`, kind: 'file' }));
+    } else {
+      lines.push({ key: `${c.id}c`, text: `${c.name}(...)`, kind: 'cmd', active: isActive });
     }
+    if (body) {
+      body
+        .replace(/\n$/, '')
+        .split('\n')
+        .forEach((l, k) => lines.push({ key: `${c.id}r${k}`, text: c.name === 'read_file' ? `   │ ${l}` : l, kind: c.name === 'read_file' ? 'file' : 'result' }));
+    } else {
+      lines.push({ key: `${c.id}run`, text: '▌', kind: 'info' });
+    }
+    events.push({ step: c.execStep, order: 1, lines });
+  }
+  events.sort((a, b) => a.step - b.step || a.order - b.order);
+  const all = events.flatMap((e) => e.lines);
+  const shown = all.slice(-13);
 
-    return { phase, command, output, toolName };
-  }, [trigger, variables]);
+  const focusCall = scene.call && ['select', 'execute', 'return'].includes(scene.phase) ? scene.call : undefined;
+  const badge = focusCall ? safetyFor(focusCall.name) : undefined;
 
-  const isActive = phase !== 'idle';
-
-  if (!isActive) return null;
+  const color: Record<Line['kind'], string> = {
+    out: 'rgba(255,255,255,0.55)',
+    user: '#93c5fd',
+    assistant: '#86efac',
+    cmd: '#fbbf24',
+    result: 'rgba(255,255,255,0.9)',
+    file: '#c4b5fd',
+    info: '#4ade80',
+  };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl overflow-hidden border border-white/10 bg-[#1a1a2e]"
-    >
-      {/* Terminal title bar */}
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-[#0d0d1a] border-b border-white/10">
-        <div className="flex gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
-          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
-          <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
-        </div>
-        <span className="text-[10px] text-white/30 font-mono ml-2">
-          {toolName === 'run_command' ? 'Terminal' : toolName === 'read_file' ? 'File Reader' : toolName === 'write_file' ? 'File Writer' : 'Terminal'}
-        </span>
+    <div className="h-full flex flex-col rounded-lg overflow-hidden border border-white/15 bg-[#05050f] min-h-0">
+      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 border-b border-white/10 flex-shrink-0">
+        <span className="w-2.5 h-2.5 rounded-full bg-[#f87171]" />
+        <span className="w-2.5 h-2.5 rounded-full bg-[#fbbf24]" />
+        <span className="w-2.5 h-2.5 rounded-full bg-[#4ade80]" />
+        <span className="ml-2 text-[12px] font-mono text-white/40 truncate">terminal — python terminal_assistant.py</span>
       </div>
-
-      {/* Terminal body */}
-      <div className="p-3 font-mono text-xs min-h-[80px]">
-        {/* Command line */}
-        <AnimatePresence>
-          {command && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex items-center gap-1 mb-2"
-            >
-              <span className="text-green-400">$</span>
-              <motion.span
-                initial={{ width: 0 }}
-                animate={{ width: 'auto' }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
-                className="text-white/80 overflow-hidden whitespace-nowrap"
-              >
-                {command}
-              </motion.span>
-              {phase === 'command' && (
-                <motion.span
-                  animate={{ opacity: [1, 0] }}
-                  transition={{ duration: 0.8, repeat: Infinity }}
-                  className="text-white/60"
-                >
-                  ▋
-                </motion.span>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Running indicator */}
-        {phase === 'running' && !output && (
+      {badge && (
+        <motion.div
+          key={`${focusCall?.id}-${scene.phase}`}
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="px-2.5 py-1 text-[12px] font-semibold flex-shrink-0"
+          style={{ color: badge.color, backgroundColor: `${badge.color}14`, borderBottom: `1px solid ${badge.color}40` }}
+        >
+          {badge.text}
+        </motion.div>
+      )}
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col justify-end px-2.5 py-1.5 font-mono text-[12.5px] leading-[1.45]">
+        {shown.length === 0 && <div className="text-white/30">$ python terminal_assistant.py</div>}
+        {shown.map((l) => (
           <motion.div
-            animate={{ opacity: [0.3, 1, 0.3] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="text-yellow-400/60"
+            key={l.key}
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.25 }}
+            className={`whitespace-pre truncate ${l.active ? 'bg-yellow-300/10 rounded' : ''}`}
+            style={{ color: color[l.kind] }}
           >
-            Running...
+            {l.kind === 'info' ? (
+              <motion.span animate={{ opacity: [1, 0, 1] }} transition={{ duration: 1, repeat: Infinity }}>
+                ▌ running…
+              </motion.span>
+            ) : (
+              l.text
+            )}
           </motion.div>
-        )}
-
-        {/* Output */}
-        <AnimatePresence>
-          {output && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ ...spring, delay: 0.2 }}
-              className="text-white/60 whitespace-pre-wrap border-l-2 border-white/10 pl-2"
-            >
-              {output.split('\n').map((line, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -5 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                >
-                  {line || '\u00A0'}
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        ))}
       </div>
-    </motion.div>
+    </div>
   );
 }

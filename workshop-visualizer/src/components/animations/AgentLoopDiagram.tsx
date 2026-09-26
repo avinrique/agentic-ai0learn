@@ -111,6 +111,7 @@ export interface AgentScene {
   output: string;
   outputsSoFar: { step: number; text: string }[];
   importDone: boolean;
+  loopSeen: boolean;
 }
 
 const NEVER = Number.POSITIVE_INFINITY;
@@ -449,9 +450,12 @@ export function sceneAt(model: AgentModel, steps: TraceStep[], s: number): Agent
 
   const outputsSoFar: { step: number; text: string }[] = [];
   let importDone = false;
+  let loopSeen = false;
   for (let i = 0; i <= s && i < steps.length; i++) {
+    const tr = steps[i].animationTrigger;
     if (steps[i].output) outputsSoFar.push({ step: i, text: steps[i].output });
-    if (steps[i].animationTrigger === 'import') importDone = true;
+    if (tr === 'import') importDone = true;
+    if (tr === 'chatLoop' || tr === 'agentLoop-enter') loopSeen = true;
   }
 
   return {
@@ -474,6 +478,7 @@ export function sceneAt(model: AgentModel, steps: TraceStep[], s: number): Agent
     output: step?.output ?? '',
     outputsSoFar,
     importDone,
+    loopSeen,
   };
 }
 

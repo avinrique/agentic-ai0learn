@@ -561,7 +561,7 @@ export default function ApiRoundTripAnim() {
                 color="#a78bfa"
               >
                 <div className="font-mono text-[11px] text-white/35 truncate">
-                  id: &quot;chatcmpl-…&quot; · model: &quot;{model}&quot; · usage: {promptTokens + 8}+{tokens.length} tokens
+                  id: &quot;chatcmpl-…&quot; · model: &quot;{model}&quot; · usage: ≈{promptTokens} in + {tokens.length} out tokens
                 </div>
                 <Layer
                   name="choices[0]"
