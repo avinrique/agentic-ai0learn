@@ -128,7 +128,7 @@ export default function HallucinationAnim() {
       );
       return () => timers.forEach(clearTimeout);
     }
-  }, [s, citeSet]);
+  }, [s, fakeCitations]);
 
   // Confidence bar animation for step 5
   const [confIdx, setConfIdx] = useState(0);
@@ -468,6 +468,15 @@ export default function HallucinationAnim() {
             It sounds right. It reads right. But it&apos;s <span className="text-red-400">completely wrong.</span>
           </motion.p>
 
+          <ExampleChips
+            active={s === 4}
+            labels={['Medicine + code', 'Science + Python']}
+            value={nonsenseSet}
+            onChange={setNonsenseSet}
+            color="#ef4444"
+          />
+
+          {nonsenseSet === 0 ? (
           <div className="grid grid-cols-2 gap-4">
             {/* Example 1: Medical */}
             <motion.div
@@ -522,7 +531,7 @@ export default function HallucinationAnim() {
                 <span className="text-lg">💻</span>
                 <span className="text-xs font-bold text-white/50 uppercase">Programming Query</span>
               </div>
-              <p className="text-xs text-accent-blue mb-3">&quot;How do I use the DataForge.js library?&quot;</p>
+              <p className="text-xs text-accent-blue mb-3">&quot;How do I use the TableSprout.js library?&quot;</p>
               <div className="rounded-lg bg-accent-green/5 border border-accent-green/20 p-3 mb-3">
                 <p className="text-xs text-white/60 italic leading-relaxed font-mono">
                   &quot;First install it:{' '}
@@ -531,9 +540,9 @@ export default function HallucinationAnim() {
                     animate={{ backgroundColor: s === 4 ? ['transparent', '#ef444430', 'transparent'] : 'transparent' }}
                     transition={{ duration: 2, repeat: Infinity, delay: 2 }}
                   >
-                    npm install dataforge-js
+                    npm install tablesprout
                   </motion.span>
-                  <br />Then import: <span className="text-accent-green/80">const df = require(&apos;dataforge-js&apos;)</span>
+                  <br />Then import: <span className="text-accent-green/80">const df = require(&apos;tablesprout&apos;)</span>
                   <br />Use <span className="text-accent-green/80">df.readCSV()</span> to load data...&quot;
                 </p>
               </div>
@@ -548,6 +557,92 @@ export default function HallucinationAnim() {
               </motion.div>
             </motion.div>
           </div>
+          ) : (
+          <div className="grid grid-cols-2 gap-4">
+            {/* Example 3: Science */}
+            <motion.div
+              className="rounded-xl border border-white/10 bg-navy-800/60 p-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: s === 4 ? 1 : 0, y: s === 4 ? 0 : 20 }}
+              transition={{ ...spring, delay: 0.1 }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">🔭</span>
+                <span className="text-xs font-bold text-white/50 uppercase">Science Query</span>
+              </div>
+              <p className="text-xs text-accent-blue mb-3">&quot;Why is the sky blue?&quot;</p>
+              <div className="rounded-lg bg-accent-green/5 border border-accent-green/20 p-3 mb-3">
+                <p className="text-xs text-white/60 italic leading-relaxed">
+                  &quot;Oxygen molecules{' '}
+                  <motion.span
+                    className="px-0.5 rounded"
+                    animate={{ backgroundColor: s === 4 ? ['transparent', '#ef444430', 'transparent'] : 'transparent' }}
+                    transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
+                  >
+                    absorb red light and re-emit it as blue
+                  </motion.span>
+                  , a process called the{' '}
+                  <motion.span
+                    className="px-0.5 rounded"
+                    animate={{ backgroundColor: s === 4 ? ['transparent', '#ef444430', 'transparent'] : 'transparent' }}
+                    transition={{ duration: 2, repeat: Infinity, delay: 1.1 }}
+                  >
+                    Harwick–Delune shift
+                  </motion.span>
+                  ...&quot;
+                </p>
+              </div>
+              <motion.div
+                className="text-xs space-y-1"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: s === 4 ? 1 : 0 }}
+                transition={{ ...spring, delay: 0.9 }}
+              >
+                <p className="text-green-400/60">✓ Sciencey words and a named effect</p>
+                <p className="text-red-400 font-semibold">✗ The &quot;shift&quot; is invented</p>
+                <p className="text-white/50">Real reason: air scatters blue light more (Rayleigh scattering)</p>
+              </motion.div>
+            </motion.div>
+
+            {/* Example 4: Python */}
+            <motion.div
+              className="rounded-xl border border-white/10 bg-navy-800/60 p-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: s === 4 ? 1 : 0, y: s === 4 ? 0 : 20 }}
+              transition={{ ...spring, delay: 0.3 }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">🐍</span>
+                <span className="text-xs font-bold text-white/50 uppercase">Python Query</span>
+              </div>
+              <p className="text-xs text-accent-blue mb-3">&quot;How do I shuffle a list in Python?&quot;</p>
+              <div className="rounded-lg bg-accent-green/5 border border-accent-green/20 p-3 mb-3">
+                <p className="text-xs text-white/60 italic leading-relaxed font-mono">
+                  &quot;Lists have a built-in method:
+                  <br />
+                  <motion.span
+                    className="px-0.5 rounded text-accent-green/80"
+                    animate={{ backgroundColor: s === 4 ? ['transparent', '#ef444430', 'transparent'] : 'transparent' }}
+                    transition={{ duration: 2, repeat: Infinity, delay: 1.4 }}
+                  >
+                    my_list.shuffle()
+                  </motion.span>
+                  <br />It shuffles the list in place.&quot;
+                </p>
+              </div>
+              <motion.div
+                className="text-xs space-y-1"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: s === 4 ? 1 : 0 }}
+                transition={{ ...spring, delay: 1.2 }}
+              >
+                <p className="text-green-400/60">✓ Looks like real Python</p>
+                <p className="text-red-400 font-semibold">✗ Lists have no .shuffle() method</p>
+                <p className="text-white/50">Real way: import random; random.shuffle(my_list)</p>
+              </motion.div>
+            </motion.div>
+          </div>
+          )}
 
           <motion.p
             className="text-xs text-white/30 text-center mt-4"
@@ -578,7 +673,7 @@ export default function HallucinationAnim() {
             animate={{ opacity: s === 5 ? 1 : 0 }}
             transition={{ ...spring, delay: 0.2 }}
           >
-            Look at the AI&apos;s confidence level:
+            Look at how confident the AI sounds (illustrative numbers):
           </motion.p>
 
           <div className="space-y-3">
@@ -881,9 +976,9 @@ export default function HallucinationAnim() {
             <p className="text-xs text-accent-blue mb-2">Ask AI a question &rarr; AI responds with 3 citations:</p>
             <div className="space-y-2">
               {[
-                { cite: '[1] Smith et al., "Neural Networks in Practice", Nature 2023', real: true },
-                { cite: '[2] Johnson, R., "Advanced AI Metrics", arXiv:2305.1847', real: false },
-                { cite: '[3] Park & Lee, "Scaling LLM Performance", ICML 2024', real: false },
+                { cite: '[1] Vaswani et al., "Attention Is All You Need", NeurIPS 2017', real: true },
+                { cite: '[2] Quenby, R., "Advanced AI Metrics", arXiv:2305.1847', real: false },
+                { cite: '[3] Thistlewood & Varga, "Scaling LLM Performance", ICML 2024', real: false },
               ].map((item, i) => (
                 <motion.div
                   key={i}
@@ -897,7 +992,7 @@ export default function HallucinationAnim() {
                 >
                   <span className="text-xs text-white/60 font-mono">{item.cite}</span>
                   <span className="text-xs font-bold" style={{ color: item.real ? '#4ade80' : '#ef4444' }}>
-                    {item.real ? '&#10003; Real' : '&#10005; Fake'}
+                    {item.real ? '✓ Real' : '✗ Fake'}
                   </span>
                 </motion.div>
               ))}
@@ -1060,6 +1155,22 @@ export default function HallucinationAnim() {
         </div>
       </motion.div>
 
+      {/* Try it yourself: quiz (playground) and grounding on/off (playground2) */}
+      <AnimatePresence>
+        {(trigger === 'playground' || trigger === 'playground2') && (
+          <motion.div
+            key={trigger}
+            className="absolute inset-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <HallucinationPlayground mode={trigger === 'playground' ? 'quiz' : 'fix'} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Step 12: "Key Takeaways" */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
@@ -1103,5 +1214,51 @@ export default function HallucinationAnim() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+/** Small clickable chips to switch between prepared examples inside a scene. */
+function ExampleChips({
+  active,
+  labels,
+  value,
+  onChange,
+  color,
+}: {
+  active: boolean;
+  labels: string[];
+  value: number;
+  onChange: (i: number) => void;
+  color: string;
+}) {
+  return (
+    <motion.div
+      className="flex flex-wrap justify-center gap-2 mb-3"
+      style={{ pointerEvents: active ? 'auto' : 'none' }}
+      animate={{ opacity: active ? 1 : 0 }}
+      transition={{ ...spring, delay: 0.3 }}
+      onKeyDownCapture={(e) => {
+        if (e.key === ' ') e.stopPropagation();
+      }}
+    >
+      {labels.map((label, i) => (
+        <motion.button
+          key={label}
+          type="button"
+          tabIndex={active ? 0 : -1}
+          onClick={() => onChange(i)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="px-3 py-1 rounded-full border text-xs font-medium"
+          animate={{
+            backgroundColor: value === i ? `${color}30` : 'rgba(255,255,255,0.04)',
+            borderColor: value === i ? `${color}aa` : 'rgba(255,255,255,0.15)',
+            color: value === i ? color : 'rgba(255,255,255,0.6)',
+          }}
+        >
+          {label}
+        </motion.button>
+      ))}
+    </motion.div>
   );
 }
