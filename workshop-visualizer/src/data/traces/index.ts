@@ -30,3 +30,6 @@ export { basicApiVariants } from './basicApiVariants';
 export { jsonOutputVariants } from './jsonVariants';
 export { systemPromptVariants, SP_NO_SYSTEM_REPLY } from './systemPromptVariants';
 export { fewShotVariants, fewShotZeroShotReplies } from './fewShotVariants';
+export { assemblyLineTrace, assemblyLineVariants } from './part4-assembly-line';
+export { writerCriticTrace, writerCriticVariants } from './part4-writer-critic';
+export { bossAgentTrace, bossAgentVariants, bossAgentScenes } from './part4-boss-agent';
