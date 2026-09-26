@@ -21,3 +21,9 @@ export {
   studyBuddyProTrace,
   terminalAssistantTrace,
 } from './part3';
+
+export { challengeVariants } from './challengeVariants';
+export { basicApiVariants } from './basicApiVariants';
+export { jsonOutputVariants } from './jsonVariants';
+export { systemPromptVariants, SP_NO_SYSTEM_REPLY } from './systemPromptVariants';
+export { fewShotVariants, fewShotZeroShotReplies } from './fewShotVariants';
