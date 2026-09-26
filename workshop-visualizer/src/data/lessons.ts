@@ -194,6 +194,57 @@ export const lessons: Lesson[] = [
     animations: ['AgentLoopDiagram', 'ToolSelectionAnim'],
     type: 'tracer',
   },
+  // PART 4: Multi-Agent Teams
+  {
+    id: 'why-teams',
+    title: 'Why a Team of Agents?',
+    shortTitle: 'Why Teams?',
+    route: '/part4/why-teams',
+    part: 4,
+    description: 'One agent doing everything gets overwhelmed. A team of specialists works better.',
+    animations: ['WhyTeamsAnim'],
+    type: 'concept',
+  },
+  {
+    id: 'team-shapes',
+    title: 'Team Shapes: How Agents Work Together',
+    shortTitle: 'Team Shapes',
+    route: '/part4/team-shapes',
+    part: 4,
+    description: 'Assembly line, boss & helpers, receptionist, writer & critic: four ways to organise a team.',
+    animations: ['TeamShapesAnim'],
+    type: 'concept',
+  },
+  {
+    id: 'assembly-line',
+    title: 'Code: Assembly Line (Researcher → Writer)',
+    shortTitle: 'Assembly Line',
+    route: '/part4/assembly-line',
+    part: 4,
+    description: 'Two agents in a row: one finds the facts, the next writes them up.',
+    animations: ['AssemblyLineAnim'],
+    type: 'tracer',
+  },
+  {
+    id: 'writer-critic',
+    title: 'Code: Writer & Critic Loop',
+    shortTitle: 'Writer & Critic',
+    route: '/part4/writer-critic',
+    part: 4,
+    description: 'One agent writes, another reviews, and they loop until the work is approved.',
+    animations: ['WriterCriticAnim'],
+    type: 'tracer',
+  },
+  {
+    id: 'boss-agent',
+    title: 'Code: The Boss Agent',
+    shortTitle: 'Boss Agent',
+    route: '/part4/boss-agent',
+    part: 4,
+    description: 'A manager agent that calls other agents as its tools.',
+    animations: ['BossAgentAnim'],
+    type: 'tracer',
+  },
 ];
 
 export const partLabels: Record<number, string> = {
@@ -201,6 +252,7 @@ export const partLabels: Record<number, string> = {
   1: 'API Basics',
   2: 'Agents',
   3: 'Advanced Agents',
+  4: 'Multi-Agent Teams',
 };
 
 export const partColors: Record<number, string> = {
@@ -208,4 +260,7 @@ export const partColors: Record<number, string> = {
   1: '#4a9eff',
   2: '#fbbf24',
   3: '#a78bfa',
+  4: '#22d3ee',
 };
+
+export const parts = Object.keys(partLabels).map(Number);

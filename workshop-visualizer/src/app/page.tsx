@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { lessons, partLabels, partColors } from '@/data/lessons';
+import { lessons, partLabels, partColors, parts } from '@/data/lessons';
 import { useOverallProgress, usePartProgress } from '@/stores/progressStore';
 import ProgressRing from '@/components/ui/ProgressRing';
 import LessonStatusBadge from '@/components/ui/LessonStatusBadge';
@@ -51,8 +51,6 @@ function PartCompletionRing({ part }: { part: number }) {
 }
 
 export default function HomePage() {
-  const parts = [0, 1, 2, 3];
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8 relative">
       <motion.div
@@ -75,7 +73,7 @@ export default function HomePage() {
 
       <OverallProgressHero />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl w-full">
         {parts.map((part, partIdx) => {
           const partLessons = lessons.filter((l) => l.part === part);
           const color = partColors[part];

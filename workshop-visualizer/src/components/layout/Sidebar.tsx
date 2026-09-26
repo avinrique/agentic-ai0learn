@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { lessons, partLabels, partColors } from '@/data/lessons';
+import { lessons, partLabels, partColors, parts } from '@/data/lessons';
 import { useUIStore } from '@/stores/uiStore';
 import { usePartProgress } from '@/stores/progressStore';
 import LessonStatusBadge from '@/components/ui/LessonStatusBadge';
@@ -33,8 +33,6 @@ function PartProgressBar({ part }: { part: number }) {
 export default function Sidebar() {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
-
-  const parts = [0, 1, 2, 3];
 
   return (
     <motion.aside
