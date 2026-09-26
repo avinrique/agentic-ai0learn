@@ -8,6 +8,7 @@ import { lessons } from '@/data/lessons';
 import StepProgressBar from '@/components/ui/StepProgressBar';
 import StepTimeline from '@/components/ui/StepTimeline';
 import PaceToggle from '@/components/ui/PaceToggle';
+import { QuizLauncher } from '@/components/ui/LessonQuiz';
 import { useUIStore } from '@/stores/uiStore';
 import { stepDelay } from '@/lib/pacing';
 
@@ -107,6 +108,9 @@ export default function ConceptStepControls({ lessonId }: ConceptStepControlsPro
             {currentStep + 1}/{steps.length}
           </span>
         </div>
+
+        {/* Quick check quiz, offered on the last step */}
+        {isLastStep && <QuizLauncher lessonId={lessonId} />}
 
         {/* Next lesson */}
         <AnimatePresence>

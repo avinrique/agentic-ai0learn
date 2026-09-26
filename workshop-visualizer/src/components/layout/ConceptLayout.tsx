@@ -3,6 +3,7 @@ import { ReactNode, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
 import LessonBadge from '@/components/ui/LessonBadge';
+import JourneyStrip from '@/components/ui/JourneyStrip';
 import ConceptStepControls from './ConceptStepControls';
 import { useConceptStore, ConceptStep } from '@/stores/conceptStore';
 import { useProgressStore } from '@/stores/progressStore';
@@ -91,6 +92,7 @@ export default function ConceptLayout({
                 Fullscreen
               </button>
             </div>
+            {currentStep === 0 && <JourneyStrip lessonId={lessonId} />}
             <AnimatePresence mode="wait">
               {currentConceptStep && (
                 <motion.div

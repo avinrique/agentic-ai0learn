@@ -2,6 +2,7 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import LessonBadge from '@/components/ui/LessonBadge';
+import JourneyStrip from '@/components/ui/JourneyStrip';
 import StepControls from './StepControls';
 import ResizableHandle from './ResizableHandle';
 import { useTracerStore, TraceStep, TraceVariant } from '@/stores/tracerStore';
@@ -83,6 +84,7 @@ export default function LessonLayout({
               {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             </button>
           </div>
+          {!isFullscreen && currentStep === 0 && <JourneyStrip lessonId={lessonId} />}
           {currentTraceStep?.explanation && (
             <div className={`px-4 py-2 rounded-lg bg-accent-blue/10 border border-accent-blue/20 text-[15px] leading-relaxed text-blue-100 ${isFullscreen ? '' : 'mt-2'}`}>
               {currentTraceStep.explanation}

@@ -15,12 +15,16 @@ interface ProgressState {
   setHasHydrated: (v: boolean) => void;
   updateStep: (lessonId: string, step: number, totalSteps: number) => void;
   markCompleted: (lessonId: string) => void;
+  /** Best quick-check score per lesson (number of correct answers). */
+  quizScores: Record<string, number>;
+  setQuizScore: (lessonId: string, score: number) => void;
 }
 
 export const useProgressStore = create<ProgressState>()(
   persist(
     (set, get) => ({
       lessonProgress: {},
+      quizScores: {},
       hasHydrated: false,
       setHasHydrated: (v) => set({ hasHydrated: v }),
 
@@ -36,6 +40,15 @@ export const useProgressStore = create<ProgressState>()(
               completed,
               visitedAt: prev?.visitedAt || Date.now(),
             },
+          },
+        }));
+      },
+
+      setQuizScore: (lessonId, score) => {
+        set((state) => ({
+          quizScores: {
+            ...state.quizScores,
+            [lessonId]: Math.max(score, state.quizScores[lessonId] ?? 0),
           },
         }));
       },
