@@ -2,15 +2,17 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTracerStore } from '@/stores/tracerStore';
 
-export default function VariableInspector() {
+export default function VariableInspector({ hideHeader = false }: { hideHeader?: boolean }) {
   const { currentStep, steps } = useTracerStore();
   const variables = steps[currentStep]?.variables ?? [];
 
   return (
     <div>
-      <div className="px-3 py-2 text-xs font-semibold text-white/30 uppercase tracking-wider border-b border-white/10 bg-navy-800/50">
-        Variables
-      </div>
+      {!hideHeader && (
+        <div className="px-3 py-2 text-xs font-semibold text-white/30 uppercase tracking-wider border-b border-white/10 bg-navy-800/50">
+          Variables
+        </div>
+      )}
       <div className="p-3 space-y-1.5">
         <AnimatePresence mode="popLayout">
           {variables.length === 0 ? (

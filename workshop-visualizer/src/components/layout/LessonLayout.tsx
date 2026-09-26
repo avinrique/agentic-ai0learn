@@ -7,6 +7,11 @@ import ResizableHandle from './ResizableHandle';
 import { useTracerStore, TraceStep, TraceVariant } from '@/stores/tracerStore';
 import { useProgressStore } from '@/stores/progressStore';
 import { useFullscreen } from '@/hooks/useFullscreen';
+import { useUIStore } from '@/stores/uiStore';
+
+// Code lessons need the width, so on laptop-size screens the sidebar starts
+// collapsed — but only the first time, so a student who re-opens it keeps it open.
+let sidebarAutoCollapsed = false;
 
 interface LessonLayoutProps {
   children: ReactNode;
@@ -32,6 +37,14 @@ export default function LessonLayout({
   const { isFullscreen, toggleFullscreen, containerRef } = useFullscreen();
   const mainRef = useRef<HTMLDivElement>(null);
   const [tracerWidthPx, setTracerWidthPx] = useState(520);
+  const setSidebarCollapsed = useUIStore((s) => s.setSidebarCollapsed);
+
+  useEffect(() => {
+    if (!sidebarAutoCollapsed && window.innerWidth < 1700) {
+      setSidebarCollapsed(true);
+    }
+    sidebarAutoCollapsed = true;
+  }, [setSidebarCollapsed]);
 
   useEffect(() => {
     setSteps(steps);

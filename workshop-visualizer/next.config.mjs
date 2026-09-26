@@ -1,4 +1,8 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+// NEXT_DIST_DIR lets a preview dev server build into its own folder without
+// touching the production build in .next.
+const nextConfig = {
+  distDir: process.env.NEXT_DIST_DIR || '.next',
+};
 
 export default nextConfig;
