@@ -2,14 +2,51 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useConceptStore } from '@/stores/conceptStore';
+import HallucinationPlayground from './playgrounds/HallucinationPlayground';
+
+// Scene order (by animationTrigger). Scenes are drawn by index below; triggers not listed here
+// (the playgrounds) hide every scene.
+const SCENES = [
+  'whatIsHallucination',
+  'whyItHappens',
+  'confidentWrong',
+  'fakeCitations',
+  'plausibleNonsense',
+  'confidenceProblem',
+  'fixRAG',
+  'fixTemperature',
+  'fixSayIDontKnow',
+  'fixVerifySources',
+  'fixDraftNotTruth',
+  'whenOK',
+  'takeaways',
+];
 
 const spring = { type: 'spring' as const, damping: 25, stiffness: 120 };
 const smooth = { duration: 0.6, ease: 'easeInOut' as const };
 
-const fakeCitations = [
-  { author: 'Smith, J. & Lee, K.', title: 'Deep Learning Approaches to NLP Tasks', journal: 'Journal of AI Research, Vol. 42', year: '2021' },
-  { author: 'Chen, W. et al.', title: 'Transformer Attention Mechanisms Revisited', journal: 'Neural Computing Letters, 15(3)', year: '2022' },
-  { author: 'Brown, A. & Patel, R.', title: 'Scaling Laws for Language Models', journal: 'Proceedings of ICML 2020', year: '2020' },
+// All names below are invented for this demo (deliberately unusual so no real person or journal is implied).
+const citationSets = [
+  {
+    label: 'Research papers',
+    prompt: 'Give me academic sources for your claim',
+    note: 'Perfect formatting. Zero real papers. Every name here is invented.',
+    items: [
+      { author: 'Thistlewood, B. & Quenby, M.', title: 'Deep Learning Approaches to Everyday Language', journal: 'Journal of Synthetic Cognition, Vol. 42', year: '2021' },
+      { author: 'Varga-Ellison, P. et al.', title: 'Attention Mechanisms Revisited', journal: 'Lakeside Letters on Neural Computing, 15(3)', year: '2022' },
+      { author: 'Moorcraft, D. & Halvani, S.', title: 'Scaling Rules for Talking Machines', journal: 'Proceedings of the Glimmerton AI Symposium', year: '2020' },
+    ],
+  },
+  {
+    label: 'Court cases',
+    prompt: 'Find me court cases that support my argument',
+    note: 'Real case format, invented cases. In 2023 US lawyers were fined for filing AI-made-up cases (Mata v. Avianca).',
+    items: [
+      { author: 'Pemberton-Ashby v. Skylark Air Freight Co.', title: 'Airline liable for injury from a falling trolley', journal: 'Fictional Circuit Court of Appeals', year: '2019' },
+      { author: 'Hollowmere v. Brightwick Transit Ltd.', title: 'Two-year deadline paused during bankruptcy', journal: 'Fictional District Court', year: '2017' },
+      { author: 'In re Quillfeather Holdings', title: 'Passenger claims survive airline merger', journal: 'Fictional Bankruptcy Court', year: '2015' },
+    ],
+  },
 ];
 
 const confidenceExamples = [
@@ -20,9 +57,45 @@ const confidenceExamples = [
 ];
 
 
+// Extra example sets for the "Confident but Wrong" scene
+const confidentWrongSets = [
+  {
+    label: 'Set 1',
+    items: [
+      { claim: 'The Golden Gate Bridge was completed in 1936.', truth: 'Actually: 1937', diff: '1 year off' },
+      { claim: 'Humans are born with 206 bones.', truth: 'Actually: babies have about 270–300; some fuse as we grow', diff: 'Half-true' },
+      { claim: 'Einstein won the Nobel Prize for relativity.', truth: 'Actually: for the photoelectric effect', diff: 'Common misconception' },
+    ],
+  },
+  {
+    label: 'Set 2',
+    items: [
+      { claim: 'The Titanic sank in 1911.', truth: 'Actually: April 1912', diff: '1 year off' },
+      { claim: 'The capital of Australia is Sydney.', truth: 'Actually: Canberra', diff: 'Biggest city ≠ capital' },
+      { claim: 'Apollo 11 landed on the Moon in 1968.', truth: 'Actually: July 1969', diff: '1 year off' },
+    ],
+  },
+  {
+    label: 'Set 3',
+    items: [
+      { claim: 'Water is made of two oxygen atoms and one hydrogen atom.', truth: 'Actually: two hydrogen, one oxygen (H₂O)', diff: 'Swapped' },
+      { claim: 'The first iPhone came out in 2008.', truth: 'Actually: 2007', diff: '1 year off' },
+      { claim: 'Mount Everest is the tallest mountain from base to peak.', truth: 'Actually: Mauna Kea is taller base-to-peak; Everest is highest above sea level', diff: 'Subtle mix-up' },
+    ],
+  },
+];
+
 export default function HallucinationAnim() {
-  const { currentStep } = useConceptStore();
-  const s = currentStep;
+  const { currentStep, steps } = useConceptStore();
+  const trigger = steps[currentStep]?.animationTrigger;
+  // Map the step's trigger to a scene index; -1 (the playgrounds) hides all scenes.
+  const s = trigger === undefined ? currentStep : SCENES.indexOf(trigger);
+
+  // Example chips inside scenes
+  const [wrongSet, setWrongSet] = useState(0);
+  const [citeSet, setCiteSet] = useState(0);
+  const [nonsenseSet, setNonsenseSet] = useState(0);
+  const fakeCitations = citationSets[citeSet].items;
 
   // Typing effect for hallucination reveal
   const [revealState, setRevealState] = useState<'typing' | 'confident' | 'wrong'>('typing');
@@ -55,7 +128,7 @@ export default function HallucinationAnim() {
       );
       return () => timers.forEach(clearTimeout);
     }
-  }, [s]);
+  }, [s, citeSet]);
 
   // Confidence bar animation for step 5
   const [confIdx, setConfIdx] = useState(0);
@@ -117,7 +190,7 @@ export default function HallucinationAnim() {
                 transition={smooth}
               >
                 1892
-              </motion.span> and stands at exactly 324 meters tall. It was designed by architect Gustave Eiffel for the World&apos;s Fair.&quot;
+              </motion.span> and stands about 330 meters tall. It was built by Gustave Eiffel&apos;s engineering company for the World&apos;s Fair.&quot;
             </motion.p>
 
             {/* Wrong stamp */}
@@ -256,15 +329,19 @@ export default function HallucinationAnim() {
           >
             Spot the errors — they&apos;re subtle:
           </motion.p>
+          <ExampleChips
+            active={s === 2}
+            labels={confidentWrongSets.map((x) => x.label)}
+            value={wrongSet}
+            onChange={setWrongSet}
+            color="#4ade80"
+          />
 
-          {[
-            { claim: 'The Golden Gate Bridge was completed in 1936.', truth: 'Actually: 1937', diff: '1 year off' },
-            { claim: 'Mount Everest is 29,032 feet tall.', truth: 'Actually: 29,031.7 ft (recently updated)', diff: 'Close but outdated' },
-            { claim: 'Einstein won the Nobel Prize for relativity.', truth: 'Actually: for the photoelectric effect', diff: 'Common misconception' },
-          ].map((item, i) => (
+          {confidentWrongSets[wrongSet].items.map((item, i) => (
             <motion.div
-              key={i}
+              key={`${wrongSet}-${i}`}
               className="mb-4 rounded-xl overflow-hidden"
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: s === 2 ? 1 : 0, y: s === 2 ? 0 : 15 }}
               transition={{ ...spring, delay: 0.3 + i * 0.25 }}
             >
@@ -310,7 +387,7 @@ export default function HallucinationAnim() {
             animate={{ opacity: s === 3 ? 1 : 0 }}
             transition={spring}
           >
-            &quot;Give me academic sources for your claim&quot;
+            &quot;{citationSets[citeSet].prompt}&quot;
           </motion.p>
           <motion.p
             className="text-xs text-white/30 mb-4 text-center"
@@ -319,12 +396,20 @@ export default function HallucinationAnim() {
           >
             The AI happily provides:
           </motion.p>
+          <ExampleChips
+            active={s === 3}
+            labels={citationSets.map((x) => x.label)}
+            value={citeSet}
+            onChange={setCiteSet}
+            color="#ef4444"
+          />
 
           <div className="space-y-3">
             {fakeCitations.map((cite, i) => (
               <motion.div
-                key={i}
+                key={`${citeSet}-${i}`}
                 className="rounded-xl border-2 p-4 relative overflow-hidden"
+                initial={{ opacity: 0, x: -15 }}
                 style={{
                   borderColor: citationRevealed >= i ? '#ef444440' : 'rgba(255,255,255,0.1)',
                   backgroundColor: citationRevealed >= i ? '#ef444406' : 'rgba(255,255,255,0.03)',
@@ -358,11 +443,11 @@ export default function HallucinationAnim() {
 
           <motion.div
             className="mt-4 px-4 py-2 rounded-lg bg-red-400/10 border border-red-400/20 text-center"
-            animate={{ opacity: s === 3 ? 1 : 0 }}
-            transition={{ ...spring, delay: 3.5 }}
+            animate={{ opacity: s === 3 && citationRevealed >= fakeCitations.length - 1 ? 1 : 0 }}
+            transition={spring}
           >
             <span className="text-xs text-red-400">
-              Perfect APA formatting. Zero real papers. Lawyers have been fined for this.
+              {citationSets[citeSet].note}
             </span>
           </motion.div>
         </div>

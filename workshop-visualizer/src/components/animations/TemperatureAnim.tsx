@@ -2,6 +2,8 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useConceptStore } from '@/stores/conceptStore';
+import TemperaturePlayground from './playgrounds/TemperaturePlayground';
+import { TEMP_EXAMPLES, applyTemperature, pct } from './playgrounds/temperatureData';
 
 const spring = { type: 'spring' as const, damping: 25, stiffness: 120 };
 const smooth = { duration: 0.6, ease: 'easeInOut' as const };
@@ -19,7 +21,6 @@ const tempConfigs = [
     temp: 0,
     label: 'Temp = 0',
     desc: 'Always picks the #1 word. 100 runs → 100 identical answers.',
-    bars: [100, 0, 0, 0, 0],
     color: '#4a9eff',
     fillPct: 10,
     icon: '🤖',
@@ -29,7 +30,6 @@ const tempConfigs = [
     temp: 0.7,
     label: 'Temp = 0.7',
     desc: 'Usually picks top words but sometimes surprises. A common choice for chat.',
-    bars: [72, 12, 8, 5, 3],
     color: '#fbbf24',
     fillPct: 50,
     icon: '⚖️',
@@ -39,7 +39,6 @@ const tempConfigs = [
     temp: 1.5,
     label: 'Temp = 1.5',
     desc: 'Wild and unpredictable. Low-probability words get a real chance.',
-    bars: [30, 22, 20, 15, 13],
     color: '#ef4444',
     fillPct: 90,
     icon: '🎲',
@@ -71,6 +70,72 @@ const sideBySideResponses = [
   },
 ];
 
+// Extra side-by-side examples (illustrative responses, written by hand).
+const sideBySideSets = [
+  { chip: 'Sort a list', prompt: 'How do I sort a list in Python?', responses: sideBySideResponses },
+  {
+    chip: 'Name a coffee shop',
+    prompt: 'Suggest a name for a new coffee shop.',
+    responses: [
+      { temp: '0', color: '#4a9eff', response: 'The Daily Grind', style: 'The safest, most common idea. Same every run.', isCode: false },
+      { temp: '0.7', color: '#fbbf24', response: 'How about "Morning Ritual" or "The Copper Kettle"? Both feel warm and welcoming.', style: 'Fresh but sensible ideas.', isCode: false },
+      { temp: '1.5', color: '#ef4444', response: '"Velvet Thunder Beans": where espresso meets the midnight saxophone of your soul!', style: 'Surprising. Might be great, might be nonsense.', isCode: false },
+    ],
+  },
+  {
+    chip: 'Describe the ocean',
+    prompt: 'Describe the ocean in one sentence.',
+    responses: [
+      { temp: '0', color: '#4a9eff', response: 'The ocean is a large body of salt water that covers most of Earth\'s surface.', style: 'Plain and factual.', isCode: false },
+      { temp: '0.7', color: '#fbbf24', response: 'The ocean is a restless blue giant, rolling in and out with the tides.', style: 'Vivid but still clear.', isCode: false },
+      { temp: '1.5', color: '#ef4444', response: 'Ocean: a trembling liquid library where whales hum forgotten passwords to the moon.', style: 'Poetic and strange.', isCode: false },
+    ],
+  },
+];
+
+// Clickable example chips used inside scenes. Only clickable while the scene is visible.
+function ExampleChips({
+  items,
+  active,
+  onPick,
+  visible,
+  className = '',
+}: {
+  items: string[];
+  active: number;
+  onPick: (i: number) => void;
+  visible: boolean;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-center gap-2 flex-wrap ${className}`}
+      style={{ pointerEvents: visible ? 'auto' : 'none' }}
+    >
+      <span className="text-xs text-white/35">Try another:</span>
+      {items.map((label, i) => (
+        <motion.button
+          key={label}
+          onClick={() => onPick(i)}
+          className="px-3 py-1 rounded-full border text-xs font-medium"
+          style={{
+            borderColor: i === active ? '#4a9eff' : 'rgba(255,255,255,0.12)',
+            backgroundColor: i === active ? 'rgba(74,158,255,0.15)' : 'rgba(255,255,255,0.03)',
+            color: i === active ? '#bfdbfe' : 'rgba(255,255,255,0.55)',
+          }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          {label}
+        </motion.button>
+      ))}
+    </div>
+  );
+}
+
+// Scenes 2-5 use the first three examples.
+const sceneExamples = TEMP_EXAMPLES.slice(0, 3);
+
 const useCases = [
   { range: '0 – 0.3', label: 'Precise', color: '#4a9eff', icon: '💻', tasks: ['Code generation', 'Math problems', 'Data extraction', 'Factual Q&A'] },
   { range: '0.5 – 0.8', label: 'Balanced', color: '#fbbf24', icon: '💬', tasks: ['General chat', 'Summaries', 'Explanations', 'Email drafting'] },
@@ -78,8 +143,16 @@ const useCases = [
 ];
 
 export default function TemperatureAnim() {
-  const { currentStep } = useConceptStore();
+  const { currentStep, steps } = useConceptStore();
   const s = currentStep;
+  const trigger = steps[currentStep]?.animationTrigger;
+  const isTakeaways = trigger === 'takeaways';
+
+  // Which prepared example the softmax / temp scenes show (shared so it carries across steps).
+  const [exIdx, setExIdx] = useState(0);
+  const sceneEx = sceneExamples[exIdx];
+  // Which prompt the side-by-side scene shows.
+  const [sideSet, setSideSet] = useState(0);
 
   // Cycling temperature index for step 1 (prob distribution)
   const [probHighlight, setProbHighlight] = useState(0);
@@ -293,6 +366,13 @@ export default function TemperatureAnim() {
           >
             The Math: Softmax Scaling
           </motion.p>
+          <ExampleChips
+            className="mb-3"
+            items={sceneExamples.map((e) => e.chip)}
+            active={exIdx}
+            onPick={setExIdx}
+            visible={s === 2}
+          />
 
           {/* Equation */}
           <motion.div
@@ -318,24 +398,18 @@ export default function TemperatureAnim() {
                 T = 0.1
               </p>
               <div className="space-y-1.5">
-                {[
-                  { label: 'Paris', pct: 99.99, color: '#4ade80' },
-                  { label: 'Lyon', pct: 0.005, color: '#fbbf24' },
-                  { label: 'Marseille', pct: 0.003, color: '#f472b6' },
-                  { label: 'the', pct: 0.001, color: '#a78bfa' },
-                  { label: 'known', pct: 0.001, color: '#4a9eff' },
-                ].map((p, i) => (
+                {sceneEx.tokens.map((t, i) => ({ label: t.label, color: t.color, v: applyTemperature(sceneEx.tokens, 0.1)[i] })).map((p, i) => (
                   <div key={p.label} className="flex items-center gap-2">
                     <span className="w-16 text-right text-sm font-mono text-white/60">{p.label}</span>
                     <div className="flex-1 bg-white/5 rounded-full h-5 overflow-hidden">
                       <motion.div
                         className="h-full rounded-full flex items-center px-1"
                         style={{ backgroundColor: `${p.color}25` }}
-                        animate={{ width: s === 2 ? `${Math.max(p.pct, 1)}%` : '0%' }}
+                        animate={{ width: s === 2 ? `${Math.max(p.v * 100, 1)}%` : '0%' }}
                         transition={{ ...smooth, delay: 0.5 + i * 0.06 }}
                       >
                         <span className="text-xs font-bold" style={{ color: p.color }}>
-                          {p.pct}%
+                          {pct(p.v)}
                         </span>
                       </motion.div>
                     </div>
@@ -343,7 +417,7 @@ export default function TemperatureAnim() {
                 ))}
               </div>
               <p className="text-sm text-center mt-2 italic" style={{ color: '#4a9eff80' }}>
-                Extremely peaked
+                {sceneEx.id === 'france' ? 'Extremely peaked' : 'Sharply peaked'}
               </p>
             </motion.div>
 
@@ -358,24 +432,18 @@ export default function TemperatureAnim() {
                 T = 2.0
               </p>
               <div className="space-y-1.5">
-                {[
-                  { label: 'Paris', pct: 30, color: '#4ade80' },
-                  { label: 'Lyon', pct: 22, color: '#fbbf24' },
-                  { label: 'Marseille', pct: 20, color: '#f472b6' },
-                  { label: 'the', pct: 15, color: '#a78bfa' },
-                  { label: 'known', pct: 13, color: '#4a9eff' },
-                ].map((p, i) => (
+                {sceneEx.tokens.map((t, i) => ({ label: t.label, color: t.color, v: applyTemperature(sceneEx.tokens, 2)[i] })).map((p, i) => (
                   <div key={p.label} className="flex items-center gap-2">
                     <span className="w-16 text-right text-sm font-mono text-white/60">{p.label}</span>
                     <div className="flex-1 bg-white/5 rounded-full h-5 overflow-hidden">
                       <motion.div
                         className="h-full rounded-full flex items-center px-1"
                         style={{ backgroundColor: `${p.color}25` }}
-                        animate={{ width: s === 2 ? `${Math.max(p.pct, 1)}%` : '0%' }}
+                        animate={{ width: s === 2 ? `${Math.max(p.v * 100, 1)}%` : '0%' }}
                         transition={{ ...smooth, delay: 0.6 + i * 0.06 }}
                       >
                         <span className="text-xs font-bold" style={{ color: p.color }}>
-                          {p.pct}%
+                          {pct(p.v)}
                         </span>
                       </motion.div>
                     </div>
@@ -383,7 +451,7 @@ export default function TemperatureAnim() {
                 ))}
               </div>
               <p className="text-sm text-center mt-2 italic" style={{ color: '#ef444480' }}>
-                Nearly flat
+                {sceneEx.id === 'france' ? 'Much flatter' : 'Nearly flat'}
               </p>
             </motion.div>
           </div>
@@ -394,7 +462,7 @@ export default function TemperatureAnim() {
             animate={{ opacity: s === 2 ? 1 : 0 }}
             transition={{ ...spring, delay: 0.8 }}
           >
-            Lower T &rarr; sharper peaks. Higher T &rarr; flatter distribution.
+            Lower T &rarr; sharper peaks. Higher T &rarr; flatter distribution. (Illustrative scores; the formula is real.)
           </motion.p>
         </div>
       </motion.div>
@@ -403,6 +471,7 @@ export default function TemperatureAnim() {
       {[3, 4, 5].map((stepNum) => {
         const configIdx = stepNum - 3;
         const config = tempConfigs[configIdx];
+        const bars = applyTemperature(sceneEx.tokens, config.temp);
         return (
           <motion.div
             key={stepNum}
@@ -436,11 +505,18 @@ export default function TemperatureAnim() {
 
               {/* Right: Probability bars */}
               <div className="flex-1">
-                <p className="text-xs text-white/30 mb-3">
-                  &quot;The capital of France is ___&quot; — selection chances:
+                <ExampleChips
+                  className="mb-3 !justify-start"
+                  items={sceneExamples.map((e) => e.chip)}
+                  active={exIdx}
+                  onPick={setExIdx}
+                  visible={s === stepNum}
+                />
+                <p className="text-xs text-white/40 mb-3">
+                  &quot;{sceneEx.prompt} ___&quot; — selection chances:
                 </p>
                 <div className="space-y-2">
-                  {probWords.map((p, i) => (
+                  {sceneEx.tokens.map((p, i) => (
                     <motion.div
                       key={p.label}
                       className="flex items-center gap-3"
@@ -455,13 +531,13 @@ export default function TemperatureAnim() {
                           className="h-full rounded-full flex items-center px-2"
                           style={{ backgroundColor: `${p.color}25` }}
                           animate={{
-                            width: s === stepNum ? `${Math.max(config.bars[i], 1)}%` : '0%',
+                            width: s === stepNum ? `${Math.max(bars[i] * 100, 1)}%` : '0%',
                           }}
-                          transition={{ ...smooth, delay: 0.4 + i * 0.08 }}
+                          transition={{ ...smooth, delay: 0.1 + i * 0.08 }}
                         >
-                          {config.bars[i] > 0 && (
+                          {bars[i] > 0.0005 && (
                             <span className="text-sm font-bold" style={{ color: p.color }}>
-                              {config.bars[i]}%
+                              {pct(bars[i])}
                             </span>
                           )}
                         </motion.div>
@@ -489,6 +565,9 @@ export default function TemperatureAnim() {
                 >
                   {config.desc}
                 </motion.p>
+                <p className="text-xs mt-1 text-white/40">
+                  Top word &quot;{sceneEx.tokens[0].label}&quot; gets picked about {pct(bars[0])} of the time here (illustrative chances, real formula).
+                </p>
               </div>
             </div>
           </motion.div>
@@ -506,18 +585,25 @@ export default function TemperatureAnim() {
           animate={{ opacity: s === 6 ? 1 : 0 }}
           transition={spring}
         >
-          Prompt: &quot;How do I sort a list in Python?&quot;
+          Prompt: &quot;{sideBySideSets[sideSet].prompt}&quot;
         </motion.p>
+        <ExampleChips
+          className="mb-2"
+          items={sideBySideSets.map((x) => x.chip)}
+          active={sideSet}
+          onPick={setSideSet}
+          visible={s === 6}
+        />
         <motion.p
           className="text-xs text-white/30 mb-5"
           animate={{ opacity: s === 6 ? 1 : 0 }}
           transition={{ ...spring, delay: 0.2 }}
         >
-          Same model, same prompt — three temperatures:
+          Same model, same prompt — three temperatures (illustrative responses):
         </motion.p>
 
         <div className="grid grid-cols-3 gap-4 w-full max-w-3xl">
-          {sideBySideResponses.map((item, i) => (
+          {sideBySideSets[sideSet].responses.map((item, i) => (
             <motion.div
               key={item.temp}
               className="rounded-xl border-2 p-4 flex flex-col"
@@ -585,7 +671,7 @@ export default function TemperatureAnim() {
             animate={{ opacity: s === 7 ? 1 : 0 }}
             transition={{ ...spring, delay: 0.2 }}
           >
-            top_p = 0.9 — Only consider tokens whose cumulative probability &le; 90%
+            top_p = 0.9 — keep the fewest top words whose chances add up to at least 90%
           </motion.p>
 
           <div className="space-y-2.5 relative">
@@ -1017,16 +1103,19 @@ export default function TemperatureAnim() {
         </div>
       </motion.div>
 
-      {/* Step 12: "Key Takeaways" */}
+      {/* "Try it yourself" playground (mounted only on its step) */}
+      {trigger === 'playground' && <TemperaturePlayground />}
+
+      {/* "Key Takeaways" (last step) */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        animate={{ opacity: s === 12 ? 1 : 0 }}
+        animate={{ opacity: isTakeaways ? 1 : 0 }}
         transition={spring}
       >
         <div className="text-center max-w-xl w-full px-6">
           <motion.h2
             className="text-5xl font-bold text-white mb-6"
-            animate={{ opacity: s === 12 ? 1 : 0, y: s === 12 ? 0 : 20 }}
+            animate={{ opacity: isTakeaways ? 1 : 0, y: isTakeaways ? 0 : 20 }}
             transition={spring}
           >
             Key Takeaways
@@ -1044,7 +1133,7 @@ export default function TemperatureAnim() {
               key={i}
               className="flex items-center gap-4 mb-3 px-5 py-3 rounded-xl bg-white/5 border text-left"
               style={{ borderColor: `${item.color}30` }}
-              animate={{ opacity: s === 12 ? 1 : 0, y: s === 12 ? 0 : 20 }}
+              animate={{ opacity: isTakeaways ? 1 : 0, y: isTakeaways ? 0 : 20 }}
               transition={{ ...spring, delay: i * 0.12 }}
             >
               <span className="text-2xl">{item.icon}</span>

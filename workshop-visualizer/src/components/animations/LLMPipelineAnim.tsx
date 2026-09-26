@@ -2,6 +2,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useConceptStore } from '@/stores/conceptStore';
+import LLMTokenPlayground from './playgrounds/LLMTokenPlayground';
+import LLMMeaningPlayground from './playgrounds/LLMMeaningPlayground';
 
 const spring = { type: 'spring' as const, damping: 25, stiffness: 120 };
 const smooth = { duration: 0.6, ease: [0.4, 0, 0.2, 1] as const };
@@ -16,6 +18,74 @@ const probabilities = [
   { label: 'the', pct: 2, color: '#a78bfa' },
   { label: 'Marseille', pct: 1.5, color: '#f472b6' },
   { label: 'known', pct: 1.5, color: '#4a9eff' },
+];
+
+// Extra examples for the "tokenize" scene. IDs are illustrative; every tokenizer has its own numbering.
+// A leading "·" marks a space that belongs to the token.
+const tokenizeExamples = [
+  { text: 'The capital of France is', pieces: ['The', '·capital', '·of', '·France', '·is'], ids: tokenIds },
+  { text: 'Hello, world!', pieces: ['Hello', ',', '·world', '!'], ids: [15496, 11, 995, 0] },
+  { text: 'Unbelievably fast', pieces: ['Un', 'believ', 'ably', '·fast'], ids: [3118, 6667, 1346, 3049] },
+  { text: 'ChatGPT is fun', pieces: ['Chat', 'G', 'PT', '·is', '·fun'], ids: [30820, 38, 11571, 318, 1257] },
+];
+
+// Extra examples for the "attention" scene: one ambiguous word, two sentences.
+const attentionExamples = [
+  {
+    word: 'bank',
+    a: { words: ['The', 'bank', 'by', 'the', 'river'], target: 1, context: [4], meaning: 'bank = riverbank' },
+    b: { words: ['The', 'bank', 'approved', 'the', 'loan'], target: 1, context: [2, 4], meaning: 'bank = a money business' },
+  },
+  {
+    word: 'bat',
+    a: { words: ['The', 'bat', 'flew', 'out', 'of', 'the', 'cave'], target: 1, context: [2, 6], meaning: 'bat = the animal' },
+    b: { words: ['He', 'swung', 'the', 'bat', 'at', 'the', 'ball'], target: 3, context: [1, 6], meaning: 'bat = a baseball bat' },
+  },
+  {
+    word: 'apple',
+    a: { words: ['I', 'ate', 'a', 'crunchy', 'apple'], target: 4, context: [1, 3], meaning: 'apple = the fruit' },
+    b: { words: ['Apple', 'released', 'a', 'new', 'iPhone'], target: 0, context: [1, 4], meaning: 'Apple = the company' },
+  },
+  {
+    word: 'light',
+    a: { words: ['Turn', 'on', 'the', 'light'], target: 3, context: [0, 1], meaning: 'light = a lamp' },
+    b: { words: ['The', 'bag', 'is', 'very', 'light'], target: 4, context: [1, 3], meaning: 'light = not heavy' },
+  },
+];
+
+// Extra examples for the "prediction" scene (illustrative numbers, not from a real model).
+const predictionExamples = [
+  { prompt: 'The capital of France is', bars: probabilities },
+  {
+    prompt: 'The cat sat on the',
+    bars: [
+      { label: 'mat', pct: 41, color: '#4ade80' },
+      { label: 'floor', pct: 18, color: '#fbbf24' },
+      { label: 'couch', pct: 12, color: '#a78bfa' },
+      { label: 'bed', pct: 9, color: '#f472b6' },
+      { label: 'roof', pct: 5, color: '#4a9eff' },
+    ],
+  },
+  {
+    prompt: '2 + 2 =',
+    bars: [
+      { label: '4', pct: 96, color: '#4ade80' },
+      { label: 'four', pct: 2, color: '#fbbf24' },
+      { label: '5', pct: 0.5, color: '#a78bfa' },
+      { label: '?', pct: 0.5, color: '#f472b6' },
+      { label: '22', pct: 0.3, color: '#4a9eff' },
+    ],
+  },
+  {
+    prompt: 'My favourite colour is',
+    bars: [
+      { label: 'blue', pct: 34, color: '#4ade80' },
+      { label: 'green', pct: 19, color: '#fbbf24' },
+      { label: 'purple', pct: 15, color: '#a78bfa' },
+      { label: 'red', pct: 13, color: '#f472b6' },
+      { label: 'black', pct: 6, color: '#4a9eff' },
+    ],
+  },
 ];
 
 const networkLayers = [
@@ -80,9 +150,46 @@ const pipelineStages = [
   { label: 'Output', color: '#4ade80', icon: '✨' },
 ];
 
+const chipPalette = ['#4a9eff', '#a78bfa', '#4ade80', '#fbbf24', '#f472b6'];
+
+/** Small row of example chips. Only clickable while its scene is visible. */
+function ExampleChips({ labels, value, onChange, active }: {
+  labels: string[];
+  value: number;
+  onChange: (i: number) => void;
+  active: boolean;
+}) {
+  return (
+    <div className={`flex flex-wrap items-center justify-center gap-2 ${active ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+      <span className="text-xs text-white/35 mr-1">Try:</span>
+      {labels.map((label, i) => (
+        <motion.button
+          key={label}
+          onClick={() => onChange(i)}
+          tabIndex={active ? 0 : -1}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="px-3 py-1 rounded-full border text-xs font-mono transition-colors"
+          style={i === value
+            ? { borderColor: chipPalette[i % chipPalette.length], color: chipPalette[i % chipPalette.length], backgroundColor: `${chipPalette[i % chipPalette.length]}20` }
+            : { borderColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)', backgroundColor: 'rgba(255,255,255,0.04)' }}
+        >
+          {label}
+        </motion.button>
+      ))}
+    </div>
+  );
+}
+
 export default function LLMPipelineAnim() {
-  const { currentStep } = useConceptStore();
+  const { currentStep, steps } = useConceptStore();
   const s = currentStep;
+  const trigger = steps[s]?.animationTrigger;
+
+  // Example pickers inside a few scenes (tokenize, attention, prediction)
+  const [tokEx, setTokEx] = useState(0);
+  const [attEx, setAttEx] = useState(0);
+  const [predEx, setPredEx] = useState(0);
 
   const netH = 240;
 
@@ -463,21 +570,32 @@ export default function LLMPipelineAnim() {
         <p className="text-white/40 text-base font-medium mb-3">
           Text is split into <span className="text-accent-blue font-bold">tokens</span>
         </p>
+        <div className="mb-4">
+          <ExampleChips
+            labels={tokenizeExamples.map((e) => e.text)}
+            value={tokEx}
+            onChange={setTokEx}
+            active={s === 5}
+          />
+        </div>
         <motion.p
+          key={`tok-text-${tokEx}`}
           className="text-2xl font-mono text-white/30 mb-6"
+          initial={{ opacity: 0 }}
           animate={{ opacity: s === 5 ? 0.3 : 0 }}
           transition={smooth}
         >
-          &quot;The capital of France is&quot;
+          &quot;{tokenizeExamples[tokEx].text}&quot;
         </motion.p>
         {/* Animated knife sweep */}
         <div className="relative">
           <motion.div className="flex items-center gap-2">
             <span className="text-white/20 text-2xl mr-2">→</span>
-            {tokens.map((tok, i) => (
+            {tokenizeExamples[tokEx].pieces.map((tok, i) => (
               <motion.div
-                key={tok}
+                key={`${tokEx}-${i}-${tok}`}
                 className="flex flex-col items-center gap-1"
+                initial={{ opacity: 0, y: 20, scale: 0.5 }}
                 animate={{
                   opacity: s === 5 ? 1 : 0,
                   y: s === 5 ? 0 : 20,
@@ -488,24 +606,28 @@ export default function LLMPipelineAnim() {
                 <div
                   className="px-5 py-3 rounded-lg border-2 font-mono text-lg font-bold"
                   style={{
-                    borderColor: tokenColors[i],
-                    color: tokenColors[i],
-                    backgroundColor: `${tokenColors[i]}12`,
+                    borderColor: tokenColors[i % tokenColors.length],
+                    color: tokenColors[i % tokenColors.length],
+                    backgroundColor: `${tokenColors[i % tokenColors.length]}12`,
                   }}
                 >
                   {tok}
                 </div>
                 <motion.span
                   className="text-sm font-mono text-white/30"
+                  initial={{ opacity: 0 }}
                   animate={{ opacity: s === 5 ? 1 : 0 }}
                   transition={{ ...spring, delay: s === 5 ? 0.8 + i * 0.08 : 0 }}
                 >
-                  ID: {tokenIds[i]}
+                  ID: {tokenizeExamples[tokEx].ids[i]}
                 </motion.span>
               </motion.div>
             ))}
           </motion.div>
         </div>
+        <p className="text-xs text-white/30 mt-3">
+          <span className="font-mono text-white/50">·</span> = a space that is part of the token. IDs are illustrative; each tokenizer has its own numbering.
+        </p>
         {/* Subword example */}
         <motion.div
           className="mt-6 px-4 py-3 rounded-xl border border-white/10 bg-white/[0.03]"
@@ -570,12 +692,12 @@ export default function LLMPipelineAnim() {
           transition={{ ...spring, delay: 0.6 }}
         >
           <p className="text-xs text-white/50 text-center mb-2">
-            Real pricing (GPT-4): <span className="text-accent-blue font-mono">$30 / 1M input tokens</span>
-            <span className="text-white/20 mx-2">|</span>
-            Claude: <span className="text-accent-gold font-mono">$15 / 1M input tokens</span>
+            With AI APIs you <span className="text-accent-blue font-bold">pay per token</span>: for the tokens you send
+            <span className="text-white/20 mx-2">+</span>
+            the tokens that come back <span className="text-white/30">(prices differ by model)</span>
           </p>
           <p className="text-sm text-white/25 text-center">
-            A 1-page email ≈ 500 tokens ≈ $0.015 &nbsp;|&nbsp; Harry Potter (full book) ≈ 250K tokens ≈ $7.50
+            Rule of thumb: 1 token ≈ ¾ of an English word &nbsp;|&nbsp; a 1-page email ≈ 500 tokens
           </p>
         </motion.div>
       </motion.div>
@@ -1186,63 +1308,72 @@ export default function LLMPipelineAnim() {
           </p>
         </motion.div>
 
-        {/* Context determines meaning example */}
+        {/* Context determines meaning: pick an ambiguous word */}
         <motion.div
-          className="mt-5 w-full max-w-lg"
+          className="mt-5 w-full max-w-2xl"
           animate={{ opacity: s === 10 ? 1 : 0, y: s === 10 ? 0 : 15 }}
           transition={{ ...spring, delay: 0.9 }}
         >
+          <div className="mb-3">
+            <ExampleChips
+              labels={attentionExamples.map((e) => e.word)}
+              value={attEx}
+              onChange={setAttEx}
+              active={s === 10}
+            />
+          </div>
           <div className="flex gap-4">
-            {/* Sentence 1 */}
-            <div className="flex-1 rounded-xl border border-accent-blue/20 bg-accent-blue/[0.03] p-3 relative">
-              <svg className="absolute -top-4 left-0 w-full h-5" viewBox="0 0 240 20" fill="none" preserveAspectRatio="xMidYMid meet">
-                <motion.path
-                  d="M 55 18 C 55 4, 200 4, 200 18"
-                  stroke="#4a9eff"
-                  strokeWidth={2.5}
-                  fill="none"
-                  animate={s === 10 ? { strokeOpacity: [0.3, 0.9, 0.3] } : { strokeOpacity: 0 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-                />
-              </svg>
-              <p className="text-xs font-mono text-white/60 text-center mt-1">
-                The <span className="text-accent-blue font-bold">bank</span> by the <span className="text-accent-blue font-bold">river</span>
-              </p>
-              <p className="text-xs text-accent-blue/50 text-center mt-1">bank = riverbank</p>
-            </div>
-
-            {/* Sentence 2 */}
-            <div className="flex-1 rounded-xl border border-accent-green/20 bg-accent-green/[0.03] p-3 relative">
-              <svg className="absolute -top-4 left-0 w-full h-5" viewBox="0 0 240 20" fill="none" preserveAspectRatio="xMidYMid meet">
-                <motion.path
-                  d="M 40 18 C 40 6, 130 6, 130 18"
-                  stroke="#4ade80"
-                  strokeWidth={2.5}
-                  fill="none"
-                  animate={s === 10 ? { strokeOpacity: [0.3, 0.9, 0.3] } : { strokeOpacity: 0 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 1.3 }}
-                />
-                <motion.path
-                  d="M 40 18 C 40 2, 200 2, 200 18"
-                  stroke="#4ade80"
-                  strokeWidth={2}
-                  fill="none"
-                  animate={s === 10 ? { strokeOpacity: [0.2, 0.7, 0.2] } : { strokeOpacity: 0 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 1.5 }}
-                />
-              </svg>
-              <p className="text-xs font-mono text-white/60 text-center mt-1">
-                The <span className="text-accent-green font-bold">bank</span> <span className="text-accent-green font-bold">approved</span> the <span className="text-accent-green font-bold">loan</span>
-              </p>
-              <p className="text-xs text-accent-green/50 text-center mt-1">bank = financial institution</p>
-            </div>
+            {[
+              { sent: attentionExamples[attEx].a, color: '#4a9eff' },
+              { sent: attentionExamples[attEx].b, color: '#4ade80' },
+            ].map(({ sent, color }, si) => (
+              <motion.div
+                key={`${attEx}-${si}`}
+                className="flex-1 rounded-xl border p-3"
+                style={{ borderColor: `${color}33`, backgroundColor: `${color}08` }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...spring, delay: si * 0.15 }}
+              >
+                <div className="flex flex-wrap justify-center gap-1.5 font-mono text-sm">
+                  {sent.words.map((w, wi) => {
+                    const isTarget = wi === sent.target;
+                    const isContext = sent.context.includes(wi);
+                    return (
+                      <motion.span
+                        key={wi}
+                        className="px-1.5 py-0.5 rounded border"
+                        style={{
+                          color: isTarget || isContext ? color : 'rgba(255,255,255,0.55)',
+                          fontWeight: isTarget || isContext ? 700 : 400,
+                          borderColor: isTarget ? color : 'transparent',
+                        }}
+                        animate={isContext && s === 10
+                          ? { backgroundColor: [`${color}00`, `${color}40`, `${color}00`] }
+                          : { backgroundColor: isTarget ? `${color}20` : `${color}00` }}
+                        transition={isContext
+                          ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: 0.4 + si * 0.3 }
+                          : { duration: 0.3 }}
+                      >
+                        {w}
+                      </motion.span>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-center mt-2" style={{ color: `${color}aa` }}>
+                  <b>{sent.words[sent.target]}</b> looks at{' '}
+                  <b>{sent.context.map((ci) => sent.words[ci]).join(' + ')}</b>
+                </p>
+                <p className="text-xs text-center mt-0.5 text-white/50">{sent.meaning}</p>
+              </motion.div>
+            ))}
           </div>
           <motion.p
             className="text-sm text-white/35 text-center mt-2 font-bold"
             animate={{ opacity: s === 10 ? 1 : 0 }}
             transition={{ ...spring, delay: 1.2 }}
           >
-            Context determines meaning
+            Same word, different neighbours, different meaning
           </motion.p>
         </motion.div>
       </motion.div>
@@ -1257,7 +1388,7 @@ export default function LLMPipelineAnim() {
           Tokens flow through <span className="text-accent-blue font-bold">billions of neural network parameters</span>
         </p>
         <p className="text-white/20 text-xs mb-4">
-          ...96 layers of math that extract meaning and patterns
+          ...through many layers of math that extract meaning and patterns
         </p>
 
         <div className="relative w-full max-w-2xl">
@@ -1368,7 +1499,7 @@ export default function LLMPipelineAnim() {
           >
             <div className="px-3 py-2 rounded-lg border border-accent-blue/20 bg-accent-blue/5 text-center">
               <p className="text-sm text-white/30">Parameters</p>
-              <p className="text-sm font-mono font-bold text-accent-blue">175B+</p>
+              <p className="text-sm font-mono font-bold text-accent-blue">Billions</p>
             </div>
           </motion.div>
 
@@ -1379,15 +1510,15 @@ export default function LLMPipelineAnim() {
             transition={{ ...spring, delay: 1 }}
           >
             <div className="text-center">
-              <p className="text-xs font-bold text-accent-blue/70">Layers 1-10</p>
+              <p className="text-xs font-bold text-accent-blue/70">Early layers</p>
               <p className="text-xs text-white/30">Grammar</p>
             </div>
             <div className="text-center">
-              <p className="text-xs font-bold text-[#a78bfa]/70">Layers 20-50</p>
+              <p className="text-xs font-bold text-[#a78bfa]/70">Middle layers</p>
               <p className="text-xs text-white/30">Meaning</p>
             </div>
             <div className="text-center">
-              <p className="text-xs font-bold text-accent-green/70">Layers 60-96</p>
+              <p className="text-xs font-bold text-accent-green/70">Later layers</p>
               <p className="text-xs text-white/30">Reasoning</p>
             </div>
           </motion.div>
@@ -1400,7 +1531,7 @@ export default function LLMPipelineAnim() {
           transition={{ ...spring, delay: 1.2 }}
         >
           <p className="text-xs text-white/50 text-center">
-            GPT-4: <span className="text-accent-blue font-mono font-bold">175B+ parameters</span>
+            Big models: <span className="text-accent-blue font-mono font-bold">billions of parameters</span>
             <span className="text-white/20 mx-2">|</span>
             Each parameter = one tiny number, adjusted during training
           </p>
@@ -1416,15 +1547,24 @@ export default function LLMPipelineAnim() {
         <p className="text-white/40 text-base font-medium mb-2">
           The network scores <span className="text-accent-green font-bold">every possible next token</span>
         </p>
-        <p className="text-white/20 text-xs mb-6">
-          &quot;The capital of France is ___&quot; → 100,000+ words scored
+        <p className="text-white/30 text-xs mb-3">
+          &quot;{predictionExamples[predEx].prompt} ___&quot; → every token in the vocabulary gets a score
         </p>
+        <div className="mb-5">
+          <ExampleChips
+            labels={predictionExamples.map((e) => e.prompt)}
+            value={predEx}
+            onChange={setPredEx}
+            active={s === 12}
+          />
+        </div>
 
         <div className="w-full max-w-md">
-          {probabilities.map((p, i) => (
+          {predictionExamples[predEx].bars.map((p, i) => (
             <motion.div
-              key={p.label}
+              key={`${predEx}-${p.label}`}
               className="flex items-center gap-3 mb-3"
+              initial={{ opacity: 0, x: 30 }}
               animate={{
                 opacity: s === 12 ? 1 : 0,
                 x: s === 12 ? 0 : 30,
@@ -1438,10 +1578,11 @@ export default function LLMPipelineAnim() {
                 <motion.div
                   className="h-full rounded-full flex items-center px-3 relative"
                   style={{ backgroundColor: `${p.color}30` }}
-                  animate={{ width: s === 12 ? `${p.pct}%` : '0%' }}
+                  initial={{ width: '0%' }}
+                  animate={{ width: s === 12 ? `${Math.max(p.pct, 1)}%` : '0%' }}
                   transition={{ ...spring, delay: s === 12 ? 0.3 + i * 0.08 : 0 }}
                 >
-                  <span className="text-xs font-bold" style={{ color: p.color }}>
+                  <span className="text-xs font-bold whitespace-nowrap" style={{ color: p.color }}>
                     {p.pct}%
                   </span>
                 </motion.div>
@@ -1458,6 +1599,9 @@ export default function LLMPipelineAnim() {
             </motion.div>
           ))}
         </div>
+        <p className="text-xs text-white/30 mt-2">
+          Illustrative numbers. A clear question gives one tall bar; an open one spreads the chances out.
+        </p>
       </motion.div>
 
       {/* ===== STEP 13: "One Token at a Time" ===== */}
@@ -1749,8 +1893,8 @@ export default function LLMPipelineAnim() {
               transition={{ ...spring, delay: 0.8 }}
             >
               <p>Billions of parameters</p>
-              <p>adjusted over weeks</p>
-              <p>on thousands of GPUs</p>
+              <p>adjusted over weeks or months</p>
+              <p>on thousands of chips</p>
             </motion.div>
           </motion.div>
         </div>
@@ -1761,7 +1905,7 @@ export default function LLMPipelineAnim() {
           transition={{ ...spring, delay: 0.9 }}
         >
           <p className="text-sm text-white/50 text-center">
-            Trained on <span className="text-accent-blue font-bold font-mono">~15 trillion tokens</span> of text
+            Big models are trained on <span className="text-accent-blue font-bold font-mono">trillions of tokens</span> of text
           </p>
         </motion.div>
 
@@ -1775,13 +1919,13 @@ export default function LLMPipelineAnim() {
             <div className="flex-1 px-4 py-2.5 rounded-lg border border-[#fbbf24]/20 bg-[#fbbf24]/[0.03]">
               <p className="text-sm text-[#fbbf24]/70 font-bold mb-0.5">Human Scale</p>
               <p className="text-sm text-white/40">
-                If you read 1 book/day, it would take <span className="text-[#fbbf24] font-bold font-mono">41,000 years</span> to match GPT-4&apos;s training data
+                Even reading a book every day, a person would need <span className="text-[#fbbf24] font-bold">thousands of lifetimes</span> to read that much
               </p>
             </div>
             <div className="flex-1 px-4 py-2.5 rounded-lg border border-[#f472b6]/20 bg-[#f472b6]/[0.03]">
               <p className="text-sm text-[#f472b6]/70 font-bold mb-0.5">Training Cost</p>
               <p className="text-sm text-white/40">
-                <span className="text-[#f472b6] font-bold font-mono">~$100M+</span> and <span className="text-[#f472b6] font-bold font-mono">25,000 GPUs</span> running for months
+                <span className="text-[#f472b6] font-bold">Thousands of powerful chips</span> running for weeks or months, which costs a lot of money and electricity
               </p>
             </div>
           </div>
@@ -1906,16 +2050,17 @@ export default function LLMPipelineAnim() {
           transition={{ ...spring, delay: 0.5 }}
         >
           {[
-            { model: 'GPT-4', tokens: '128K', pages: '~300 pages' },
-            { model: 'Claude', tokens: '200K', pages: '~500 pages' },
+            { title: 'Measured in', big: 'tokens', note: 'not words or pages' },
+            { title: 'Everything counts', big: 'in + out', note: 'your messages and its replies' },
+            { title: 'Size', big: 'varies', note: 'by model; check the docs' },
           ].map((m) => (
             <div
-              key={m.model}
+              key={m.title}
               className="px-4 py-3 rounded-lg border border-white/10 bg-white/[0.03] text-center"
             >
-              <p className="text-xs font-bold text-white/60">{m.model}</p>
-              <p className="text-lg font-mono font-bold text-accent-blue">{m.tokens}</p>
-              <p className="text-sm text-white/30">{m.pages}</p>
+              <p className="text-xs font-bold text-white/60">{m.title}</p>
+              <p className="text-lg font-mono font-bold text-accent-blue">{m.big}</p>
+              <p className="text-sm text-white/30">{m.note}</p>
             </div>
           ))}
         </motion.div>
@@ -2102,8 +2247,8 @@ export default function LLMPipelineAnim() {
         >
           <p className="text-sm text-white/60 text-center font-bold">
             Same principle.{' '}
-            <span className="text-accent-blue font-mono">10,000x</span> more data.{' '}
-            <span className="text-[#a78bfa] font-mono">1,000,000x</span> more parameters.
+            <span className="text-accent-blue">Vastly more</span> training text.{' '}
+            <span className="text-[#a78bfa]">Vastly bigger</span> model.
           </p>
         </motion.div>
       </motion.div>
@@ -2159,16 +2304,44 @@ export default function LLMPipelineAnim() {
         </div>
       </motion.div>
 
-      {/* ===== STEP 22: "Key Takeaways" ===== */}
+      {/* ===== STEPS 22-23: "Try it yourself" playgrounds ===== */}
+      <AnimatePresence>
+        {trigger === 'playground' && (
+          <motion.div
+            key="pg1"
+            className="absolute inset-0 z-10 bg-[#0a0e1a]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={smooth}
+          >
+            <LLMTokenPlayground />
+          </motion.div>
+        )}
+        {trigger === 'playground2' && (
+          <motion.div
+            key="pg2"
+            className="absolute inset-0 z-10 bg-[#0a0e1a]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={smooth}
+          >
+            <LLMMeaningPlayground />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ===== STEP 24: "Key Takeaways" ===== */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        animate={{ opacity: s === 22 ? 1 : 0 }}
+        animate={{ opacity: s === 24 ? 1 : 0 }}
         transition={smooth}
       >
         <div className="text-center max-w-xl w-full px-6">
           <motion.h2
             className="text-5xl font-bold text-white mb-8"
-            animate={{ opacity: s === 22 ? 1 : 0, y: s === 22 ? 0 : 15 }}
+            animate={{ opacity: s === 24 ? 1 : 0, y: s === 24 ? 0 : 15 }}
             transition={spring}
           >
             Key Takeaways
@@ -2185,10 +2358,10 @@ export default function LLMPipelineAnim() {
               className="flex items-center gap-4 mb-4 px-6 py-4 rounded-xl bg-white/5 border text-left"
               style={{ borderColor: `${item.color}20` }}
               animate={{
-                opacity: s === 22 ? 1 : 0,
-                y: s === 22 ? 0 : 20,
+                opacity: s === 24 ? 1 : 0,
+                y: s === 24 ? 0 : 20,
               }}
-              transition={{ ...spring, delay: s === 22 ? i * 0.15 : 0 }}
+              transition={{ ...spring, delay: s === 24 ? i * 0.15 : 0 }}
             >
               <span className="text-2xl">{item.icon}</span>
               <span className="text-white/80 text-base font-medium">{item.text}</span>
@@ -2196,7 +2369,7 @@ export default function LLMPipelineAnim() {
           ))}
           <motion.p
             className="text-white/30 text-xs mt-6"
-            animate={{ opacity: s === 22 ? 1 : 0 }}
+            animate={{ opacity: s === 24 ? 1 : 0 }}
             transition={{ ...spring, delay: 1 }}
           >
             Now you know what powers ChatGPT, Claude, Gemini, and Llama!

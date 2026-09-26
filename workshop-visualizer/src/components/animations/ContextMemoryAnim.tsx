@@ -1,6 +1,8 @@
 'use client';
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 import { useConceptStore } from '@/stores/conceptStore';
+import ContextMemoryPlayground from './playgrounds/ContextMemoryPlayground';
 
 const spring = { type: 'spring' as const, damping: 25, stiffness: 120 };
 const smooth = { duration: 0.6, ease: 'easeInOut' as const };
@@ -24,6 +26,80 @@ const conversationMessages: Msg[] = [
   { role: 'assistant', content: 'JavaScript is a web scripting language...' },
   { role: 'user', content: 'Which is better for beginners?' },
 ];
+
+// Extra conversations for the first-call / response / second-call scenes.
+// Token counts are rough estimates (the replies shown here are shortened).
+const callExamples: {
+  chip: string;
+  msgs: Msg[];
+  followUpAnswer: string;
+  tokens: [number, number, number];
+}[] = [
+  {
+    chip: 'Python vs JavaScript',
+    msgs: conversationMessages.slice(0, 4),
+    followUpAnswer: 'JavaScript is mainly used for web pages...',
+    tokens: [20, 140, 150],
+  },
+  {
+    chip: 'Remember my name',
+    msgs: [
+      { role: 'system', content: 'You are a helpful assistant.' },
+      { role: 'user', content: 'Hi, my name is Alex.' },
+      { role: 'assistant', content: 'Nice to meet you, Alex!' },
+      { role: 'user', content: "What's my name?" },
+    ],
+    followUpAnswer: 'Your name is Alex!',
+    tokens: [20, 30, 38],
+  },
+  {
+    chip: 'Pancake recipe',
+    msgs: [
+      { role: 'system', content: 'You are a helpful assistant.' },
+      { role: 'user', content: 'Give me a quick pancake recipe.' },
+      { role: 'assistant', content: 'Mix flour, eggs and milk, then fry...' },
+      { role: 'user', content: 'Can I make it without eggs?' },
+    ],
+    followUpAnswer: 'Yes! Swap each egg for half a mashed banana.',
+    tokens: [22, 120, 130],
+  },
+];
+
+function SceneChips({
+  active,
+  onPick,
+  visible,
+}: {
+  active: number;
+  onPick: (i: number) => void;
+  visible: boolean;
+}) {
+  return (
+    <motion.div
+      className="absolute top-4 left-0 right-0 flex items-center justify-center gap-2 flex-wrap px-6"
+      style={{ pointerEvents: visible ? 'auto' : 'none' }}
+      animate={{ opacity: visible ? 1 : 0 }}
+    >
+      <span className="text-xs text-white/35">Try another chat:</span>
+      {callExamples.map((ex, i) => (
+        <motion.button
+          key={ex.chip}
+          onClick={() => onPick(i)}
+          className="px-3 py-1 rounded-full border text-xs font-medium"
+          style={{
+            borderColor: i === active ? '#4a9eff' : 'rgba(255,255,255,0.12)',
+            backgroundColor: i === active ? 'rgba(74,158,255,0.15)' : 'rgba(255,255,255,0.03)',
+            color: i === active ? '#bfdbfe' : 'rgba(255,255,255,0.55)',
+          }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          {ex.chip}
+        </motion.button>
+      ))}
+    </motion.div>
+  );
+}
 
 function MsgBubble({
   msg,
@@ -96,25 +172,30 @@ function MsgBubble({
 }
 
 export default function ContextMemoryAnim() {
-  const { currentStep } = useConceptStore();
+  const { currentStep, steps } = useConceptStore();
   const s = currentStep;
+  const trigger = steps[currentStep]?.animationTrigger;
 
-  // Cost bar chart animation
+  // Which prepared conversation steps 3-5 show (shared so it carries across those steps).
+  const [exIdx, setExIdx] = useState(0);
+  const ex = callExamples[exIdx];
+
+  // Cost bar chart animation (illustrative token counts)
   const costBars = [
-    { call: 1, tokens: 85, cost: '' },
-    { call: 2, tokens: 127, cost: '' },
-    { call: 3, tokens: 384, cost: '' },
-    { call: 5, tokens: 1200, cost: '$0.004' },
-    { call: 10, tokens: 4800, cost: '$0.014' },
-    { call: 20, tokens: 12000, cost: '$0.036' },
+    { call: 1, tokens: 85 },
+    { call: 2, tokens: 127 },
+    { call: 3, tokens: 384 },
+    { call: 5, tokens: 1200 },
+    { call: 10, tokens: 4800 },
+    { call: 20, tokens: 12000 },
   ];
 
   // Step 3 messages: system + user
-  const step3Msgs = conversationMessages.slice(0, 2);
+  const step3Msgs = ex.msgs.slice(0, 2);
   // Step 4 messages: system + user + assistant (new)
-  const step4Msgs = conversationMessages.slice(0, 3);
+  const step4Msgs = ex.msgs.slice(0, 3);
   // Step 5 messages: system + user + assistant + new user
-  const step5Msgs = conversationMessages.slice(0, 4);
+  const step5Msgs = ex.msgs.slice(0, 4);
 
   return (
     <div
@@ -297,7 +378,7 @@ export default function ContextMemoryAnim() {
               <div className="space-y-1.5 pl-2">
                 {step3Msgs.map((msg, i) => (
                   <motion.div
-                    key={`s3-${i}`}
+                    key={`s3-${exIdx}-${i}`}
                     initial={{ opacity: 0, x: -15 }}
                     animate={{ opacity: s === 3 ? 1 : 0, x: s === 3 ? 0 : -15 }}
                     transition={{ ...spring, delay: 0.2 + i * 0.15 }}
@@ -358,7 +439,7 @@ export default function ContextMemoryAnim() {
               transition={{ ...spring, delay: 0.8 }}
             >
               <span className="text-xs text-accent-green">
-                &quot;Python is a programming language...&quot;
+                &quot;{ex.msgs[2].content}&quot;
               </span>
             </motion.div>
           </motion.div>
@@ -372,7 +453,8 @@ export default function ContextMemoryAnim() {
         >
           <div className="flex items-center gap-2">
             <span className="text-xs text-white/40">Tokens:</span>
-            <span className="text-sm font-bold font-mono text-accent-gold">~85</span>
+            <span className="text-sm font-bold font-mono text-accent-gold">~{ex.tokens[0]}</span>
+            <span className="text-xs text-white/30">(rough estimate)</span>
           </div>
         </motion.div>
       </motion.div>
@@ -396,7 +478,7 @@ export default function ContextMemoryAnim() {
               <div className="space-y-1.5 pl-2 max-h-[55%] overflow-y-auto">
                 {step4Msgs.map((msg, i) => (
                   <motion.div
-                    key={`s4-${i}`}
+                    key={`s4-${exIdx}-${i}`}
                     initial={{ opacity: 0, x: -15 }}
                     animate={{ opacity: s === 4 ? 1 : 0, x: s === 4 ? 0 : -15 }}
                     transition={{ ...spring, delay: 0.1 + i * 0.12 }}
@@ -492,7 +574,8 @@ export default function ContextMemoryAnim() {
         >
           <div className="flex items-center gap-2">
             <span className="text-xs text-white/40">Tokens:</span>
-            <span className="text-sm font-bold font-mono text-accent-gold">~127</span>
+            <span className="text-sm font-bold font-mono text-accent-gold">~{ex.tokens[1]}</span>
+            <span className="text-xs text-white/30">(rough; full reply included)</span>
           </div>
         </motion.div>
       </motion.div>
@@ -524,7 +607,7 @@ export default function ContextMemoryAnim() {
                   const isLast = i === step5Msgs.length - 1;
                   return (
                     <motion.div
-                      key={`s5-${i}`}
+                      key={`s5-${exIdx}-${i}`}
                       initial={{ opacity: 0, x: -15 }}
                       animate={{ opacity: s === 5 ? 1 : 0, x: s === 5 ? 0 : -15 }}
                       transition={{ ...spring, delay: 0.1 + i * 0.12 }}
@@ -615,7 +698,7 @@ export default function ContextMemoryAnim() {
               animate={{ scale: 1 }}
               transition={spring}
             >
-              ~384
+              ~{ex.tokens[2]}
             </motion.span>
             <motion.span
               className="text-xs text-accent-gold"

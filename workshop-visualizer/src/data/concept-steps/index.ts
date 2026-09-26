@@ -146,7 +146,19 @@ export const whatIsLLMSteps: ConceptStep[] = [
     animationTrigger: 'canAndCant',
     subtitle: 'Know what it can do, and what it cannot.',
   },
-  // Step 22: "Key Takeaways"
+  // Step 22: "Try it: Tokenizer + Next Word"
+  {
+    explanation: 'Type anything and watch it split into tokens. Then click an example and keep clicking bars to build a sentence one token at a time.',
+    animationTrigger: 'playground',
+    subtitle: 'Text → tokens → chances for the next token → pick one → repeat.',
+  },
+  // Step 23: "Try it: The Meaning Map"
+  {
+    explanation: 'Click words on the map to see their closest neighbours. Then switch to "Word math" and pick an equation to watch the arrows move.',
+    animationTrigger: 'playground2',
+    subtitle: 'Similar meanings sit close; the same direction means the same kind of change.',
+  },
+  // Step 24: "Key Takeaways"
   {
     explanation: 'What you learned: (1) An LLM predicts the next token, one at a time. (2) Text becomes tokens, then numbers that carry meaning. (3) Temperature controls how adventurous each pick is.',
     animationTrigger: 'takeaways',
@@ -227,7 +239,13 @@ export const temperatureSteps: ConceptStep[] = [
     animationTrigger: 'whenToUse',
     subtitle: 'Pick the temperature that fits your task.',
   },
-  // Step 12: "Key Takeaways"
+  // Step 12: "Try it yourself" playground
+  {
+    explanation: 'Your turn: pick a prompt, drag the temperature and top-p sliders, and watch the chances reshape. Then press "Sample 10 times" and compare T = 0 with T = 1.5.',
+    animationTrigger: 'playground',
+    subtitle: 'Low temperature repeats itself; high temperature explores.',
+  },
+  // Step 13: "Key Takeaways"
   {
     explanation: 'What you learned: (1) Temperature controls how boldly the next word is picked. (2) Low = consistent, high = creative. (3) A clear prompt matters more than the setting.',
     animationTrigger: 'takeaways',
@@ -358,7 +376,13 @@ export const systemPromptSteps: ConceptStep[] = [
     animationTrigger: 'promptInjection',
     subtitle: 'System prompts can be bypassed.',
   },
-  // Step 9: "Key Takeaways"
+  // Step 9: "Try it yourself" playground
+  {
+    explanation: 'Build your own system prompt: click persona, format, rule and safety blocks, then pick a question and watch the reply change. Try the "Ignore previous instructions" chip with and without the Safety block.',
+    animationTrigger: 'playground',
+    subtitle: 'Each block of the system prompt changes the reply.',
+  },
+  // Step 10: "Key Takeaways"
   {
     explanation: 'What you learned: (1) The system prompt is the first message and sets the rules. (2) Keep it short and clear, and test it. (3) Never rely on it for security.',
     animationTrigger: 'takeaways',
@@ -439,7 +463,19 @@ export const hallucinationSteps: ConceptStep[] = [
     animationTrigger: 'whenOK',
     subtitle: 'Sometimes making things up is the goal.',
   },
-  // Step 12: "Key Takeaways"
+  // Step 12: "Try it yourself": Real or Made-up quiz
+  {
+    explanation: 'Quiz time: for each AI statement, click Real or Made up, then read why. Some fakes look exactly like real facts or sources.',
+    animationTrigger: 'playground',
+    subtitle: 'You cannot tell a hallucination by how it sounds.',
+  },
+  // Step 13: "Try it yourself": grounding on/off
+  {
+    explanation: 'Pick a question and flip Grounding on and off. With grounding, the model is given a source to quote. Without it, it guesses.',
+    animationTrigger: 'playground2',
+    subtitle: 'Give the model a source and it can quote instead of guess.',
+  },
+  // Step 14: "Key Takeaways"
   {
     explanation: 'What you learned: (1) LLMs can be confidently wrong because they predict likely text. (2) Give them real data and allow "I don\'t know". (3) Always verify important facts.',
     animationTrigger: 'takeaways',
@@ -520,7 +556,13 @@ export const ragSteps: ConceptStep[] = [
     animationTrigger: 'ragNotEnough',
     subtitle: 'Reading is not doing.',
   },
-  // Step 12: "Key Takeaways"
+  // Step 12: "Try It Yourself"
+  {
+    explanation: 'Try it: pick a question (or type your own) and watch the handbook chunks get scored and ranked. Move the top-k slider to choose how many chunks go into the prompt, then compare the answers with and without RAG.',
+    animationTrigger: 'playground',
+    subtitle: 'Find the right chunks, and the model can answer from your data.',
+  },
+  // Step 13: "Key Takeaways"
   {
     explanation: 'What you learned: (1) RAG = find documents, add them to the prompt, then answer. (2) Documents are chunked and searched by meaning. (3) It reduces guessing by giving the model real data.',
     animationTrigger: 'takeaways',
@@ -555,7 +597,7 @@ export const agentsSteps: ConceptStep[] = [
   },
   // Step 4: "Real Example: Weather"
   {
-    explanation: 'Example: the user asks about the weather in Paris. The LLM asks for get_weather("Paris"), your code returns "22°C, rain", and the LLM writes the answer from that.',
+    explanation: 'Example: the user asks about the weather in Paris. The LLM asks for get_weather("Paris"), your code returns "22°C, sunny", and the LLM writes the answer from that.',
     animationTrigger: 'realExample',
     subtitle: 'From question to tool to answer.',
   },
@@ -601,7 +643,13 @@ export const agentsSteps: ConceptStep[] = [
     animationTrigger: 'whatYoullBuild',
     subtitle: "From ideas to working code. Let's build!",
   },
-  // Step 12: "Key Takeaways"
+  // Step 12: "Try It Yourself"
+  {
+    explanation: 'Try it: pick a task and watch the agent think, choose a tool, run it and read the result, turn by turn. Turn on "Tool fails" to see how it recovers.',
+    animationTrigger: 'playground',
+    subtitle: 'Some tasks need several tools, some need none.',
+  },
+  // Step 13: "Key Takeaways"
   {
     explanation: 'What you learned: (1) Agent = LLM + tools + a loop. (2) The LLM decides; your code does the work. (3) Use an agent only when one API call is not enough.',
     animationTrigger: 'takeaways',

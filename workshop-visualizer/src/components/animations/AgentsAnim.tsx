@@ -1,13 +1,113 @@
 'use client';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useConceptStore } from '@/stores/conceptStore';
+import AgentsPlayground from './playgrounds/AgentsPlayground';
 
 const spring = { type: 'spring' as const, stiffness: 260, damping: 22 };
 const smooth = { duration: 0.5, ease: [0.4, 0, 0.2, 1] as const };
 
+// Extra examples for the "Real Example" scene (step 4). Tool results are made-up example data.
+const singleExamples = [
+  {
+    chip: 'Weather',
+    steps: [
+      { label: 'User asks', text: '"What\'s the weather in Paris?"', color: '#4a9eff', icon: '💬' },
+      { label: 'Agent THINKS', text: '"I need the weather tool"', color: '#a78bfa', icon: '🧠' },
+      { label: 'Tool call', text: 'get_weather("Paris")', color: '#fbbf24', icon: '⚙️' },
+      { label: 'Result', text: '{ "temp": "22°C", "conditions": "Sunny" }', color: '#4ade80', icon: '📊' },
+      { label: 'Agent THINKS', text: '"I have the data, time to respond"', color: '#a78bfa', icon: '🧠' },
+      { label: 'Final response', text: '"It\'s 22°C and sunny in Paris!"', color: '#4ade80', icon: '✅' },
+    ],
+  },
+  {
+    chip: 'Big multiplication',
+    steps: [
+      { label: 'User asks', text: '"What is 23 × 47?"', color: '#4a9eff', icon: '💬' },
+      { label: 'Agent THINKS', text: '"Exact math is safer with the calculator tool"', color: '#a78bfa', icon: '🧠' },
+      { label: 'Tool call', text: 'calculator("23 * 47")', color: '#fbbf24', icon: '⚙️' },
+      { label: 'Result', text: '{ "result": 1081 }', color: '#4ade80', icon: '📊' },
+      { label: 'Agent THINKS', text: '"I have the exact number, time to respond"', color: '#a78bfa', icon: '🧠' },
+      { label: 'Final response', text: '"23 × 47 = 1,081."', color: '#4ade80', icon: '✅' },
+    ],
+  },
+  {
+    chip: 'Miles to km',
+    steps: [
+      { label: 'User asks', text: '"How far is 10 miles in km?"', color: '#4a9eff', icon: '💬' },
+      { label: 'Agent THINKS', text: '"I need the unit converter tool"', color: '#a78bfa', icon: '🧠' },
+      { label: 'Tool call', text: 'convert_units(10, "mi", "km")', color: '#fbbf24', icon: '⚙️' },
+      { label: 'Result', text: '{ "value": 16.09, "unit": "km" }', color: '#4ade80', icon: '📊' },
+      { label: 'Agent THINKS', text: '"Got the converted value, time to respond"', color: '#a78bfa', icon: '🧠' },
+      { label: 'Final response', text: '"10 miles is about 16.09 km."', color: '#4ade80', icon: '✅' },
+    ],
+  },
+];
+
+// Extra examples for the "Multi-Step" scene (step 5). Made-up example data.
+const multiExamples = [
+  {
+    chip: 'Trip to Paris',
+    request: 'Plan a trip to Paris',
+    steps: [
+      { num: 1, action: 'search_flights("Paris, Mar")', result: '$340 round-trip, Air France', icon: '✈️', color: '#4a9eff' },
+      { num: 2, action: 'search_hotels("Paris, 4★+")', result: 'Hotel Le Marais, $120/night', icon: '🏨', color: '#a78bfa' },
+      { num: 3, action: 'get_weather("Paris, March")', result: '15°C avg, light rain expected', icon: '🌤️', color: '#4ade80' },
+    ],
+    final: 'I found a $340 round-trip on Air France, Hotel Le Marais for $120/night. March weather averages 15°C with light rain -- pack a jacket!',
+  },
+  {
+    chip: 'Prep my meeting',
+    request: 'Prepare me for tomorrow\'s meeting',
+    steps: [
+      { num: 1, action: 'get_calendar("tomorrow")', result: '10:00 Budget review with Sam', icon: '📅', color: '#4a9eff' },
+      { num: 2, action: 'search_docs("budget review")', result: 'Found: Budget draft v2.pdf', icon: '📚', color: '#a78bfa' },
+      { num: 3, action: 'draft_email("Sam", "Agenda")', result: 'Draft saved (not sent)', icon: '✉️', color: '#4ade80' },
+    ],
+    final: 'Tomorrow at 10:00 you have the budget review with Sam. I found "Budget draft v2" and saved a draft agenda email to Sam for you to check and send.',
+  },
+];
+
+// Extra examples for the "Error Handling" scene (step 8): each error has a best way to recover.
+const errorExamples = [
+  { chip: 'Timeout', error: 'Network timeout', best: 0, why: 'Timeouts are often temporary, so trying again usually works.' },
+  { chip: 'Service down', error: 'Service unavailable (3 tries)', best: 1, why: 'Retrying keeps failing, so use another tool, e.g. web_search("Paris weather").' },
+  { chip: 'Key expired', error: '401: API key expired', best: 2, why: 'The agent cannot fix this itself. A person has to renew the key.' },
+];
+
+function Chips({ active, labels, idx, onPick, prefix }: { active: boolean; labels: string[]; idx: number; onPick: (i: number) => void; prefix: string }) {
+  return (
+    <div className="flex items-center justify-center gap-1.5 flex-wrap" style={{ pointerEvents: active ? 'auto' : 'none' }}>
+      <span className="text-xs text-white/35 mr-1">{prefix}</span>
+      {labels.map((label, i) => (
+        <motion.button
+          key={label}
+          onClick={() => onPick(i)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="px-2.5 py-0.5 rounded-full border text-xs"
+          style={{
+            borderColor: idx === i ? 'rgba(74,158,255,0.7)' : 'rgba(255,255,255,0.15)',
+            backgroundColor: idx === i ? 'rgba(74,158,255,0.18)' : 'rgba(255,255,255,0.04)',
+            color: idx === i ? '#cfe4ff' : 'rgba(255,255,255,0.6)',
+          }}
+        >
+          {label}
+        </motion.button>
+      ))}
+    </div>
+  );
+}
+
 export default function AgentsAnim() {
   const s = useConceptStore((st) => st.currentStep);
+  const trigger = useConceptStore((st) => st.steps[st.currentStep]?.animationTrigger);
+  const isTakeaways = trigger === 'takeaways';
+
+  const [singleIdx, setSingleIdx] = useState(0);
+  const [multiIdx, setMultiIdx] = useState(0);
+  const [errIdx, setErrIdx] = useState(0);
+  const errEx = errorExamples[errIdx];
 
   // Weather example phase sequencer (step 4)
   const [weatherPhase, setWeatherPhase] = useState(0);
@@ -19,7 +119,7 @@ export default function AgentsAnim() {
       }, 1200);
       return () => clearInterval(timer);
     }
-  }, [s]);
+  }, [s, singleIdx]);
 
   // Agent loop pulse (step 3)
   const [loopPulse, setLoopPulse] = useState(0);
@@ -43,7 +143,7 @@ export default function AgentsAnim() {
       }, 1500);
       return () => clearInterval(timer);
     }
-  }, [s]);
+  }, [s, multiIdx]);
 
   // Tool cards cycling (step 6)
   const [toolHighlight, setToolHighlight] = useState(0);
@@ -57,17 +157,8 @@ export default function AgentsAnim() {
     }
   }, [s]);
 
-  // Error handling branch animation (step 8)
-  const [errorBranch, setErrorBranch] = useState(0);
-  useEffect(() => {
-    if (s === 8) {
-      setErrorBranch(0);
-      const timer = setInterval(() => {
-        setErrorBranch((prev) => (prev + 1) % 3);
-      }, 2000);
-      return () => clearInterval(timer);
-    }
-  }, [s]);
+  // Error handling: the highlighted branch is the best recovery for the chosen error (step 8)
+  const errorBranch = errEx.best;
 
   return (
     <div
@@ -535,16 +626,9 @@ export default function AgentsAnim() {
             Step-by-step walkthrough
           </motion.p>
 
-          {[
-            { label: 'User asks', text: '"What\'s the weather in Paris?"', color: '#4a9eff', icon: '💬' },
-            { label: 'Agent THINKS', text: '"I need the weather tool"', color: '#a78bfa', icon: '🧠' },
-            { label: 'Tool call', text: 'get_weather("Paris")', color: '#fbbf24', icon: '⚙️' },
-            { label: 'Result', text: '{ "temp": "22°C", "conditions": "Sunny" }', color: '#4ade80', icon: '📊' },
-            { label: 'Agent THINKS', text: '"I have the data, time to respond"', color: '#a78bfa', icon: '🧠' },
-            { label: 'Final response', text: '"It\'s 22°C and sunny in Paris!"', color: '#4ade80', icon: '✅' },
-          ].map((step, i) => (
+          {singleExamples[singleIdx].steps.map((step, i) => (
             <motion.div
-              key={i}
+              key={`${singleIdx}-${i}`}
               className="flex items-start gap-3 mb-2 relative"
               animate={{
                 opacity: s === 4 ? (weatherPhase >= i ? 1 : 0.15) : 0,
@@ -591,6 +675,10 @@ export default function AgentsAnim() {
               )}
             </motion.div>
           ))}
+
+          <motion.div className="mt-3" animate={{ opacity: s === 4 ? 1 : 0 }} transition={{ ...spring, delay: 0.3 }}>
+            <Chips active={s === 4} labels={singleExamples.map((e) => e.chip)} idx={singleIdx} onPick={setSingleIdx} prefix="Try another:" />
+          </motion.div>
         </div>
       </motion.div>
 
@@ -607,18 +695,14 @@ export default function AgentsAnim() {
             animate={{ opacity: s === 5 ? 1 : 0 }}
             transition={spring}
           >
-            <span className="text-sm text-[#4a9eff]">&quot;Plan a trip to Paris&quot;</span>
+            <span className="text-sm text-[#4a9eff]">&quot;{multiExamples[multiIdx].request}&quot;</span>
           </motion.div>
 
           {/* Loop iterations */}
           <div className="space-y-3">
-            {[
-              { num: 1, action: 'search_flights("Paris, Mar")', result: '$340 round-trip, Air France', icon: '✈️', color: '#4a9eff' },
-              { num: 2, action: 'search_hotels("Paris, 4★+")', result: 'Hotel Le Marais, $120/night', icon: '🏨', color: '#a78bfa' },
-              { num: 3, action: 'get_weather("Paris, March")', result: '15°C avg, light rain expected', icon: '🌤️', color: '#4ade80' },
-            ].map((step, i) => (
+            {multiExamples[multiIdx].steps.map((step, i) => (
               <motion.div
-                key={i}
+                key={`${multiIdx}-${i}`}
                 className="flex items-center gap-3"
                 animate={{
                   opacity: s === 5 ? (multiPhase >= i ? 1 : 0.2) : 0,
@@ -677,7 +761,7 @@ export default function AgentsAnim() {
           >
             <p className="text-sm text-[#fbbf24] font-bold uppercase tracking-wider mb-1">Final Response</p>
             <p className="text-xs text-white/50">
-              &quot;I found a $340 round-trip on Air France, Hotel Le Marais for $120/night. March weather averages 15&deg;C with light rain -- pack a jacket!&quot;
+              &quot;{multiExamples[multiIdx].final}&quot;
             </p>
           </motion.div>
 
@@ -688,6 +772,10 @@ export default function AgentsAnim() {
           >
             3 loop iterations, each adding to the response
           </motion.p>
+
+          <motion.div className="mt-3" animate={{ opacity: s === 5 ? 1 : 0 }} transition={{ ...spring, delay: 0.3 }}>
+            <Chips active={s === 5} labels={multiExamples.map((e) => e.chip)} idx={multiIdx} onPick={setMultiIdx} prefix="Try another task:" />
+          </motion.div>
         </div>
       </motion.div>
 
@@ -898,7 +986,7 @@ export default function AgentsAnim() {
               <span className="text-white/30">{'{'} </span>
               <span className="text-[#ef4444]">&quot;error&quot;</span>
               <span className="text-white/30">: </span>
-              <span className="text-[#ef4444]">&quot;Network timeout&quot;</span>
+              <span className="text-[#ef4444]">&quot;{errEx.error}&quot;</span>
               <span className="text-white/30"> {'}'}</span>
             </motion.div>
           </div>
@@ -950,6 +1038,20 @@ export default function AgentsAnim() {
               </motion.div>
             ))}
           </div>
+
+          <motion.p
+            key={errEx.chip}
+            className="text-sm text-white/60 text-center mt-4"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: s === 8 ? 1 : 0, y: 0 }}
+            transition={{ ...spring, delay: 0.2 }}
+          >
+            Best choice here: <span className="font-bold text-white/85">{['Retry', 'Fallback', 'Tell User'][errEx.best]}</span>. {errEx.why}
+          </motion.p>
+
+          <motion.div className="mt-3" animate={{ opacity: s === 8 ? 1 : 0 }} transition={{ ...spring, delay: 0.3 }}>
+            <Chips active={s === 8} labels={errorExamples.map((e) => e.chip)} idx={errIdx} onPick={setErrIdx} prefix="Try another error:" />
+          </motion.div>
         </div>
       </motion.div>
 
@@ -1294,18 +1396,34 @@ export default function AgentsAnim() {
         </div>
       </motion.div>
 
-      {/* ===== Step 12: Key Takeaways ===== */}
+      {/* ===== Try It Yourself (playground) ===== */}
+      <AnimatePresence>
+        {trigger === 'playground' && (
+          <motion.div
+            key="agents-playground"
+            className="absolute inset-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <AgentsPlayground />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ===== Key Takeaways ===== */}
       <motion.div
         className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-6"
-        animate={{ opacity: s === 12 ? 1 : 0 }}
+        animate={{ opacity: isTakeaways ? 1 : 0 }}
         transition={spring}
       >
         <div className="max-w-md w-full">
           <motion.h2
             className="text-2xl font-bold text-white text-center mb-5"
             animate={{
-              opacity: s === 12 ? 1 : 0,
-              y: s === 12 ? 0 : 15,
+              opacity: isTakeaways ? 1 : 0,
+              y: isTakeaways ? 0 : 15,
             }}
             transition={spring}
           >
@@ -1327,8 +1445,8 @@ export default function AgentsAnim() {
                   borderColor: `${item.color}25`,
                 }}
                 animate={{
-                  opacity: s === 12 ? 1 : 0,
-                  x: s === 12 ? 0 : -20,
+                  opacity: isTakeaways ? 1 : 0,
+                  x: isTakeaways ? 0 : -20,
                 }}
                 transition={{ ...spring, delay: i * 0.12 }}
               >

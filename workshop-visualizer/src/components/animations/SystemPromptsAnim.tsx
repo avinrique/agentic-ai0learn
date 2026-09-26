@@ -1,7 +1,23 @@
 'use client';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useConceptStore } from '@/stores/conceptStore';
+import SystemPromptsPlayground from './playgrounds/SystemPromptsPlayground';
+
+// Scene order (by animationTrigger). Scenes are drawn by index below; triggers not listed here
+// (e.g. 'playground') hide every scene.
+const SCENES = [
+  'systemPromptZoom',
+  'systemPromptAnatomy',
+  'sameQuestionDiffPersonality',
+  'realWorldExamples',
+  'whatNotToDo',
+  'systemPromptCost',
+  'iterating',
+  'acrossAPIs',
+  'promptInjection',
+  'takeaways',
+];
 
 const spring = { type: 'spring' as const, damping: 25, stiffness: 120 };
 const smooth = { duration: 0.6, ease: 'easeInOut' as const };
@@ -13,24 +29,41 @@ const anatomyLines = [
   { text: 'If unsure, say so.', label: 'SAFETY', color: '#ef4444' },
 ];
 
-const personalities = [
+const personalityNames = [
+  { name: 'Physicist', color: '#a78bfa' },
+  { name: 'Pirate', color: '#fbbf24' },
+  { name: 'Poet', color: '#4ade80' },
+];
+
+// Same three system prompts, several questions to switch between.
+const personalityQuestions = [
   {
-    name: 'Physicist',
-    color: '#a78bfa',
-    response: 'Gravity is a fundamental force described by Einstein\'s general relativity as the curvature of spacetime caused by mass and energy...',
+    question: 'Explain gravity',
+    responses: [
+      'Gravity is a fundamental force described by Einstein\'s general relativity as the curvature of spacetime caused by mass and energy...',
+      'Arrr! Gravity be the force that keeps yer boots on the deck and yer grog in the barrel! Without it, we\'d all be floatin\' off to Davy Jones...',
+      'Gravity, that gentle pull — the invisible thread that binds the apple to the earth, the moon to its orbit, and the heart to its longing...',
+    ],
   },
   {
-    name: 'Pirate',
-    color: '#fbbf24',
-    response: 'Arrr! Gravity be the force that keeps yer boots on the deck and yer grog in the barrel! Without it, we\'d all be floatin\' off to Davy Jones...',
+    question: 'Why is the sky blue?',
+    responses: [
+      'Sunlight scatters off air molecules. Shorter blue wavelengths scatter far more strongly than red ones (Rayleigh scattering), so blue light reaches us from every direction...',
+      'Arrr! The sun\'s light be bouncin\' off the air, and the blue bits scatter the most. So the whole sky turns the colour o\' the sea, matey!',
+      'The sun pours white light into the air, and the air, restless, flings the blue in every direction, so the sky wears the colour it scatters most...',
+    ],
   },
   {
-    name: 'Poet',
-    color: '#4ade80',
-    response: 'Gravity, that gentle pull — the invisible thread that binds the apple to the earth, the moon to its orbit, and the heart to its longing...',
+    question: 'What is rain?',
+    responses: [
+      'Water vapour rises and cools, then condenses on tiny particles into droplets. When droplets merge and grow heavy enough, gravity pulls them down as rain...',
+      'Arrr, the sea sends her water up to the clouds, and when the clouds be too heavy to carry it, she dumps it right back on our heads!',
+      'The sea rises as breath, gathers into grey, and returns as a thousand small falling songs upon the roofs...',
+    ],
   },
 ];
 
+const realWorldSets: { label: string; items: { title: string; color: string; prompt: string }[] }[] = [];
 const realWorldExamples = [
   {
     title: 'Customer Service Bot',
@@ -48,6 +81,49 @@ const realWorldExamples = [
     prompt: 'Write in the style of Hemingway. Short sentences. No adjectives.',
   },
 ];
+realWorldSets.push(
+  { label: 'Business apps', items: realWorldExamples },
+  {
+    label: 'Learning apps',
+    items: [
+      {
+        title: 'Homework Helper',
+        color: '#4a9eff',
+        prompt: 'You are a maths tutor for 12-year-olds. Give hints, not final answers. Ask what they tried first.',
+      },
+      {
+        title: 'Language Partner',
+        color: '#a78bfa',
+        prompt: 'Chat only in simple Spanish. Gently correct one mistake per reply, with the fix in brackets.',
+      },
+      {
+        title: 'Quiz Master',
+        color: '#4ade80',
+        prompt: 'Ask one multiple-choice question at a time. Wait for the answer, then explain why it is right or wrong.',
+      },
+    ],
+  },
+  {
+    label: 'Everyday apps',
+    items: [
+      {
+        title: 'Recipe Assistant',
+        color: '#4a9eff',
+        prompt: 'Suggest recipes using only the ingredients listed. Always mention common allergens like nuts or gluten.',
+      },
+      {
+        title: 'Travel Planner',
+        color: '#a78bfa',
+        prompt: 'Plan day-by-day trips. Use a table: Day | Morning | Afternoon | Evening. Ask for the budget first.',
+      },
+      {
+        title: 'Email Polisher',
+        color: '#4ade80',
+        prompt: 'Rewrite the user\'s email to be polite and clear. Keep their meaning. Never add facts they did not give.',
+      },
+    ],
+  },
+);
 
 const badPractices = [
   { text: 'API keys in system prompt', detail: 'sk-abc123... exposed to prompt injection' },
@@ -89,8 +165,19 @@ const takeaways = [
 ];
 
 export default function SystemPromptsAnim() {
-  const { currentStep } = useConceptStore();
-  const s = currentStep;
+  const { currentStep, steps } = useConceptStore();
+  const trigger = steps[currentStep]?.animationTrigger;
+  // Map the step's trigger to a scene index; -1 (e.g. the playground) hides all scenes.
+  const s = trigger === undefined ? currentStep : SCENES.indexOf(trigger);
+
+  // Example chips for Step 2 (question) and Step 3 (example set)
+  const [personaQ, setPersonaQ] = useState(0);
+  const [realSet, setRealSet] = useState(0);
+  const personalities = personalityNames.map((p, i) => ({
+    ...p,
+    response: personalityQuestions[personaQ].responses[i],
+  }));
+  const realWorldShown = realWorldSets[realSet].items;
 
   // Cycling highlight for Step 2 (personalities)
   const [typingIdx, setTypingIdx] = useState(0);
@@ -100,7 +187,7 @@ export default function SystemPromptsAnim() {
       const timer = setInterval(() => setTypingIdx((p) => (p + 1) % 3), 2500);
       return () => clearInterval(timer);
     }
-  }, [s]);
+  }, [s, personaQ]);
 
   // Animated token count for Step 5
   const [showSavings, setShowSavings] = useState(false);
@@ -284,15 +371,22 @@ export default function SystemPromptsAnim() {
           animate={{ opacity: s === 2 ? 1 : 0 }}
           transition={spring}
         >
-          Same question: &quot;Explain gravity&quot;
+          Same question: &quot;{personalityQuestions[personaQ].question}&quot;
         </motion.p>
         <motion.p
-          className="text-xs text-white/30 mb-5"
+          className="text-xs text-white/30 mb-3"
           animate={{ opacity: s === 2 ? 1 : 0 }}
           transition={{ ...spring, delay: 0.2 }}
         >
           Three different system prompts, three different personalities:
         </motion.p>
+        <ExampleChips
+          active={s === 2}
+          labels={personalityQuestions.map((q) => q.question)}
+          value={personaQ}
+          onChange={setPersonaQ}
+          color="#a78bfa"
+        />
 
         <div className="grid grid-cols-3 gap-4 w-full max-w-3xl">
           {personalities.map((p, i) => (
@@ -324,9 +418,12 @@ export default function SystemPromptsAnim() {
                 )}
               </div>
               <motion.div
+                key={`${personaQ}-${i}`}
                 className="text-xs leading-relaxed flex-1 text-white/60"
+                initial={{ opacity: 0, y: 6 }}
                 animate={{
                   opacity: s === 2 ? (typingIdx === i ? 1 : 0.4) : 0,
+                  y: 0,
                 }}
                 transition={smooth}
               >
@@ -350,11 +447,19 @@ export default function SystemPromptsAnim() {
         >
           Real-World System Prompts
         </motion.p>
+        <ExampleChips
+          active={s === 3}
+          labels={realWorldSets.map((r) => r.label)}
+          value={realSet}
+          onChange={setRealSet}
+          color="#4a9eff"
+        />
 
         <div className="flex gap-4 w-full max-w-3xl justify-center">
-          {realWorldExamples.map((ex, i) => (
+          {realWorldShown.map((ex, i) => (
             <motion.div
               key={ex.title}
+              initial={{ opacity: 0, y: 25 }}
               className="flex-1 rounded-xl border-2 p-5"
               style={{
                 borderColor: `${ex.color}30`,
@@ -750,6 +855,22 @@ export default function SystemPromptsAnim() {
         </div>
       </motion.div>
 
+      {/* Try it yourself: prompt builder */}
+      <AnimatePresence>
+        {trigger === 'playground' && (
+          <motion.div
+            key="playground"
+            className="absolute inset-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <SystemPromptsPlayground />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Step 9: "Key Takeaways" */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
@@ -788,5 +909,51 @@ export default function SystemPromptsAnim() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+/** Small clickable chips to switch between prepared examples inside a scene. */
+function ExampleChips({
+  active,
+  labels,
+  value,
+  onChange,
+  color,
+}: {
+  active: boolean;
+  labels: string[];
+  value: number;
+  onChange: (i: number) => void;
+  color: string;
+}) {
+  return (
+    <motion.div
+      className="flex flex-wrap justify-center gap-2 mb-4"
+      style={{ pointerEvents: active ? 'auto' : 'none' }}
+      animate={{ opacity: active ? 1 : 0 }}
+      transition={{ ...spring, delay: 0.3 }}
+      onKeyDownCapture={(e) => {
+        if (e.key === ' ') e.stopPropagation();
+      }}
+    >
+      {labels.map((label, i) => (
+        <motion.button
+          key={label}
+          type="button"
+          tabIndex={active ? 0 : -1}
+          onClick={() => onChange(i)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="px-3 py-1 rounded-full border text-xs font-medium"
+          animate={{
+            backgroundColor: value === i ? `${color}30` : 'rgba(255,255,255,0.04)',
+            borderColor: value === i ? `${color}aa` : 'rgba(255,255,255,0.15)',
+            color: value === i ? color : 'rgba(255,255,255,0.6)',
+          }}
+        >
+          {label}
+        </motion.button>
+      ))}
+    </motion.div>
   );
 }

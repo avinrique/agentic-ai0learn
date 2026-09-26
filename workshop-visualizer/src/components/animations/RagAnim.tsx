@@ -2,6 +2,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useConceptStore } from '@/stores/conceptStore';
+import RagPlayground from './playgrounds/RagPlayground';
 
 const spring = { type: 'spring' as const, stiffness: 260, damping: 22 };
 const smooth = { duration: 0.5, ease: [0.4, 0, 0.2, 1] as const };
@@ -13,13 +14,88 @@ const ragLetters = [
 ];
 
 const documents = [
-  { name: 'Q3 Report.pdf', icon: '📄', match: true },
-  { name: 'Sales Data.csv', icon: '📊', match: true },
-  { name: 'Q1 Report.pdf', icon: '📄', match: false },
-  { name: 'HR Policy.pdf', icon: '📄', match: false },
-  { name: 'Meeting Notes', icon: '📝', match: true },
-  { name: 'Product Spec', icon: '📝', match: false },
+  { name: 'Q3 Report.pdf', icon: '📄' },
+  { name: 'Sales Data.csv', icon: '📊' },
+  { name: 'Q1 Report.pdf', icon: '📄' },
+  { name: 'HR Policy.pdf', icon: '📄' },
+  { name: 'Meeting Notes', icon: '📝' },
+  { name: 'Product Spec', icon: '📝' },
 ];
+
+// Example questions used by the Retrieve, Augment and RAG-vs-No-RAG scenes (made-up example data)
+const ragExamples = [
+  {
+    chip: 'Q3 sales',
+    question: 'What were Q3 sales?',
+    short: 'Q3 sales?',
+    matches: ['Q3 Report.pdf', 'Sales Data.csv', 'Meeting Notes'],
+    context: 'Q3 revenue was $4.2M, up 18% YoY, driven by enterprise...',
+    noRag: 'Revenue was approximately $3M based on typical industry averages...',
+    noRagVerdict: 'Hallucinated, no source',
+    rag: [
+      { t: '$4.2M, up 18% YoY', b: true },
+      { t: ', driven by enterprise contracts.', b: false },
+    ],
+    source: 'Q3 Report',
+  },
+  {
+    chip: 'Vacation days',
+    question: 'How many vacation days do I get?',
+    short: 'My vacation days?',
+    matches: ['HR Policy.pdf'],
+    context: 'Full-time staff get 20 paid vacation days per year; up to 5 unused days carry over...',
+    noRag: 'Most companies give around 10 to 15 days, but it depends on your employer...',
+    noRagVerdict: 'Generic guess, not your policy',
+    rag: [
+      { t: 'You get ', b: false },
+      { t: '20 paid vacation days', b: true },
+      { t: ' a year, and up to 5 unused days carry over.', b: false },
+    ],
+    source: 'HR Policy',
+  },
+  {
+    chip: 'App launch date',
+    question: 'When does our new app launch?',
+    short: 'App launch date?',
+    matches: ['Product Spec', 'Meeting Notes'],
+    context: 'Launch of the mobile app moved to 14 November after beta testing...',
+    noRag: 'I don\'t have information about your company\'s product plans.',
+    noRagVerdict: 'Can\'t answer: never saw your data',
+    rag: [
+      { t: 'The app launches on ', b: false },
+      { t: '14 November', b: true },
+      { t: ', after beta testing.', b: false },
+    ],
+    source: 'Product Spec, Meeting Notes',
+  },
+];
+
+function ExampleChips({ active, idx, onPick }: { active: boolean; idx: number; onPick: (i: number) => void }) {
+  return (
+    <div
+      className="flex items-center justify-center gap-1.5 flex-wrap"
+      style={{ pointerEvents: active ? 'auto' : 'none' }}
+    >
+      <span className="text-xs text-white/35 mr-1">Try another question:</span>
+      {ragExamples.map((ex, i) => (
+        <motion.button
+          key={ex.chip}
+          onClick={() => onPick(i)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="px-2.5 py-0.5 rounded-full border text-xs"
+          style={{
+            borderColor: idx === i ? 'rgba(74,158,255,0.7)' : 'rgba(255,255,255,0.15)',
+            backgroundColor: idx === i ? 'rgba(74,158,255,0.18)' : 'rgba(255,255,255,0.04)',
+            color: idx === i ? '#cfe4ff' : 'rgba(255,255,255,0.6)',
+          }}
+        >
+          {ex.chip}
+        </motion.button>
+      ))}
+    </div>
+  );
+}
 
 const pipelineStages = [
   { label: 'Documents', icon: '📄', color: '#a78bfa' },
@@ -42,8 +118,14 @@ const takeaways = [
 ];
 
 export default function RagAnim() {
-  const { currentStep } = useConceptStore();
+  const { currentStep, steps } = useConceptStore();
   const s = currentStep;
+  const trigger = steps[currentStep]?.animationTrigger;
+  const isTakeaways = trigger === 'takeaways';
+
+  // Which example question the Retrieve / Augment / RAG-vs-No-RAG scenes show
+  const [exIdx, setExIdx] = useState(0);
+  const ex = ragExamples[exIdx];
 
   // Pipeline pulse animation (step 10)
   const [pulsePosIdx, setPulsePosIdx] = useState(0);
@@ -362,9 +444,24 @@ export default function RagAnim() {
             Search your document store for relevant matches
           </motion.p>
 
+          {/* Question being searched for */}
+          <div className="flex justify-center mb-4">
+            <motion.div
+              key={ex.question}
+              className="px-3 py-1.5 rounded-lg border border-[#4a9eff]/30 bg-[#4a9eff]/5"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: s === 3 ? 1 : 0, y: 0 }}
+              transition={spring}
+            >
+              <span className="text-sm text-[#4a9eff]">&quot;{ex.question}&quot;</span>
+            </motion.div>
+          </div>
+
           {/* Document grid */}
           <div className="grid grid-cols-3 gap-3 mb-4">
-            {documents.map((doc, i) => (
+            {documents.map((d, i) => {
+              const doc = { ...d, match: ex.matches.includes(d.name) };
+              return (
               <motion.div
                 key={doc.name}
                 className="px-3 py-3 rounded-xl border text-center"
@@ -398,7 +495,8 @@ export default function RagAnim() {
                   </motion.span>
                 )}
               </motion.div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Magnifying glass scanning */}
@@ -414,6 +512,10 @@ export default function RagAnim() {
             }}
           >
             <span className="text-4xl">🔍</span>
+          </motion.div>
+
+          <motion.div className="mt-4" animate={{ opacity: s === 3 ? 1 : 0 }} transition={spring}>
+            <ExampleChips active={s === 3} idx={exIdx} onPick={setExIdx} />
           </motion.div>
         </div>
       </motion.div>
@@ -689,7 +791,7 @@ export default function RagAnim() {
                 <span className="text-[#a78bfa]">system:</span> &quot;You are helpful&quot;
               </div>
               <div className="px-2 py-1 rounded border border-[#4a9eff]/20 bg-[#4a9eff]/5 text-white/40">
-                <span className="text-[#4a9eff]">user:</span> &quot;Q3 sales?&quot;
+                <span className="text-[#4a9eff]">user:</span> &quot;{ex.short}&quot;
               </div>
             </div>
           </motion.div>
@@ -741,15 +843,24 @@ export default function RagAnim() {
                   scale: s === 6 ? [0.95, 1] : 0.95,
                 }}
                 transition={{ ...spring, delay: 0.6 }}
+                key={ex.chip}
               >
-                <span className="text-[#4ade80] font-bold">context:</span> &quot;Q3 revenue was $4.2M, up 18% YoY, driven by enterprise...&quot;
+                <span className="text-[#4ade80] font-bold">context:</span> &quot;{ex.context}&quot;
               </motion.div>
               <div className="px-2 py-1 rounded border border-[#4a9eff]/20 bg-[#4a9eff]/5 text-white/40">
-                <span className="text-[#4a9eff]">user:</span> &quot;Q3 sales?&quot;
+                <span className="text-[#4a9eff]">user:</span> &quot;{ex.short}&quot;
               </div>
             </div>
           </motion.div>
         </div>
+
+        <motion.div
+          className="absolute bottom-[12%] left-0 right-0"
+          animate={{ opacity: s === 6 ? 1 : 0 }}
+          transition={{ ...spring, delay: 0.4 }}
+        >
+          <ExampleChips active={s === 6} idx={exIdx} onPick={setExIdx} />
+        </motion.div>
       </motion.div>
 
       {/* ===== Step 7: Token Budget Problem ===== */}
@@ -961,10 +1072,19 @@ export default function RagAnim() {
 
       {/* ===== Step 9: RAG vs No RAG ===== */}
       <motion.div
-        className="absolute inset-0 flex items-center justify-center pointer-events-none px-6"
+        className="absolute inset-0 flex flex-col items-center justify-center gap-4 pointer-events-none px-6"
         animate={{ opacity: s === 9 ? 1 : 0 }}
         transition={spring}
       >
+        <motion.div
+          key={ex.question}
+          className="px-3 py-1.5 rounded-lg border border-[#4a9eff]/30 bg-[#4a9eff]/5"
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: s === 9 ? 1 : 0, y: 0 }}
+          transition={spring}
+        >
+          <span className="text-sm text-[#4a9eff]">Question: &quot;{ex.question}&quot;</span>
+        </motion.div>
         <div className="flex gap-6 max-w-2xl w-full">
           {/* Without RAG */}
           <motion.div
@@ -986,7 +1106,7 @@ export default function RagAnim() {
             </div>
             <div className="bg-black/20 rounded-lg p-3 border border-white/5 mb-3">
               <p className="text-xs text-white/50 italic leading-relaxed">
-                &quot;Revenue was approximately $3M based on typical industry averages...&quot;
+                &quot;{ex.noRag}&quot;
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -997,7 +1117,7 @@ export default function RagAnim() {
               >
                 ✕
               </motion.span>
-              <span className="text-sm text-[#ef4444]">Hallucinated, no source</span>
+              <span className="text-sm text-[#ef4444]">{ex.noRagVerdict}</span>
             </div>
           </motion.div>
 
@@ -1021,9 +1141,19 @@ export default function RagAnim() {
             </div>
             <div className="bg-black/20 rounded-lg p-3 border border-[#4ade80]/10 mb-3">
               <p className="text-xs text-white/70 leading-relaxed">
-                &quot;<span className="font-bold text-[#4ade80]">$4.2M, up 18% YoY</span>, driven by enterprise contracts.&quot;
+                &quot;
+                {ex.rag.map((part, i) =>
+                  part.b ? (
+                    <span key={i} className="font-bold text-[#4ade80]">
+                      {part.t}
+                    </span>
+                  ) : (
+                    <span key={i}>{part.t}</span>
+                  ),
+                )}
+                &quot;
               </p>
-              <p className="text-xs text-[#4a9eff] mt-1 font-mono">[Source: Q3 Report]</p>
+              <p className="text-xs text-[#4a9eff] mt-1 font-mono">[Source: {ex.source}]</p>
             </div>
             <div className="flex items-center gap-2">
               <motion.span
@@ -1037,6 +1167,9 @@ export default function RagAnim() {
             </div>
           </motion.div>
         </div>
+        <motion.div animate={{ opacity: s === 9 ? 1 : 0 }} transition={{ ...spring, delay: 0.4 }}>
+          <ExampleChips active={s === 9} idx={exIdx} onPick={setExIdx} />
+        </motion.div>
       </motion.div>
 
       {/* ===== Step 10: The Full RAG Pipeline ===== */}
@@ -1201,16 +1334,32 @@ export default function RagAnim() {
         </div>
       </motion.div>
 
-      {/* ===== Step 12: Key Takeaways ===== */}
+      {/* ===== Try It Yourself (playground) ===== */}
+      <AnimatePresence>
+        {trigger === 'playground' && (
+          <motion.div
+            key="rag-playground"
+            className="absolute inset-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <RagPlayground />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ===== Key Takeaways ===== */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        animate={{ opacity: s === 12 ? 1 : 0 }}
+        animate={{ opacity: isTakeaways ? 1 : 0 }}
         transition={spring}
       >
         <div className="text-center max-w-xl w-full px-6">
           <motion.h2
             className="text-5xl font-bold text-white mb-6"
-            animate={{ opacity: s === 12 ? 1 : 0, y: s === 12 ? 0 : 20 }}
+            animate={{ opacity: isTakeaways ? 1 : 0, y: isTakeaways ? 0 : 20 }}
             transition={spring}
           >
             Key Takeaways
@@ -1220,7 +1369,7 @@ export default function RagAnim() {
               key={i}
               className="flex items-center gap-4 mb-3 px-5 py-3 rounded-xl bg-white/5 border text-left"
               style={{ borderColor: `${item.color}30` }}
-              animate={{ opacity: s === 12 ? 1 : 0, y: s === 12 ? 0 : 20 }}
+              animate={{ opacity: isTakeaways ? 1 : 0, y: isTakeaways ? 0 : 20 }}
               transition={{ ...spring, delay: i * 0.12 }}
             >
               <span
