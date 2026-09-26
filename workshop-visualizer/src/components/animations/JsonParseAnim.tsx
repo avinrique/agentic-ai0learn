@@ -147,7 +147,12 @@ export default function JsonParseAnim() {
   // First key/value of the reply, for the "What is JSON?" card.
   const sample = useMemo(() => {
     const first = items[0] ?? {};
-    const k = askedKeys.find((a) => a in first) ?? Object.keys(first)[0] ?? 'difficulty';
+    // Shortest asked-for value reads best as a tiny example: {"difficulty": "easy"}.
+    const cands = askedKeys.filter((a) => a in first);
+    const k =
+      cands.sort((a, b) => JSON.stringify(first[a]).length - JSON.stringify(first[b]).length)[0] ??
+      Object.keys(first)[0] ??
+      'difficulty';
     const v = first[k] ?? 'easy';
     return { k, v: JSON.stringify(v) };
   }, [items, askedKeys]);
@@ -174,170 +179,192 @@ export default function JsonParseAnim() {
     });
   };
 
-  const showCompare = reached >= JSON_RANK.buildMessages && reached < JSON_RANK.jsonParse;
   const arrived = reached >= JSON_RANK.apiCallComplete;
   const printed = reached >= JSON_RANK.extractContent;
+  const phase =
+    reached < JSON_RANK.addSystemMsg
+      ? 'intro'
+      : reached < JSON_RANK.startRequest
+        ? 'prompts'
+        : reached < JSON_RANK.buildMessages
+          ? 'packing'
+          : reached < JSON_RANK.apiCall
+            ? 'compare'
+            : reached < JSON_RANK.jsonParse
+              ? 'reply'
+              : reached === JSON_RANK.jsonParse
+                ? 'dict'
+                : 'cards';
+
+  const keyChips = (big: boolean) =>
+    askedKeys.map((k, i) => (
+      <motion.span
+        key={k}
+        initial={{ opacity: 0, scale: 0.6 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ ...spring, delay: at('highlightKeys') ? i * 0.15 : 0 }}
+        className={`font-mono font-bold rounded-full ${big ? 'text-[15px] px-3 py-1' : 'text-[13px] px-2 py-0.5'}`}
+        style={{ color: keyColor(k), backgroundColor: `${keyColor(k)}1a` }}
+      >
+        {k}
+      </motion.span>
+    ));
+
+  // The JSON reply box (typed out while the model writes).
+  const jsonBox = (big: boolean) => (
+    <div
+      className={`rounded-xl bg-black/40 px-4 py-3 font-mono leading-relaxed break-all overflow-hidden ${
+        big ? 'text-[16px] max-h-full' : 'flex-1 min-h-0 text-[14px]'
+      }`}
+    >
+      {reached >= JSON_RANK.apiProcessing ? (
+        <>
+          {printed && <span className="text-accent-gold">&quot;</span>}
+          <JsonText text={jsonShown} keyColor={keyColor} glowKeys={arrived} />
+          {printed && <span className="text-accent-gold">&quot;</span>}
+          {at('apiProcessing') && typed < rawJson.length && (
+            <span className="inline-block w-2 h-4 bg-accent-gold/80 ml-0.5 animate-pulse align-middle" />
+          )}
+        </>
+      ) : (
+        <span className="text-white/30">
+          {'{ '}
+          <span className="text-accent-purple/60">&quot;{listKey}&quot;</span>
+          {': [ … ] }'}
+        </span>
+      )}
+    </div>
+  );
 
   return (
-    <div className="h-full flex flex-col gap-2 p-3 overflow-hidden text-white">
+    <div className="h-full flex flex-col gap-3 px-5 py-4 overflow-hidden text-white">
       {/* What is JSON? (before the prompts exist) */}
-      {reached < JSON_RANK.addSystemMsg && (
-        <Card on={at('jsonIntro')} color="#a78bfa" className="flex-1 min-h-0 rounded-xl border border-white/10 bg-navy-900/50 p-3 flex flex-col items-center justify-center gap-3">
-          <div className="text-sm font-bold text-white/85">What is JSON?</div>
-          <div className="font-mono text-lg">
+      {phase === 'intro' && (
+        <motion.div
+          animate={{ opacity: reached >= JSON_RANK.jsonIntro ? 1 : 0.6 }}
+          className="flex-1 min-h-0 flex flex-col items-center justify-center gap-4"
+        >
+          <div className="text-[15px] font-semibold text-white/70">What is JSON?</div>
+          <div className="font-mono text-[26px]">
             <span className="text-white/40">{'{'}</span>
-            <span className="font-bold" style={{ color: keyColor(sample.k) ?? '#a78bfa' }}>&quot;{sample.k}&quot;</span>
+            <span className="font-bold" style={{ color: keyColor(sample.k) ?? '#a78bfa' }}>
+              &quot;{sample.k}&quot;
+            </span>
             <span className="text-white/40">: </span>
-            <span className="text-white/85">{sample.v}</span>
+            <span className="text-white/90">{sample.v}</span>
             <span className="text-white/40">{'}'}</span>
           </div>
           {reached >= JSON_RANK.jsonIntro && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-6 text-xs">
-              <span className="text-accent-purple">↑ key = the label</span>
-              <span className="text-white/70">↑ value = the data</span>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-10 text-[15px]">
+              <span style={{ color: keyColor(sample.k) ?? '#a78bfa' }}>↑ key</span>
+              <span className="text-white/70">↑ value</span>
             </motion.div>
           )}
-          <div className="text-xs text-white/45 text-center max-w-md">
-            Text made of keys and values. It looks just like a Python dictionary, and any program can read it.
-          </div>
-        </Card>
+        </motion.div>
       )}
 
-      {/* Prompts */}
-      {reached >= JSON_RANK.addSystemMsg && (
-        <div className="flex gap-2 shrink-0">
-          <Card on={at('addSystemMsg')} color="#a78bfa" className="flex-1 min-w-0 rounded-lg border border-accent-purple/30 bg-accent-purple/10 px-2 py-1.5">
-            <div className="text-[11px] font-bold text-accent-purple uppercase tracking-wider">system_prompt (the rules)</div>
-            <div className="text-xs text-white/75 line-clamp-2">
+      {/* The two prompts, big while they are being written */}
+      {phase === 'prompts' && (
+        <div className="flex-1 min-h-0 flex flex-col justify-center gap-3">
+          <motion.div
+            animate={{ opacity: at('addSystemMsg') ? 1 : 0.55 }}
+            className="rounded-2xl bg-accent-purple/10 px-4 py-3"
+          >
+            <div className="text-[13px] font-mono font-semibold text-accent-purple mb-1">system_prompt</div>
+            <div className="text-[15px] text-white/85 leading-snug">
               {systemPrompt.split(/(valid JSON)/).map((p, i) =>
                 p === 'valid JSON' ? (
-                  <span key={i} className="text-accent-gold font-semibold">{p}</span>
+                  <span key={i} className="text-accent-gold font-semibold">
+                    {p}
+                  </span>
                 ) : (
                   <span key={i}>{p}</span>
                 ),
               )}
             </div>
-          </Card>
+          </motion.div>
           {reached >= JSON_RANK.addUserMsg && (
-            <Card on={at('addUserMsg')} color="#4a9eff" className="flex-[1.6] min-w-0 rounded-lg border border-accent-blue/30 bg-accent-blue/10 px-2 py-1.5">
-              <div className="text-[11px] font-bold text-accent-blue uppercase tracking-wider">user_prompt (what we want)</div>
-              <div className="text-xs text-white/75 line-clamp-2 whitespace-pre-line">{highlightPrompt(userPrompt)}</div>
+            <Card on={at('addUserMsg')} color="#4a9eff" className="rounded-2xl bg-accent-blue/10 px-4 py-3">
+              <div className="text-[13px] font-mono font-semibold text-accent-blue mb-1">user_prompt</div>
+              <div className="text-[16px] text-white/85 leading-snug whitespace-pre-line">{highlightPrompt(userPrompt)}</div>
             </Card>
+          )}
+          {reached >= JSON_RANK.highlightKeys && askedKeys.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap justify-center pt-1">{keyChips(true)}</div>
           )}
         </div>
       )}
 
-      {/* Keys asked for + why both */}
-      {reached >= JSON_RANK.highlightKeys && askedKeys.length > 0 && (
-        <Card on={at('highlightKeys') || at('whyBoth')} color="#22d3ee" className="shrink-0 flex items-center gap-1.5 flex-wrap rounded-lg px-2 py-1 bg-white/[0.03] border border-white/10">
-          <span className="text-xs text-white/55">Keys we asked for:</span>
-          {askedKeys.map((k, i) => (
-            <motion.span
-              key={k}
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ ...spring, delay: at('highlightKeys') ? i * 0.15 : 0 }}
-              className="font-mono text-xs font-bold rounded-full px-2 py-0.5 border"
-              style={{ color: keyColor(k), borderColor: `${keyColor(k)}66`, backgroundColor: `${keyColor(k)}1a` }}
-            >
-              {k}
-            </motion.span>
-          ))}
-          {reached >= JSON_RANK.whyBoth && (
-            <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="ml-auto text-xs text-white/60">
-              <span className="text-accent-blue">prompt</span> = WHAT data ·{' '}
-              <span className="text-accent-gold">JSON mode</span> = valid FORMAT
-            </motion.span>
-          )}
-        </Card>
-      )}
-
-      {/* Waiting for the request to be packed (top panel) */}
-      {reached >= JSON_RANK.addSystemMsg && reached < JSON_RANK.buildMessages && (
-        <div className="flex-1 min-h-0 rounded-xl border border-dashed border-white/10 flex items-center justify-center text-xs text-white/35 text-center px-4">
-          {reached >= JSON_RANK.startRequest
-            ? 'Packing both prompts into the request above… one more setting is coming.'
-            : 'These two prompts will go into the request. The reply will appear here.'}
+      {/* While the request is packed (top panel is the focus): prompts shrink to chips */}
+      {phase === 'packing' && (
+        <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-3 opacity-60">
+          <div className="flex items-center gap-2 text-[14px]">
+            <span className="px-3 py-1 rounded-lg bg-accent-purple/15 text-accent-purple font-mono">✓ system_prompt</span>
+            <span className="px-3 py-1 rounded-lg bg-accent-blue/15 text-accent-blue font-mono">✓ user_prompt</span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap justify-center">{keyChips(false)}</div>
         </div>
       )}
 
       {/* Without vs with response_format */}
-      {showCompare && (
-        <div className="flex-1 min-h-0 flex gap-2">
-          <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: printed ? 0.45 : 1, x: 0 }}
-            transition={spring}
-            className="flex-1 min-w-0 rounded-xl border border-accent-red/30 bg-accent-red/5 p-2 flex flex-col gap-1 overflow-hidden"
-          >
-            <div className="text-xs font-bold text-accent-red shrink-0">✗ Without response_format</div>
-            <div className="text-[11px] text-white/45 shrink-0">The AI may chat. Hard for a program to read.</div>
-            <div className="text-xs text-white/70 whitespace-pre-line leading-snug overflow-hidden">{freeText}</div>
-          </motion.div>
+      {phase === 'compare' && (
+        <div className="flex-1 min-h-0 flex flex-col gap-3">
+          {at('whyBoth') && (
+            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="shrink-0 flex justify-center gap-3 text-[14px]">
+              <span className="px-3 py-1 rounded-lg bg-accent-blue/15 text-accent-blue">prompt = WHAT data</span>
+              <span className="px-3 py-1 rounded-lg bg-accent-gold/15 text-accent-gold">JSON mode = valid FORMAT</span>
+            </motion.div>
+          )}
+          <div className="flex-1 min-h-0 flex gap-3">
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: at('whyBoth') ? 0.45 : 1, x: 0 }}
+              transition={spring}
+              className="flex-1 min-w-0 rounded-2xl bg-accent-red/[0.07] px-4 py-3 flex flex-col gap-2 overflow-hidden"
+            >
+              <div className="text-[14px] font-semibold text-accent-red shrink-0">✗ without</div>
+              <div className="text-[14px] text-white/70 whitespace-pre-line leading-snug overflow-hidden">{freeText}</div>
+            </motion.div>
+            <Card on={at('buildMessages')} color="#fbbf24" className="flex-1 min-w-0 rounded-2xl bg-accent-gold/[0.07] px-4 py-3 flex flex-col gap-2 overflow-hidden">
+              <div className="text-[14px] font-semibold text-accent-gold shrink-0">✓ with JSON mode</div>
+              {jsonBox(false)}
+            </Card>
+          </div>
+        </div>
+      )}
 
-          <Card
-            on={at('buildMessages') || at('apiProcessing') || at('extractContent') || at('summary')}
-            color="#fbbf24"
-            className="flex-[1.3] min-w-0 rounded-xl border border-accent-gold/40 bg-accent-gold/5 p-2 flex flex-col gap-1 overflow-hidden"
-          >
-            <div className="text-xs font-bold text-accent-gold shrink-0">
-              ✓ With response_format=<span className="font-mono">{'{"type": "json_object"}'}</span>
-            </div>
-            <div className="text-[11px] text-white/45 shrink-0">
-              {printed ? (
-                <>
-                  <span className="font-mono">response.choices[0].message.content</span> → printed to Output
-                </>
-              ) : arrived ? (
-                'The reply: pure JSON text, keys and all.'
-              ) : at('apiProcessing') ? (
-                'The model is writing it now, piece by piece…'
-              ) : (
-                'Only valid JSON is allowed. The reply will appear here.'
-              )}
-            </div>
-            <div className="flex-1 min-h-0 rounded-lg bg-black/40 border border-white/10 p-2 font-mono text-xs leading-relaxed break-all overflow-hidden">
-              {reached >= JSON_RANK.apiProcessing ? (
-                <>
-                  {printed && <span className="text-accent-gold">&quot;</span>}
-                  <JsonText text={jsonShown} keyColor={keyColor} glowKeys={arrived} />
-                  {printed && <span className="text-accent-gold">&quot;</span>}
-                  {at('apiProcessing') && typed < rawJson.length && (
-                    <span className="inline-block w-1.5 h-3.5 bg-accent-gold/80 ml-0.5 animate-pulse align-middle" />
-                  )}
-                </>
-              ) : (
-                <span className="text-white/30">
-                  {'{ '}
-                  <span className="text-accent-purple/60">&quot;{listKey}&quot;</span>
-                  {': [ … ] }'}
-                </span>
-              )}
-            </div>
+      {/* The reply: JSON text */}
+      {phase === 'reply' && (
+        <div className="flex-1 min-h-0 flex flex-col justify-center gap-3">
+          <div className="shrink-0 flex items-center gap-2 flex-wrap">
+            <span className="text-[14px] font-semibold text-accent-gold mr-1">{printed ? 'raw_json' : 'the reply'}</span>
+            {keyChips(false)}
             {reached >= JSON_RANK.isString && (
-              <Card on={at('isString')} color="#f472b6" className="shrink-0 flex items-center gap-2 flex-wrap rounded-md px-2 py-1 bg-accent-pink/10 border border-accent-pink/30 text-xs">
-                <span className="font-mono text-accent-pink">type → str</span>
-                <span className="text-white/60">still just text.</span>
-                <span className="font-mono text-accent-green">json.loads()</span>
-                <span className="text-white/60">→ dict (challenge lesson)</span>
+              <Card
+                on={at('isString')}
+                color="#f472b6"
+                className="ml-auto rounded-lg px-2.5 py-1 bg-accent-pink/10 text-[14px] font-mono text-accent-pink"
+              >
+                type: str
               </Card>
             )}
-          </Card>
+          </div>
+          {jsonBox(true)}
         </div>
       )}
 
       {/* Challenge: json.loads() → dict */}
-      {reached === JSON_RANK.jsonParse && (
+      {phase === 'dict' && (
         <Card on color="#4ade80" className="flex-1 min-h-0 flex flex-col">
-          <div className="flex items-center gap-2 mb-1 shrink-0">
-            <span className="font-mono text-xs text-accent-pink bg-accent-pink/10 px-2 py-0.5 rounded">str</span>
-            <span className="font-mono text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded">json.loads()</span>
-            <motion.span animate={{ x: [0, 6, 0] }} transition={{ duration: 1, repeat: Infinity }} className="text-green-400 text-sm">
+          <div className="flex items-center gap-2 mb-2 shrink-0 text-[14px]">
+            <span className="font-mono text-accent-pink bg-accent-pink/10 px-2 py-0.5 rounded">str</span>
+            <span className="font-mono text-green-400 bg-green-400/10 px-2 py-0.5 rounded">json.loads()</span>
+            <motion.span animate={{ x: [0, 6, 0] }} transition={{ duration: 1, repeat: Infinity }} className="text-green-400">
               →
             </motion.span>
-            <span className="text-xs text-white/50">Python dict (type: dict)</span>
+            <span className="text-white/60">dict</span>
           </div>
-          <div className="font-mono text-xs text-white/70 bg-black/30 rounded-xl p-2 border border-green-500/20 overflow-hidden flex-1">
+          <div className="font-mono text-[14px] text-white/70 bg-black/30 rounded-xl p-3 overflow-hidden flex-1">
             <div className="text-white/40">{'{'}</div>
             <div className="pl-4 text-accent-purple">&quot;{listKey}&quot;: [</div>
             {items.map((q, i) => (
@@ -359,53 +386,45 @@ export default function JsonParseAnim() {
       )}
 
       {/* Challenge: pretty result */}
-      {reached >= JSON_RANK.printOutput && (
-        <div className="flex-1 min-h-0 flex flex-col">
-          <div className="flex items-center gap-2 mb-1 shrink-0">
-            <span className="font-mono text-xs text-accent-blue bg-accent-blue/10 px-2 py-0.5 rounded">json.dumps(parsed_json, indent=2)</span>
-            <span className="text-xs text-white/45">each item, one per card</span>
-          </div>
-          <div className="space-y-1.5 overflow-hidden flex-1">
-            {items.map((q, i) => {
-              const entries = Object.entries(q);
-              const [, title] = entries[0] ?? ['', ''];
-              const rest = entries.slice(1);
-              return (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -30, scale: 0.9 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  transition={{ ...spring, delay: i * 0.2 }}
-                  className="bg-navy-700/50 border border-white/10 rounded-lg px-3 py-1.5 flex items-start gap-3"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-white/85 font-medium truncate">{String(title)}</div>
-                    {rest
-                      .filter(([, v]) => String(v).length > 20)
-                      .map(([k, v]) => (
-                        <div key={k} className="text-xs text-white/55 truncate">{String(v)}</div>
-                      ))}
-                  </div>
-                  <div className="flex gap-1.5 items-center shrink-0">
-                    {rest
-                      .filter(([, v]) => String(v).length <= 20)
-                      .map(([k, v]) => {
-                        const c = difficultyColors[String(v)] ?? keyColor(k) ?? '#fbbf24';
-                        return (
-                          <span
-                            key={k}
-                            className="text-[11px] px-2 py-0.5 rounded-full font-bold"
-                            style={{ color: c, backgroundColor: `${c}15`, border: `1px solid ${c}30` }}
-                          >
-                            {String(v)}
-                          </span>
-                        );
-                      })}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
+      {phase === 'cards' && (
+        <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
+          {items.map((q, i) => {
+            const entries = Object.entries(q);
+            const [, title] = entries[0] ?? ['', ''];
+            const rest = entries.slice(1);
+            return (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -30, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                transition={{ ...spring, delay: i * 0.2 }}
+                className="bg-navy-700/50 rounded-xl px-4 py-2 flex items-start gap-3"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-[15px] text-white/90 font-medium truncate">{String(title)}</div>
+                  {rest
+                    .filter(([, v]) => String(v).length > 20)
+                    .map(([k, v]) => (
+                      <div key={k} className="text-[13px] text-white/60 truncate">
+                        {String(v)}
+                      </div>
+                    ))}
+                </div>
+                <div className="flex gap-1.5 items-center shrink-0">
+                  {rest
+                    .filter(([, v]) => String(v).length <= 20)
+                    .map(([k, v]) => {
+                      const c = difficultyColors[String(v)] ?? keyColor(k) ?? '#fbbf24';
+                      return (
+                        <span key={k} className="text-[13px] px-2 py-0.5 rounded-full font-bold" style={{ color: c, backgroundColor: `${c}15` }}>
+                          {String(v)}
+                        </span>
+                      );
+                    })}
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       )}
     </div>

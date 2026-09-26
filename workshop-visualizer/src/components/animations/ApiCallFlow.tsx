@@ -90,188 +90,156 @@ export default function ApiCallFlow() {
   const finalVars = steps[steps.length - 1]?.variables ?? [];
   const get = (n: string) => vars.find((v) => v.name === n)?.value ?? finalVars.find((v) => v.name === n)?.value;
   const model = unquote(get('model') ?? '"gpt-4o-mini"');
-  const systemPrompt = unquote(get('system_prompt'));
-  const userPrompt = unquote(get('user_prompt'));
 
   const sent = reached >= JSON_RANK.apiCall;
   const received = reached >= JSON_RANK.apiCallComplete;
   const jsonMode = reached >= JSON_RANK.buildMessages;
+  const packing = reached >= JSON_RANK.startRequest && !sent;
+  const thinking = at('apiProcessing');
+  // This panel is the focus from the import until the reply arrives.
+  const focus =
+    (reached >= JSON_RANK.import && reached <= JSON_RANK.createClient) ||
+    (reached >= JSON_RANK.startRequest && reached <= JSON_RANK.apiCallComplete && !at('whyBoth') && !at('buildMessages'));
 
   return (
-    <div className="h-full flex gap-2 p-3 overflow-hidden text-white">
+    <motion.div
+      animate={{ opacity: focus ? 1 : 0.5 }}
+      transition={{ duration: 0.3 }}
+      className="h-full flex items-center gap-3 px-5 py-3 overflow-hidden text-white"
+    >
       {/* LAPTOP */}
-      <motion.div
-        animate={{ borderColor: reached >= 2 && !sent ? 'rgba(74,158,255,0.6)' : 'rgba(74,158,255,0.25)' }}
-        className="flex-[1.4] min-w-0 rounded-xl border-2 bg-accent-blue/5 p-2 flex flex-col gap-1.5 overflow-hidden"
-      >
+      <div className="flex-[1.5] min-w-0 h-full rounded-2xl bg-accent-blue/[0.06] px-4 py-3 flex flex-col gap-2.5 overflow-hidden">
         <div className="flex items-center gap-2 flex-wrap shrink-0">
-          <span className="text-sm font-bold text-accent-blue">Your laptop</span>
-          {reached >= 2 && (
-            <Pop on={at('import')} color="#a78bfa" className="rounded px-1.5 bg-accent-purple/10 border border-accent-purple/30 text-xs font-mono text-accent-purple">
+          <span className="text-[15px] font-semibold text-accent-blue mr-1">Your laptop</span>
+          {reached >= JSON_RANK.import && (
+            <Pop on={at('import')} color="#a78bfa" className="rounded-md px-2 py-0.5 bg-accent-purple/10 text-[13px] font-mono text-accent-purple">
               openai
             </Pop>
           )}
-          {reached >= 3 && (
-            <Pop on={at('createClient')} color="#4a9eff" className="rounded px-1.5 bg-accent-blue/10 border border-accent-blue/30 text-xs font-mono text-accent-blue">
-              client <span className="font-sans text-white/45">(phone line)</span>
+          {reached >= JSON_RANK.createClient && (
+            <Pop on={at('createClient')} color="#4a9eff" className="rounded-md px-2 py-0.5 bg-accent-blue/10 text-[13px] font-mono text-accent-blue">
+              client
             </Pop>
           )}
         </div>
 
-        {reached < JSON_RANK.startRequest && (
-          <div className="text-xs text-white/40 leading-snug">
-            {reached >= JSON_RANK.addSystemMsg
-              ? 'First we write the two prompts (see below). Then we pack them into a request.'
-              : 'Goal: ask the AI for data that a program can read, not a chatty paragraph.'}
-          </div>
-        )}
-
-        {reached >= JSON_RANK.startRequest && !sent && (
+        {packing && (
           <Pop
             on={at('startRequest')}
             color="#4a9eff"
-            className="flex-1 min-h-0 rounded-lg border border-dashed border-accent-blue/40 bg-navy-900/60 p-1.5 flex flex-col gap-1 overflow-hidden relative"
+            className="flex-1 min-h-0 rounded-xl bg-navy-900/60 px-3 py-2.5 flex flex-col gap-2 overflow-hidden"
           >
             <div className="flex items-center gap-2 shrink-0">
-              <Envelope color="#4a9eff" size={22} />
-              <span className="text-xs font-bold text-white/85">The request</span>
+              <Envelope color="#4a9eff" size={24} />
+              <span className="text-[14px] font-semibold text-white/85">request</span>
               {reached >= JSON_RANK.selectModel && (
-                <Pop on={at('selectModel')} color="#4a9eff" className="rounded px-1.5 bg-accent-blue/20 border border-accent-blue/50 text-xs font-mono text-accent-blue font-bold">
+                <Pop on={at('selectModel')} color="#4a9eff" className="rounded-md px-2 py-0.5 bg-accent-blue/15 text-[13px] font-mono text-accent-blue">
                   {model}
                 </Pop>
               )}
             </div>
-            {reached >= JSON_RANK.packSystem && (
-              <Pop on={at('packSystem')} color="#a78bfa" className="rounded-md bg-accent-purple/10 border border-accent-purple/30 px-1.5 py-0.5 text-xs truncate">
-                <span className="font-mono font-bold text-accent-purple">system</span>
-                <span className="text-white/40 font-mono"> = system_prompt: </span>
-                <span className="text-white/70">{systemPrompt}</span>
-              </Pop>
-            )}
-            {reached >= JSON_RANK.packUser && (
-              <Pop on={at('packUser')} color="#4a9eff" className="rounded-md bg-accent-blue/10 border border-accent-blue/30 px-1.5 py-0.5 text-xs truncate">
-                <span className="font-mono font-bold text-accent-blue">user</span>
-                <span className="text-white/40 font-mono"> = user_prompt: </span>
-                <span className="text-white/70">{userPrompt}</span>
-              </Pop>
-            )}
-            {jsonMode && (
-              <motion.div
-                initial={{ opacity: 0, scale: 1.8, rotate: -12 }}
-                animate={{ opacity: 1, scale: 1, rotate: -4 }}
-                transition={{ type: 'spring', damping: 12, stiffness: 180 }}
-                className="self-end rounded-md border-2 border-accent-gold bg-accent-gold/15 px-2 py-0.5 text-xs font-bold text-accent-gold"
-              >
-                JSON MODE ON
-                <span className="font-mono font-normal text-white/60"> response_format</span>
-              </motion.div>
-            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              {reached >= JSON_RANK.packSystem && (
+                <Pop on={at('packSystem')} color="#a78bfa" className="rounded-lg bg-accent-purple/15 px-2.5 py-1 text-[14px] font-mono text-accent-purple">
+                  system
+                </Pop>
+              )}
+              {reached >= JSON_RANK.packUser && (
+                <Pop on={at('packUser')} color="#4a9eff" className="rounded-lg bg-accent-blue/15 px-2.5 py-1 text-[14px] font-mono text-accent-blue">
+                  user
+                </Pop>
+              )}
+              {jsonMode && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 1.8, rotate: -12 }}
+                  animate={{ opacity: 1, scale: 1, rotate: -4 }}
+                  transition={{ type: 'spring', damping: 12, stiffness: 180 }}
+                  className="ml-auto rounded-md border-2 border-accent-gold bg-accent-gold/15 px-2 py-0.5 text-[13px] font-bold text-accent-gold"
+                >
+                  JSON MODE ON
+                </motion.div>
+              )}
+            </div>
           </Pop>
         )}
 
         {sent && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-xs text-white/55">
-            <Envelope color="rgba(255,255,255,0.4)" size={18} />
-            Request sent: {model} + 2 messages + JSON mode
-          </motion.div>
+          <div className="flex flex-col gap-2 text-[14px]">
+            <div className="flex items-center gap-2 text-white/50">
+              <Envelope color="rgba(255,255,255,0.4)" size={20} />
+              sent
+            </div>
+            {received && (
+              <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 text-accent-green">
+                <span className="rounded bg-accent-green/20 px-1.5 font-mono font-bold">{'{ }'}</span>
+                response
+              </motion.div>
+            )}
+          </div>
         )}
-        {(at('apiCall') || at('apiProcessing')) && (
-          <motion.div
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 1.4, repeat: Infinity }}
-            className="text-xs text-accent-gold"
-          >
-            Line 11 is waiting for the answer…
-          </motion.div>
-        )}
-        {received && (
-          <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 text-xs text-accent-green">
-            <span className="rounded bg-accent-green/20 border border-accent-green/50 px-1 font-mono font-bold">{'{ }'}</span>
-            response arrived: its content is JSON text (see below)
-          </motion.div>
-        )}
-      </motion.div>
+      </div>
 
       {/* INTERNET LANE */}
-      <div className="flex-[0.45] min-w-[80px] flex flex-col justify-center gap-5">
-        <div className="text-[11px] text-center text-white/35 uppercase tracking-widest">internet</div>
+      <div className="flex-[0.5] min-w-[70px] flex flex-col justify-center gap-6">
         <div className="relative h-8">
           <div className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-accent-blue/25" />
           {at('apiCall') && (
             <motion.div
               key={`req-${resetKey}`}
               initial={{ left: '0%', opacity: 0 }}
-              animate={{ left: '50%', opacity: 1 }}
+              animate={{ left: '55%', opacity: 1 }}
               transition={{ duration: 1.5, ease: 'easeInOut' }}
-              className="absolute top-0 flex flex-col items-center"
+              className="absolute top-0"
             >
               <Envelope color="#4a9eff" size={30} />
             </motion.div>
           )}
-          <div className="absolute inset-x-0 -bottom-4 text-center text-[11px] text-white/40">{sent ? '✓ sent' : 'request →'}</div>
+          {!at('apiCall') && <span className="absolute right-0 top-1/2 -translate-y-1/2 text-accent-blue/40 text-[15px]">→</span>}
         </div>
         <div className="relative h-8">
           <div className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-accent-green/25" />
           {at('apiCallComplete') && (
             <motion.div
               key={`res-${resetKey}`}
-              initial={{ left: '50%', opacity: 0 }}
+              initial={{ left: '55%', opacity: 0 }}
               animate={{ left: '0%', opacity: 1 }}
               transition={{ duration: 1.5, ease: 'easeInOut' }}
-              className="absolute top-1 rounded bg-accent-green/25 border-2 border-accent-green px-1 font-mono text-[11px] font-bold text-accent-green"
+              className="absolute top-1 rounded bg-accent-green/25 border-2 border-accent-green px-1 font-mono text-[13px] font-bold text-accent-green"
             >
               {'{ }'}
             </motion.div>
           )}
-          <div className="absolute inset-x-0 -bottom-4 text-center text-[11px] text-white/40">{received ? '✓ received' : '← response'}</div>
+          {!at('apiCallComplete') && <span className="absolute left-0 top-1/2 -translate-y-1/2 text-accent-green/40 text-[15px]">←</span>}
         </div>
       </div>
 
       {/* OPENAI SERVER */}
       <motion.div
         animate={{
-          borderColor: at('apiProcessing') ? '#fbbf24' : sent ? 'rgba(74,222,128,0.6)' : 'rgba(74,222,128,0.2)',
-          boxShadow: at('apiProcessing') ? '0 0 24px rgba(251,191,36,0.2)' : 'none',
+          borderColor: thinking ? '#fbbf24' : sent ? 'rgba(74,222,128,0.5)' : 'rgba(74,222,128,0.15)',
+          boxShadow: thinking ? '0 0 24px rgba(251,191,36,0.25)' : 'none',
         }}
-        className="flex-1 min-w-0 rounded-xl border-2 bg-accent-green/5 p-2 flex flex-col gap-1.5 overflow-hidden"
+        className="flex-1 min-w-0 h-full rounded-2xl border-2 bg-accent-green/[0.04] px-4 py-3 flex flex-col items-center justify-center gap-2 text-center"
       >
-        <span className="text-sm font-bold text-accent-green shrink-0">OpenAI server</span>
-        {!sent ? (
-          <div className="text-xs text-white/40 leading-snug">Waits for your request and runs the AI model.</div>
+        <span className="text-[16px] font-semibold text-accent-green">OpenAI</span>
+        {thinking ? (
+          <div className="flex items-center gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <motion.span
+                key={i}
+                animate={{ opacity: [0.2, 1, 0.2] }}
+                transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                className="w-2 h-2 rounded-full bg-accent-gold"
+              />
+            ))}
+            <span className="text-[14px] text-accent-gold ml-1">writing JSON</span>
+          </div>
         ) : (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-white/70">
-              Running <span className="font-mono text-accent-blue">{model}</span>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="rounded-md border border-accent-gold/40 bg-accent-gold/10 px-1.5 py-1 text-xs text-accent-gold"
-            >
-              JSON mode rule: the reply must be valid JSON. No chatty sentences.
-            </motion.div>
-            {reached >= JSON_RANK.apiProcessing && (
-              <div className="flex items-center gap-1.5 text-xs text-white/70">
-                {at('apiProcessing') ? (
-                  <>
-                    {[0, 1, 2].map((i) => (
-                      <motion.span
-                        key={i}
-                        animate={{ opacity: [0.2, 1, 0.2] }}
-                        transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-                        className="w-1.5 h-1.5 rounded-full bg-accent-gold"
-                      />
-                    ))}
-                    <span className="text-accent-gold">writing JSON…</span>
-                  </>
-                ) : (
-                  <span className="text-accent-green">✓ JSON reply sent back</span>
-                )}
-              </div>
-            )}
-          </>
+          <span className={`text-[14px] ${received ? 'text-accent-green' : sent ? 'text-white/70' : 'text-white/35'}`}>
+            {received ? '✓ done' : sent ? model : 'waiting'}
+          </span>
         )}
       </motion.div>
-    </div>
+    </motion.div>
   );
 }

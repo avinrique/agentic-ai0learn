@@ -1,18 +1,21 @@
-'use client';
+"use client";
 /**
  * AgentDataFlow — the main stage of the agent lessons.
  *
- *   ┌ 🤖 The AI ──────────┐  packet  ┌ 🐍 Your Python code ───────────────┐
- *   │ tool menu (cards)    │  ←──→    │ setup / request / order slip →      │
- *   │ AI thought bubble    │          │ function run → role:"tool" message  │
- *   └──────────────────────┘          └─────────────────────────────────────┘
+ *   [ 🤖 The AI ]  ── packet ──  [ 🐍 Your code ]     ← small actor strip; the busy side glows,
+ *                                                        the idle side shrinks and dims
+ *   ┌──────────────────────────────────────────────┐
+ *   │   ONE focal thing for this step, big:         │  e.g. the tool menu while the AI picks,
+ *   │   menu / request / order slip / function run  │  the function call + result while our
+ *   │   / tool message / answer / terminal          │  code runs it
+ *   └──────────────────────────────────────────────┘
  *
  * Everything is derived from the scene (a pure function of the trace + step index).
  */
-import { motion } from 'framer-motion';
-import { ReactNode, useEffect, useState } from 'react';
-import ToolSelectionAnim, { MenuMode } from './ToolSelectionAnim';
-import TerminalToolExec from './TerminalToolExec';
+import { motion } from "framer-motion";
+import { ReactNode, useEffect, useState } from "react";
+import ToolSelectionAnim, { MenuMode } from "./ToolSelectionAnim";
+import TerminalToolExec, { safetyFor } from "./TerminalToolExec";
 import {
   AgentCall,
   AgentScene,
@@ -26,7 +29,8 @@ import {
   truncate,
   unescape,
   unquote,
-} from './AgentLoopDiagram';
+  usedTools,
+} from "./AgentLoopDiagram";
 
 interface AgentDataFlowProps {
   scene: AgentScene;
@@ -34,9 +38,12 @@ interface AgentDataFlowProps {
   accentColor: string;
   loop: boolean;
   showTerminal: boolean;
+  /** only draw the actor strip (another widget is the focal point this step) */
+  collapsed?: boolean;
 }
 
-const AFTER_DECIDE = ['decide', 'check', 'select', 'execute', 'return', 'loopback'];
+const PY = "#4ade80";
+const SLIP = "#fbbf24";
 
 // ---------------------------------------------------------------------------
 // Small building blocks
@@ -68,542 +75,807 @@ function Typewriter({ text, animate }: { text: string; animate: boolean }) {
   );
 }
 
-function Row({
-  active,
-  children,
-  summary,
-  color = '#4a9eff',
-}: {
-  active: boolean;
-  children: ReactNode;
-  summary?: ReactNode;
-  color?: string;
-}) {
-  const short = !active && summary !== undefined;
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: 10 }}
-      animate={{
-        opacity: 1,
-        x: 0,
-        borderColor: active ? color : 'rgba(255,255,255,0.08)',
-        backgroundColor: active ? `${color}1c` : 'rgba(255,255,255,0.02)',
-        boxShadow: active ? `0 0 14px ${color}44` : '0 0 0px rgba(0,0,0,0)',
-      }}
-      transition={{ duration: 0.3 }}
-      className={`rounded-md border px-2 py-1 text-[12.5px] leading-snug ${short ? 'whitespace-nowrap overflow-hidden text-ellipsis' : ''}`}
-    >
-      {short ? summary : children}
-    </motion.div>
-  );
-}
-
-function Box({
-  title,
+/** A big card: the focal item of a step. */
+function Card({
+  label,
   color,
-  active,
   children,
-  className = '',
+  className = "",
 }: {
-  title: ReactNode;
+  label?: ReactNode;
   color: string;
-  active: boolean;
   children: ReactNode;
   className?: string;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{
-        opacity: 1,
-        y: 0,
-        borderColor: active ? color : `${color}40`,
-        boxShadow: active ? `0 0 16px ${color}44` : '0 0 0px rgba(0,0,0,0)',
+    <div
+      className={`w-full rounded-2xl border px-5 py-4 ${className}`}
+      style={{
+        borderColor: `${color}99`,
+        backgroundColor: `${color}12`,
+        boxShadow: `0 0 24px ${color}22`,
       }}
-      transition={{ duration: 0.3 }}
-      className={`rounded-lg border px-2 py-1.5 ${className}`}
-      style={{ backgroundColor: `${color}0f` }}
     >
-      <div className="text-[12px] font-semibold mb-0.5 flex items-center gap-1.5 flex-wrap" style={{ color }}>
-        {title}
-      </div>
+      {label && (
+        <div className="text-[14px] font-semibold mb-2" style={{ color }}>
+          {label}
+        </div>
+      )}
       {children}
-    </motion.div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Python column views
-// ---------------------------------------------------------------------------
-function SetupView({ scene, tools }: { scene: AgentScene; tools: ToolCard[] }) {
-  const f = scene.focus;
-  const v = scene.vars;
-  const defined = tools.filter((t) => t.name in v);
-  const hasSystem = !!v.system_prompt || /^\[\s*system/.test(v.messages ?? '');
-  const toolsSeen = 'tools' in v;
-  const shell = tools.some((t) => t.name === 'run_command');
-  // Every row stays on screen; only the row for the current line opens up, the others shrink to one line.
-  return (
-    <div className="flex flex-col gap-1">
-      {scene.importDone && (
-        <Row
-          active={f === 'import'}
-          summary={
-            <>
-              📦 <span className="font-mono text-white/90">import json{shell ? ', subprocess' : ''}</span>
-            </>
-          }
-        >
-          📦 <span className="font-mono text-white/90">import json{shell ? ', subprocess' : ''}</span>
-          <span className="text-white/60">
-            {' '}
-            → json turns the AI&apos;s JSON text into a dict{shell ? '; subprocess runs terminal commands' : ''}
-          </span>
-        </Row>
-      )}
-      {'client' in v && (
-        <Row
-          active={f === 'client'}
-          summary={
-            <>
-              🔌 <span className="font-mono text-white/90">client = OpenAI()</span>
-            </>
-          }
-        >
-          🔌 <span className="font-mono text-white/90">client = OpenAI()</span>
-          <span className="text-white/60"> → our line to the AI</span>
-        </Row>
-      )}
-      {defined.length > 0 && (
-        <Row
-          active={f === 'functions'}
-          color="#4ade80"
-          summary={
-            <>
-              🐍{' '}
-              {defined.map((t) => (
-                <span key={t.name} className="font-mono mr-1.5" style={{ color: t.color }}>
-                  def {t.name}()
-                </span>
-              ))}
-            </>
-          }
-        >
-          <div className="text-white/70 mb-0.5">🐍 real Python functions (only your code can run these):</div>
-          <div className="flex flex-wrap gap-1">
-            {defined.map((t) => (
-              <motion.span
-                key={t.name}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="font-mono text-[12px] px-1.5 rounded border"
-                style={{ color: t.color, borderColor: scene.newVars.has(t.name) ? t.color : 'rgba(255,255,255,0.12)' }}
-              >
-                def {t.name}({(t.params ?? []).join(', ')})
-              </motion.span>
-            ))}
-          </div>
-        </Row>
-      )}
-      {toolsSeen && (
-        <Row
-          active={f.startsWith('menu')}
-          color="#fbbf24"
-          summary={
-            <>
-              📋 <span className="font-mono text-white/90">tools = [{tools.length}]</span>
-              <span className="text-white/50"> the menu (left)</span>
-            </>
-          }
-        >
-          📋{' '}
-          <span className="font-mono text-white/90">
-            tools = [{tools.length} card{tools.length > 1 ? 's' : ''}]
-          </span>
-          <span className="text-white/60"> → the menu on the left. The AI reads it; it never runs it.</span>
-        </Row>
-      )}
-      {'available_functions' in v && (
-        <Row
-          active={f === 'map'}
-          color="#22d3ee"
-          summary={
-            <>
-              🗂️ <span className="font-mono text-white/90">available_functions</span>
-              <span className="text-white/50"> name → function</span>
-            </>
-          }
-        >
-          <div className="text-white/70 mb-0.5">🗂️ available_functions (name text → real function):</div>
-          <div className="flex flex-wrap gap-1 font-mono text-[12px]">
-            {tools.map((t) => (
-              <span key={t.name} className="px-1 rounded bg-white/5">
-                <span className="text-[#ce9178]">&quot;{t.name}&quot;</span>
-                <span className="text-white/40"> → </span>
-                <span style={{ color: t.color }}>{t.name}</span>
-              </span>
-            ))}
-          </div>
-        </Row>
-      )}
-      {hasSystem && (
-        <Row
-          active={f === 'system'}
-          color="#a78bfa"
-          summary={
-            <>
-              ⚙️ <span className="text-[#a78bfa] font-semibold">system:</span>{' '}
-              <span className="text-white/70">&quot;{scene.systemPrompt}&quot;</span>
-            </>
-          }
-        >
-          ⚙️ <span className="text-[#a78bfa] font-semibold">system:</span>{' '}
-          <span className="text-white/85">&quot;{truncate(scene.systemPrompt, 90)}&quot;</span>
-        </Row>
-      )}
-      {scene.loopSeen && (
-        <Row
-          active={f === 'loop'}
-          color="#f472b6"
-          summary={
-            <>
-              🔁 <span className="font-mono text-white/90">while True:</span>
-            </>
-          }
-        >
-          🔁 <span className="font-mono text-white/90">while True:</span>
-          <span className="text-white/60"> repeat until a break</span>
-        </Row>
-      )}
-      {scene.question && (
-        <Row active={f === 'question'} color="#60a5fa">
-          👤 <span className="text-[#60a5fa] font-semibold">user:</span>{' '}
-          <span className="text-white text-[13px]">&quot;{scene.question}&quot;</span>
-        </Row>
-      )}
-      {f === 'envelope' && (
-        <Row active color="#fbbf24">
-          📨 request = <span className="font-mono">messages</span> ({scene.msgCount}) +{' '}
-          <span className="font-mono">tools</span> ({tools.length}) +{' '}
-          <span className="font-mono text-[#ce9178]">tool_choice=&quot;auto&quot;</span>
-          <span className="text-white/60"> (the AI may use a tool, or just answer)</span>
-        </Row>
-      )}
-      {!scene.importDone && defined.length === 0 && !scene.question && (
-        <Row active>
-          🧰 An <b>agent</b> = an AI that can ask <b>your code</b> to run functions (tools). Let&apos;s build one.
-        </Row>
-      )}
     </div>
   );
 }
 
-function EnvelopeView({ scene, tools, loop }: { scene: AgentScene; tools: ToolCard[]; loop: boolean }) {
-  const sending = scene.phase === 'send';
-  const withTools = toolsSent(scene.turn, loop);
-  const msgs = scene.conversation.slice(0, scene.msgCount);
+/** A big line of code with an optional 1–4 word tag. */
+function CodeLine({
+  code,
+  tag,
+  color = "#fff",
+}: {
+  code: ReactNode;
+  tag?: string;
+  color?: string;
+}) {
+  return (
+    <div className="flex items-baseline gap-3 flex-wrap">
+      <span className="font-mono text-[20px] font-semibold" style={{ color }}>
+        {code}
+      </span>
+      {tag && <span className="text-[14px] text-white/55">{tag}</span>}
+    </div>
+  );
+}
+
+/** Quiet one-line chip for something that already happened. */
+function DoneChip({
+  children,
+  color = "rgba(255,255,255,0.6)",
+}: {
+  children: ReactNode;
+  color?: string;
+}) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full px-2.5 py-[2px] text-[13px] whitespace-nowrap bg-white/[0.04]"
+      style={{ color }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function Hl({ on, children }: { on: boolean; children: ReactNode }) {
+  return (
+    <div
+      className={`rounded-lg px-2 py-1 -mx-2 ${on ? "bg-yellow-300/15 ring-2 ring-yellow-300/60" : ""}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Badge({
+  ok,
+  text,
+  pulse,
+}: {
+  ok: boolean;
+  text: string;
+  pulse?: boolean;
+}) {
+  const c = ok ? "#4ade80" : "#f87171";
   return (
     <motion.div
-      key={`env-${scene.turnIdx}`}
-      initial={{ opacity: 0, x: 30 }}
-      animate={{ opacity: sending ? 1 : 0.75, x: sending ? [30, 0, -8] : 0 }}
-      transition={{ duration: 0.8 }}
+      animate={{ scale: pulse ? [1, 1.05, 1] : 1 }}
+      transition={pulse ? { duration: 1.2, repeat: Infinity } : {}}
+      className="inline-flex items-center gap-2 text-[17px] px-4 py-1.5 rounded-full border-2 font-mono font-semibold"
+      style={{ color: c, borderColor: c, backgroundColor: `${c}1c` }}
     >
-      <Box title={<>📨 the request (client.chat.completions.create)</>} color="#fbbf24" active={sending}>
-        <div className="font-mono text-[12.5px] space-y-0.5">
-          <div>
-            <span className="text-white/50">model=</span>
-            <span className="text-[#ce9178]">&quot;gpt-4o-mini&quot;</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-1">
-            <span className="text-white/50">messages=</span>
-            {msgs.map((m, i) => (
-              <span key={i} className="px-1 rounded bg-white/5 text-[12px] text-white/80">
-                {m.role}
-              </span>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-1">
-            <span className="text-white/50">tools=</span>
-            {!withTools && (
-              <span className="text-white/40 font-sans text-[12px]">
-                not sent this time (we only want a text answer)
-              </span>
-            )}
-            {withTools &&
-              tools.map((t) => (
-                <span key={t.name} className="text-[12px]" style={{ color: t.color }}>
-                  {t.name}
-                </span>
-              ))}
-          </div>
-        </div>
-      </Box>
-      <div className="text-[12.5px] mt-1.5 text-white/60">
-        {sending ? (
-          '→ flying to the AI…'
-        ) : (
-          <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.2, repeat: Infinity }}>
-            ⏳ waiting for the AI&apos;s reply…
+      {text}
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Actor strip: The AI  ⇄  Your code
+// ---------------------------------------------------------------------------
+type Who = "ai" | "py" | "none";
+
+function who(sc: AgentScene): Who {
+  switch (sc.phase) {
+    case "thinking":
+    case "decide":
+      return "ai";
+    case "answer":
+      return "ai";
+    case "done":
+      return "none";
+    default:
+      return "py";
+  }
+}
+
+function aiState(sc: AgentScene): string {
+  const hasCalls = !!sc.turn?.calls.length;
+  switch (sc.phase) {
+    case "thinking":
+      return hasCalls ? "picking a tool…" : "writing the answer…";
+    case "decide":
+      return hasCalls ? "sent an order slip" : "replied with text";
+    case "answer":
+    case "done":
+      return "answered";
+    case "send":
+      return "receiving…";
+    default:
+      return sc.phase === "setup" ? "not called yet" : "waiting";
+  }
+}
+
+function pyState(sc: AgentScene): string {
+  const c = sc.call;
+  switch (sc.phase) {
+    case "setup":
+      return "setting up";
+    case "send":
+      return "sending the request";
+    case "check":
+      return "checking the reply";
+    case "select":
+      return "reading the slip";
+    case "execute":
+      return `running ${c?.name ?? "the tool"}`;
+    case "return":
+      return "sending the result back";
+    case "loopback":
+      return "looping";
+    case "done":
+      return "finished";
+    default:
+      return "waiting";
+  }
+}
+
+function Actor({
+  icon,
+  name,
+  state,
+  active,
+  color,
+  wiggle,
+}: {
+  icon: string;
+  name: string;
+  state: string;
+  active: boolean;
+  color: string;
+  wiggle?: boolean;
+}) {
+  return (
+    <motion.div
+      animate={{
+        opacity: active ? 1 : 0.5,
+        borderColor: active ? color : "rgba(255,255,255,0.1)",
+        backgroundColor: active ? `${color}1a` : "rgba(255,255,255,0.02)",
+        boxShadow: active ? `0 0 18px ${color}44` : "0 0 0px rgba(0,0,0,0)",
+      }}
+      transition={{ duration: 0.3 }}
+      className={`flex items-center gap-2 rounded-full border min-w-0 ${active ? "px-4 py-1.5" : "px-3 py-1"}`}
+    >
+      <motion.span
+        className={
+          active ? "text-[22px] leading-none" : "text-[16px] leading-none"
+        }
+        animate={wiggle ? { rotate: [0, -10, 10, 0] } : { rotate: 0 }}
+        transition={wiggle ? { duration: 1, repeat: Infinity } : {}}
+      >
+        {icon}
+      </motion.span>
+      <span
+        className={`font-semibold whitespace-nowrap ${active ? "text-[15px] text-white" : "text-[13px] text-white/80"}`}
+      >
+        {name}
+      </span>
+      <span
+        className={`truncate ${active ? "text-[14px]" : "text-[13px]"}`}
+        style={{ color: active ? color : "rgba(255,255,255,0.5)" }}
+      >
+        {state}
+      </span>
+    </motion.div>
+  );
+}
+
+function packetOf(
+  sc: AgentScene,
+): { icon: string; label: string; toAI: boolean } | null {
+  const hasCalls = !!sc.turn?.calls.length;
+  if (sc.phase === "send") return { icon: "📨", label: "request", toAI: true };
+  if (sc.phase === "decide")
+    return hasCalls
+      ? { icon: "🧾", label: "tool call", toAI: false }
+      : { icon: "💬", label: "text", toAI: false };
+  if (sc.phase === "return") return { icon: "📦", label: "result", toAI: true };
+  if (sc.phase === "answer")
+    return { icon: "💬", label: "answer", toAI: false };
+  return null;
+}
+
+function ActorStrip({
+  scene,
+  accentColor,
+}: {
+  scene: AgentScene;
+  accentColor: string;
+}) {
+  const w = who(scene);
+  const packet = packetOf(scene);
+  return (
+    <div className="flex-shrink-0 flex items-center justify-center gap-2 min-w-0">
+      <Actor
+        icon="🤖"
+        name="The AI"
+        state={aiState(scene)}
+        active={w === "ai"}
+        color={accentColor}
+        wiggle={scene.phase === "thinking"}
+      />
+      <div className="relative w-[92px] h-8 flex-shrink-0 flex items-center justify-center">
+        <div className="absolute inset-x-1 top-1/2 border-t border-dashed border-white/15" />
+        {packet && (
+          <motion.span
+            key={`${scene.step}-${packet.icon}`}
+            className="relative text-[20px] leading-none"
+            initial={{ x: packet.toAI ? 34 : -34, opacity: 0 }}
+            animate={{
+              x: packet.toAI ? [34, -34] : [-34, 34],
+              opacity: [0, 1, 1, 0],
+            }}
+            transition={{ duration: 1.4, repeat: Infinity, repeatDelay: 0.3 }}
+            title={packet.label}
+          >
+            {packet.icon}
           </motion.span>
         )}
       </div>
-    </motion.div>
+      <Actor
+        icon="🐍"
+        name="Your code"
+        state={pyState(scene)}
+        active={w === "py"}
+        color={PY}
+      />
+    </div>
   );
 }
 
-function CheckBadge({ scene, hasCalls, loop }: { scene: AgentScene; hasCalls: boolean; loop: boolean }) {
-  const active = scene.phase === 'check';
+// ---------------------------------------------------------------------------
+// Setup (before the first AI call)
+// ---------------------------------------------------------------------------
+function SetupTrail({
+  scene,
+  tools,
+}: {
+  scene: AgentScene;
+  tools: ToolCard[];
+}) {
+  const f = scene.focus;
+  const v = scene.vars;
+  const defined = tools.filter((t) => t.name in v);
+  const hasSystem = !!v.system_prompt || /^\[\s*system/.test(v.messages ?? "");
+  const items: [boolean, string][] = [
+    [scene.importDone && f !== "import", "imports"],
+    ["client" in v && f !== "client", "client"],
+    [
+      defined.length > 0 && f !== "functions",
+      `${defined.length} function${defined.length === 1 ? "" : "s"}`,
+    ],
+    ["tools" in v && !f.startsWith("menu"), "tool menu"],
+    ["available_functions" in v && f !== "map", "name → function"],
+    [hasSystem && f !== "system", "system prompt"],
+    [scene.loopSeen && f !== "loop", "while True"],
+    [!!scene.question && f !== "question", "question"],
+  ];
+  const shown = items.filter(([on]) => on);
+  if (!shown.length) return null;
   return (
-    <motion.div
-      animate={{ scale: active ? [1, 1.04, 1] : 1 }}
-      transition={active ? { duration: 1.2, repeat: Infinity } : {}}
-      className="inline-flex items-center gap-1 text-[12px] px-2 py-0.5 rounded-full border font-mono"
-      style={{
-        color: hasCalls ? '#4ade80' : '#f87171',
-        borderColor: active ? (hasCalls ? '#4ade80' : '#f87171') : 'rgba(255,255,255,0.12)',
-        backgroundColor: active ? (hasCalls ? '#4ade8022' : '#f8717122') : 'transparent',
-      }}
-    >
-      tool_calls? {hasCalls ? 'YES → run' : `NO → ${loop ? 'break' : 'answer'}`}
-    </motion.div>
+    <div className="flex flex-wrap justify-center gap-1.5">
+      {shown.map(([, label]) => (
+        <DoneChip key={label}>✓ {label}</DoneChip>
+      ))}
+    </div>
   );
 }
 
-function CallColumn({
+function SetupFocal({
+  scene,
+  tools,
+  accentColor,
+  loop,
+}: {
+  scene: AgentScene;
+  tools: ToolCard[];
+  accentColor: string;
+  loop: boolean;
+}) {
+  const f = scene.focus;
+  const v = scene.vars;
+  const defined = tools.filter((t) => t.name in v);
+  const shell = tools.some((t) => t.name === "run_command");
+  const many = tools.length > 3;
+
+  switch (f) {
+    case "import":
+      return (
+        <Card color="#60a5fa" className="max-w-[520px]">
+          <div className="space-y-2">
+            <CodeLine code="import json" tag="reads the AI's arguments" />
+            {shell && (
+              <CodeLine code="import subprocess" tag="runs terminal commands" />
+            )}
+          </div>
+        </Card>
+      );
+    case "client":
+      return (
+        <Card color="#60a5fa" className="max-w-[520px]">
+          <CodeLine code="client = OpenAI()" tag="our line to the AI" />
+        </Card>
+      );
+    case "functions":
+      return (
+        <div
+          className={`w-full grid gap-2.5 ${many ? "grid-cols-2 max-w-[720px]" : "grid-cols-1 max-w-[480px]"}`}
+        >
+          {defined.map((t) => {
+            const isNew = scene.newVars.has(t.name);
+            return (
+              <motion.div
+                key={t.name}
+                initial={isNew ? { opacity: 0, scale: 0.9 } : false}
+                animate={{
+                  opacity: isNew || defined.length === 1 ? 1 : 0.6,
+                  scale: 1,
+                }}
+                className="rounded-xl border px-4 py-2.5 font-mono text-[16px] truncate"
+                style={{
+                  color: t.color,
+                  borderColor: isNew ? t.color : "rgba(255,255,255,0.1)",
+                  backgroundColor: isNew
+                    ? `${t.color}18`
+                    : "rgba(255,255,255,0.02)",
+                }}
+              >
+                🐍 def {t.name}({(t.params ?? []).join(", ")})
+              </motion.div>
+            );
+          })}
+        </div>
+      );
+    case "menu":
+    case "menu-name":
+    case "menu-desc":
+    case "menu-params": {
+      const hf =
+        f === "menu" ? null : (f.slice(5) as "name" | "desc" | "params");
+      return (
+        <div className="w-full flex flex-col items-center gap-2">
+          <div className="font-mono text-[15px] text-white/70">
+            📋 tools = [ {tools.length} card{tools.length > 1 ? "s" : ""} ]
+          </div>
+          <ToolSelectionAnim
+            tools={tools}
+            mode="idle"
+            highlightField={hf}
+            accentColor={accentColor}
+            animKey={`setup-${scene.step}`}
+          />
+        </div>
+      );
+    }
+    case "map":
+      return (
+        <Card
+          color="#22d3ee"
+          label="🗂️ available_functions"
+          className="max-w-[640px]"
+        >
+          <div
+            className={`grid gap-x-6 gap-y-1.5 font-mono text-[16px] ${many ? "grid-cols-2" : "grid-cols-1"}`}
+          >
+            {tools.map((t) => (
+              <div key={t.name} className="truncate">
+                <span className="text-[#ce9178]">&quot;{t.name}&quot;</span>
+                <span className="text-white/40"> → </span>
+                <span style={{ color: t.color }}>{t.name}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      );
+    case "system":
+      return (
+        <Card color="#a78bfa" label="⚙️ system" className="max-w-[640px]">
+          <div className="text-[17px] leading-snug text-white/90">
+            &quot;{truncate(scene.systemPrompt, 170)}&quot;
+          </div>
+        </Card>
+      );
+    case "question":
+      return scene.question ? (
+        <Card color="#60a5fa" label="👤 user" className="max-w-[640px]">
+          <div className="text-[20px] leading-snug text-white">
+            &quot;{scene.question}&quot;
+          </div>
+        </Card>
+      ) : null;
+    case "loop":
+      return (
+        <Card color="#f472b6" className="max-w-[520px]">
+          <CodeLine
+            code="while True:"
+            tag="repeat until a break"
+            color="#f9a8d4"
+          />
+        </Card>
+      );
+    case "envelope":
+      return <EnvelopeFocal scene={scene} tools={tools} loop={loop} />;
+    case "console":
+      return (
+        <div className="w-full max-w-[640px] rounded-xl bg-black/50 border border-white/10 px-4 py-3 font-mono text-[16px] text-white/90 whitespace-pre-wrap break-words">
+          <span className="text-white/40">🖨 </span>
+          {scene.output.trim() || "…"}
+        </div>
+      );
+    default:
+      return (
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="text-[44px] leading-none">🤖 ⇄ 🐍</div>
+          <div className="text-[18px] text-white/85">
+            An AI + tools that your code runs
+          </div>
+        </div>
+      );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The request
+// ---------------------------------------------------------------------------
+const ROLE_COLOR: Record<string, string> = {
+  system: "#a78bfa",
+  user: "#60a5fa",
+  assistant: "#fbbf24",
+  tool: "#4ade80",
+};
+
+function EnvelopeFocal({
+  scene,
+  tools,
+  loop,
+}: {
+  scene: AgentScene;
+  tools: ToolCard[];
+  loop: boolean;
+}) {
+  const withTools = toolsSent(scene.turn, loop);
+  const msgs = scene.conversation.slice(0, scene.msgCount);
+  return (
+    <Card color={SLIP} label="📨 the request" className="max-w-[640px]">
+      <div className="space-y-2.5 text-[16px]">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-mono text-white/55 w-[104px]">messages</span>
+          {msgs.map((m, i) => (
+            <span
+              key={i}
+              className="px-2 py-[1px] rounded-md text-[14px]"
+              style={{
+                color: ROLE_COLOR[m.role],
+                backgroundColor: `${ROLE_COLOR[m.role]}1c`,
+              }}
+            >
+              {m.role}
+            </span>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-mono text-white/55 w-[104px]">tools</span>
+          {!withTools && (
+            <span className="text-white/50 text-[15px]">none this time</span>
+          )}
+          {withTools &&
+            (tools.length > 4 ? (
+              <span className="text-white/85">
+                🧰 {tools.length} tool cards
+              </span>
+            ) : (
+              tools.map((t) => (
+                <span
+                  key={t.name}
+                  className="font-mono text-[15px]"
+                  style={{ color: t.color }}
+                >
+                  {t.name}
+                </span>
+              ))
+            ))}
+        </div>
+        {scene.phase === "setup" && (
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-white/55 w-[104px]">
+              tool_choice
+            </span>
+            <span className="font-mono text-[#ce9178]">&quot;auto&quot;</span>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Order slips (tool calls)
+// ---------------------------------------------------------------------------
+function Slip({
   scene,
   call,
   index,
   total,
-  showRun,
 }: {
   scene: AgentScene;
   call: AgentCall;
   index: number;
   total: number;
-  showRun: boolean;
 }) {
-  const s = scene.step;
-  const isActive = scene.call === call;
   const color = idColor(scene.model, call.id);
-  const selecting = isActive && scene.phase === 'select';
-  const executing = isActive && scene.phase === 'execute';
-  const returning = isActive && scene.phase === 'return';
-  const decideNow = scene.phase === 'decide' || scene.phase === 'check';
-  const compact = total > 1 || showRun === false;
-  // once the function runs, the slip shrinks to one line so the run + tool message fit below it
-  const past = call.execStep <= s;
-  const slipCompact = past || total > 1;
-  const dimmed = scene.call && !isActive && ['select', 'execute', 'return'].includes(scene.phase);
-
-  // With several calls side by side, the ones not being worked on shrink to a one-card summary.
-  if (total > 1 && !isActive && !decideNow) {
-    const done = call.returnStep <= s;
-    return (
-      <motion.div
-        animate={{ opacity: 0.8 }}
-        className="rounded-md border px-2 py-1 font-mono text-[12px] flex flex-wrap items-center gap-x-1.5"
-        style={{ borderColor: '#fbbf2440', backgroundColor: '#fbbf240f' }}
-      >
-        <span className="text-[#fbbf24] font-sans font-semibold">🧾 {index + 1}</span>
-        <IdChip id={call.id} color={color} />
-        <span className="text-white/85">{argsCall(call.name, call.args)}</span>
-        {done ? (
-          <span className="text-[#4ade80]">
-            → {truncate(unescape(unquote(call.result)), 24)} <span className="font-sans">📦 ✓</span>
-          </span>
-        ) : (
-          <span className="text-white/45 font-sans">next in the for loop…</span>
-        )}
-      </motion.div>
-    );
-  }
-
   return (
-    <motion.div animate={{ opacity: dimmed ? 0.55 : 1 }} className="flex-1 min-w-0 flex flex-col gap-1.5">
-      {/* the order slip */}
-      <motion.div
-        initial={{ opacity: 0, x: -30, rotate: -2 }}
-        animate={{ opacity: 1, x: 0, rotate: 0 }}
-        transition={{ type: 'spring', damping: 16, stiffness: 120, delay: index * 0.15 }}
+    <motion.div
+      initial={{ opacity: 0, x: -30, rotate: -2 }}
+      animate={{ opacity: 1, x: 0, rotate: 0 }}
+      transition={{
+        type: "spring",
+        damping: 16,
+        stiffness: 120,
+        delay: index * 0.15,
+      }}
+      className="w-full"
+    >
+      <Card
+        color={SLIP}
+        label={<>🧾 order slip{total > 1 ? ` ${index + 1}` : ""}</>}
       >
-        <Box
-          color="#fbbf24"
-          active={decideNow || selecting}
-          title={
-            <>
-              🧾 order slip{total > 1 ? ` ${index + 1}` : ''}{' '}
-              <span className="text-white/40 font-normal">(tool_call)</span>
-            </>
-          }
-        >
-          {slipCompact ? (
-            <div className="font-mono text-[12.5px] flex flex-wrap items-center gap-x-1.5">
-              <IdChip id={call.id} color={color} pulse={returning} />
-              <span className="text-[#ce9178]">&quot;{call.name}&quot;</span>
-              <span className="text-[#ce9178] break-all">&apos;{truncate(argsJson(call.args), 44)}&apos;</span>
-            </div>
-          ) : (
-            <div className="font-mono text-[12.5px] space-y-0.5">
-              <div className="flex items-center gap-1">
-                <span className="text-white/50">id:</span> <IdChip id={call.id} color={color} pulse={returning} />
-              </div>
-              <div
-                className={`rounded px-0.5 ${selecting && call.selectStep === s ? 'bg-yellow-300/15 ring-1 ring-yellow-300/60' : ''}`}
-              >
-                <span className="text-white/50">name:</span>{' '}
-                <span className="text-[#ce9178]">&quot;{call.name}&quot;</span>
-              </div>
-              <div
-                className={`rounded px-0.5 break-all ${selecting && call.argsStep === s ? 'bg-yellow-300/15 ring-1 ring-yellow-300/60' : ''}`}
-              >
-                <span className="text-white/50">arguments:</span>{' '}
-                <span className="text-[#ce9178]">&apos;{truncate(argsJson(call.args), compact ? 44 : 70)}&apos;</span>
-              </div>
-            </div>
-          )}
-        </Box>
-      </motion.div>
-
-      {/* your code reads the slip */}
-      {call.selectStep <= s && !past && (
-        <Row active={selecting} color="#60a5fa">
-          <div className="font-mono text-[12px] break-all">
-            <span className="text-[#9cdcfe]">function_name</span> ={' '}
+        <div className="font-mono text-[17px] space-y-1.5">
+          <div>
+            <span className="text-white/50">name: </span>
             <span className="text-[#ce9178]">&quot;{call.name}&quot;</span>
-            {call.argsStep <= s && (
-              <>
-                <br />
-                <span className="text-[#9cdcfe]">arguments</span> = {'{'}
-                {call.args.map(([k, v], i) => (
-                  <span key={k}>
-                    {i > 0 && ', '}
-                    <span className="text-[#ce9178]">&apos;{k}&apos;</span>: {truncate(v, 24)}
-                  </span>
-                ))}
-                {'}'} <span className="text-white/40 font-sans">← json.loads(text) → dict</span>
-              </>
-            )}
           </div>
-        </Row>
-      )}
-
-      {/* the real function runs */}
-      {showRun && call.execStep <= s && (
-        <Box color="#4ade80" active={executing} title={<>⚙️ your Python runs the REAL function</>}>
-          <div className="flex items-center gap-2 flex-wrap font-mono text-[13px]">
-            <span className="text-white">{argsCall(call.name, call.args)}</span>
-            <motion.span
-              animate={{ x: executing ? [0, 4, 0] : 0 }}
-              transition={{ duration: 0.8, repeat: executing ? Infinity : 0 }}
-              className="text-white/50"
-            >
-              →
-            </motion.span>
-            {call.resultStep <= s ? (
-              <motion.span
-                key={`res-${call.id}`}
-                initial={{ scale: 1.6, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="px-1.5 rounded bg-[#4ade80]/20 text-[#4ade80] font-bold break-all"
-              >
-                {truncate(unescape(unquote(call.result)), 60)}
-              </motion.span>
-            ) : (
-              <motion.span
-                animate={{ opacity: [0.3, 1, 0.3] }}
-                transition={{ duration: 1, repeat: Infinity }}
-                className="text-white/50"
-              >
-                running…
-              </motion.span>
-            )}
-          </div>
-        </Box>
-      )}
-
-      {/* the result goes back (one line when the terminal needs the room) */}
-      {call.returnStep <= s && !showRun && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0, borderColor: returning ? '#4ade80' : '#4ade8040' }}
-          className="rounded-md border px-2 py-1 font-mono text-[12px] flex flex-wrap items-center gap-x-1.5"
-          style={{ backgroundColor: '#4ade800f' }}
-        >
-          <span className="font-sans font-semibold text-[#4ade80]">📦 role &quot;tool&quot;</span>
-          <IdChip id={call.id} color={color} pulse={returning} />
-          {returning && (
-            <span className="font-sans" style={{ color }}>
-              = slip id ✓
+          <div className="break-all">
+            <span className="text-white/50">arguments: </span>
+            <span className="text-[#ce9178]">
+              &apos;{truncate(argsJson(call.args), total > 1 ? 34 : 60)}&apos;
             </span>
-          )}
-          <span className="text-[#ce9178] truncate max-w-full">
-            &quot;{truncate(unescape(unquote(call.result)), 34)}&quot;
-          </span>
-        </motion.div>
-      )}
-      {call.returnStep <= s && showRun && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <Box color="#4ade80" active={returning} title={<>📦 new message: role &quot;tool&quot;</>}>
-            <div className="font-mono text-[12.5px] space-y-0.5">
-              <div className="flex items-center gap-1 flex-wrap">
-                <span className="text-white/50">tool_call_id:</span>{' '}
-                <IdChip id={call.id} color={color} pulse={returning} />
-                {returning && (
-                  <span className="text-[12px] font-sans" style={{ color }}>
-                    = same id as the slip ✓
-                  </span>
-                )}
-              </div>
-              <div className="break-all">
-                <span className="text-white/50">content:</span>{' '}
-                <span className="text-[#ce9178]">&quot;{truncate(unescape(unquote(call.result)), 50)}&quot;</span>
-              </div>
-            </div>
-          </Box>
-        </motion.div>
-      )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-white/50">id:</span>{" "}
+            <IdChip id={call.id} color={color} />
+          </div>
+        </div>
+      </Card>
     </motion.div>
   );
 }
 
-function TurnView({
+/** One line for the slip once our code is working on it. */
+function SlipLine({
   scene,
-  turn,
-  loop,
-  showTerminal,
+  call,
+  pulse = false,
 }: {
   scene: AgentScene;
-  turn: AgentTurn;
-  loop: boolean;
-  showTerminal: boolean;
+  call: AgentCall;
+  pulse?: boolean;
 }) {
-  const inTools = ['select', 'execute', 'return', 'loopback'].includes(scene.phase);
   return (
-    <div className="h-full flex flex-col gap-1.5 min-h-0">
-      <div className="flex items-center gap-2 flex-wrap text-[12px] text-white/60">
-        <span>
-          🤖 reply: <span className="font-mono text-white/80">content=None</span>
-        </span>
-        <CheckBadge scene={scene} hasCalls loop={loop} />
-      </div>
-      <div
-        className={`flex min-h-0 ${turn.calls.length > 1 && !['decide', 'check'].includes(scene.phase) ? 'flex-col gap-1' : 'gap-2'} ${showTerminal ? 'flex-shrink-0' : 'flex-1'}`}
-      >
-        {turn.calls.map((c, i) => (
-          <CallColumn key={c.id} scene={scene} call={c} index={i} total={turn.calls.length} showRun={!showTerminal} />
-        ))}
-      </div>
-      {showTerminal && inTools && (
-        <div className="flex-1 min-h-[70px]">
-          <TerminalToolExec scene={scene} />
-        </div>
+    <div className="flex items-center justify-center gap-2 flex-wrap text-[14px] text-white/60">
+      <span>🧾</span>
+      <IdChip
+        id={call.id}
+        color={idColor(scene.model, call.id)}
+        pulse={pulse}
+      />
+      <span className="font-mono text-white/75">
+        {truncate(argsCall(call.name, call.args), 50)}
+      </span>
+    </div>
+  );
+}
+
+/** Other calls of the same turn (parallel tool calls), as quiet chips. */
+function OtherCalls({ scene, turn }: { scene: AgentScene; turn: AgentTurn }) {
+  if (turn.calls.length < 2) return null;
+  return (
+    <div className="flex flex-wrap justify-center gap-1.5">
+      {turn.calls.map((c, i) =>
+        c === scene.call ? null : (
+          <DoneChip
+            key={c.id}
+            color={
+              c.returnStep <= scene.step ? "#86efac" : "rgba(255,255,255,0.55)"
+            }
+          >
+            🧾 {i + 1} · {truncate(argsCall(c.name, c.args), 28)}
+            {c.returnStep <= scene.step
+              ? ` = ${truncate(unescape(unquote(c.result)), 16)} ✓`
+              : " · next"}
+          </DoneChip>
+        ),
       )}
     </div>
   );
 }
 
-function AnswerView({
+function SelectFocal({ scene, call }: { scene: AgentScene; call: AgentCall }) {
+  const s = scene.step;
+  const lookup =
+    scene.newVars.has("available_functions") ||
+    scene.newVars.has("function_to_call");
+  const nameNow = call.selectStep === s && !lookup;
+  const argsNow = call.argsStep === s && !lookup;
+  return (
+    <div className="w-full max-w-[640px] flex flex-col gap-3">
+      <SlipLine scene={scene} call={call} />
+      <Card color="#60a5fa" label="🔎 your code reads the slip">
+        <div className="font-mono text-[18px] space-y-1.5 break-words">
+          <Hl on={nameNow}>
+            <span className="text-[#9cdcfe]">function_name</span> ={" "}
+            <span className="text-[#ce9178]">&quot;{call.name}&quot;</span>
+          </Hl>
+          {call.argsStep <= s && (
+            <Hl on={argsNow}>
+              <span className="text-[#9cdcfe]">arguments</span> = {"{"}
+              {call.args.map(([k, v], i) => (
+                <span key={k}>
+                  {i > 0 && ", "}
+                  <span className="text-[#ce9178]">&apos;{k}&apos;</span>:{" "}
+                  {truncate(v, 28)}
+                </span>
+              ))}
+              {"}"}
+              {argsNow && (
+                <span className="ml-2 font-sans text-[14px] text-white/55 whitespace-nowrap">
+                  json.loads → dict
+                </span>
+              )}
+            </Hl>
+          )}
+          {lookup && (
+            <Hl on>
+              <span className="whitespace-nowrap">
+                <span className="text-[#9cdcfe]">available_functions</span>[
+                <span className="text-[#ce9178]">&quot;{call.name}&quot;</span>]
+              </span>{" "}
+              <span className="whitespace-nowrap">
+                → <span className="text-[#4ade80]">{call.name}</span>
+              </span>
+            </Hl>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function ExecuteFocal({
+  scene,
+  call,
+  showTerminal,
+}: {
+  scene: AgentScene;
+  call: AgentCall;
+  showTerminal: boolean;
+}) {
+  const done = call.resultStep <= scene.step;
+  const executing = scene.phase === "execute";
+  if (showTerminal) {
+    const badge = safetyFor(call.name);
+    return (
+      <div className="w-full max-h-full flex flex-col gap-3 min-h-0">
+        <div className="flex items-center justify-center gap-3 flex-wrap flex-shrink-0">
+          <span className="font-mono text-[17px] text-white">
+            {truncate(argsCall(call.name, call.args), 48)}
+          </span>
+          {badge.text && (
+            <span
+              className="text-[14px] font-semibold px-3 py-1 rounded-full"
+              style={{
+                color: badge.color,
+                backgroundColor: `${badge.color}1a`,
+              }}
+            >
+              {badge.text}
+            </span>
+          )}
+        </div>
+        <div className="w-full min-h-0 flex flex-col">
+          <TerminalToolExec scene={scene} showBadge={false} />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <Card
+      color={PY}
+      label="⚙️ your Python runs the real function"
+      className="max-w-[680px]"
+    >
+      <div className="flex items-center gap-4 flex-wrap">
+        <span className="font-mono text-[22px] text-white break-all">
+          {argsCall(call.name, call.args)}
+        </span>
+        <motion.span
+          animate={{ x: executing && !done ? [0, 6, 0] : 0 }}
+          transition={{
+            duration: 0.8,
+            repeat: executing && !done ? Infinity : 0,
+          }}
+          className="text-[22px] text-white/50"
+        >
+          →
+        </motion.span>
+        {done ? (
+          <motion.span
+            key={`res-${call.id}`}
+            initial={{ scale: 1.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="px-3 py-0.5 rounded-lg bg-[#4ade80]/20 text-[#4ade80] font-mono font-bold text-[22px] break-words"
+          >
+            {truncate(unescape(unquote(call.result)), 70)}
+          </motion.span>
+        ) : (
+          <motion.span
+            animate={{ opacity: [0.3, 1, 0.3] }}
+            transition={{ duration: 1, repeat: Infinity }}
+            className="text-[18px] text-white/55"
+          >
+            running…
+          </motion.span>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function ReturnFocal({ scene, call }: { scene: AgentScene; call: AgentCall }) {
+  const color = idColor(scene.model, call.id);
+  return (
+    <div className="w-full max-w-[640px] flex flex-col gap-3">
+      <SlipLine scene={scene} call={call} pulse />
+      <Card color={PY} label={<>📦 new message: role &quot;tool&quot;</>}>
+        <div className="font-mono text-[17px] space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-white/50">tool_call_id:</span>
+            <IdChip id={call.id} color={color} pulse />
+            <span className="font-sans text-[15px]" style={{ color }}>
+              = same id as the slip ✓
+            </span>
+          </div>
+          <div className="break-words">
+            <span className="text-white/50">content: </span>
+            <span className="text-[#ce9178]">
+              &quot;{truncate(unescape(unquote(call.result)), 80)}&quot;
+            </span>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The AI's text reply / final answer
+// ---------------------------------------------------------------------------
+function AnswerFocal({
   scene,
   turn,
   loop,
@@ -614,251 +886,242 @@ function AnswerView({
   loop: boolean;
   showTerminal: boolean;
 }) {
-  const earlier = scene.model.turns.filter((t) => t.n < turn.n).flatMap((t) => t.calls);
-  const final = scene.phase === 'answer' || scene.phase === 'done';
-  return (
-    <div className="h-full flex flex-col gap-1.5 min-h-0">
-      <div className="flex items-center gap-2 flex-wrap text-[12px] text-white/60">
-        <span>
-          🤖 reply: <span className="font-mono text-white/80">tool_calls=None</span>
-        </span>
-        {(loop || turn.n === 1) && <CheckBadge scene={scene} hasCalls={false} loop={loop} />}
+  const earlier = scene.model.turns
+    .filter((t) => t.n < turn.n)
+    .flatMap((t) => t.calls);
+  const check = scene.phase === "check";
+  const exited =
+    scene.phase === "done" && unquote(scene.vars.user_input) === "exit";
+  const card = (
+    <motion.div
+      initial={{ opacity: 0, x: -30 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="w-full"
+    >
+      <Card color="#4ade80" label="💬 the AI's answer">
+        <div
+          className={`${showTerminal ? "text-[17px]" : "text-[20px]"} leading-snug text-white`}
+        >
+          <Typewriter
+            text={turn.answer ?? ""}
+            animate={scene.phase === "decide" || scene.phase === "answer"}
+          />
+        </div>
+      </Card>
+    </motion.div>
+  );
+
+  if (showTerminal) {
+    return (
+      <div className="w-full max-h-full flex flex-col gap-3 min-h-0">
+        {check ? (
+          <div className="flex justify-center flex-shrink-0">
+            <Badge
+              ok={false}
+              text={`tool_calls? NO → ${loop ? "break" : "answer"}`}
+              pulse
+            />
+          </div>
+        ) : exited ? (
+          <div className="flex justify-center flex-shrink-0">
+            <DoneChip color="#f9a8d4">👋 exit → Goodbye!</DoneChip>
+          </div>
+        ) : null}
+        {!exited && <div className="flex-shrink-0">{card}</div>}
+        <motion.div
+          animate={{ opacity: exited ? 1 : 0.6 }}
+          className="w-full min-h-0 flex flex-col"
+        >
+          <TerminalToolExec scene={scene} maxLines={exited ? 12 : 6} />
+        </motion.div>
       </div>
-      <motion.div
-        initial={{ opacity: 0, x: -30 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="rounded-xl border px-3 py-2"
-        style={{
-          borderColor: final ? '#4ade80' : '#4ade8066',
-          backgroundColor: '#4ade8012',
-          boxShadow: final ? '0 0 20px #4ade8033' : 'none',
-        }}
-      >
-        <div className="text-[12px] font-semibold text-[#4ade80] mb-0.5">
-          💬 message.content {final ? '(the final answer)' : ''}
-        </div>
-        <div className={`${showTerminal ? 'text-[14px]' : 'text-[15px]'} leading-snug text-white`}>
-          <Typewriter text={turn.answer ?? ''} animate={scene.phase === 'decide' || scene.phase === 'answer'} />
-        </div>
-      </motion.div>
-      {showTerminal ? null : earlier.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-1 text-[12px] text-white/60">
-          <span>Built from the real results:</span>
+    );
+  }
+
+  return (
+    <div className="w-full max-w-[680px] flex flex-col items-center gap-3">
+      {check && (
+        <Badge
+          ok={false}
+          text={`tool_calls? NO → ${loop ? "break" : "answer"}`}
+          pulse
+        />
+      )}
+      {card}
+      {earlier.length > 0 ? (
+        <div className="flex flex-wrap justify-center gap-1.5">
           {earlier.map((c) => (
-            <span key={c.id} className="font-mono px-1.5 rounded bg-white/5 text-white/85">
-              {truncate(argsCall(c.name, c.args), 30)} = {truncate(unescape(unquote(c.result)), 24)}
-            </span>
+            <DoneChip key={c.id} color="#86efac">
+              ✓ {truncate(argsCall(c.name, c.args), 44)} ={" "}
+              {truncate(unescape(unquote(c.result)), 24)}
+            </DoneChip>
           ))}
         </div>
       ) : (
-        <div className="text-[12.5px] text-white/60">
-          ✨ No tool was needed: the AI answered directly, and no Python function ran.
-        </div>
-      )}
-      {showTerminal && (
-        <div className="flex-1 min-h-[70px]">
-          <TerminalToolExec scene={scene} />
-        </div>
+        !usedTools(scene) && <DoneChip>no tool used</DoneChip>
       )}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Channel between the columns: the packet that is travelling right now
+// What the AI "thinks" while it has no tool to pick
 // ---------------------------------------------------------------------------
-function Channel({ scene }: { scene: AgentScene }) {
-  const hasCalls = !!scene.turn?.calls.length;
-  let packet: { icon: string; label: string; toAI: boolean } | null = null;
-  if (scene.phase === 'send') packet = { icon: '📨', label: 'request', toAI: true };
-  else if (scene.phase === 'decide')
-    packet = hasCalls ? { icon: '🧾', label: 'tool call', toAI: false } : { icon: '💬', label: 'text', toAI: false };
-  else if (scene.phase === 'return') packet = { icon: '📦', label: 'result', toAI: true };
-  else if (scene.phase === 'answer') packet = { icon: '💬', label: 'answer', toAI: false };
-
-  return (
-    <div className="w-11 flex-shrink-0 flex flex-col items-center justify-center gap-2 relative">
-      <div className="text-white/20 text-lg leading-none">⟵</div>
-      {packet ? (
-        <motion.div
-          key={`${scene.step}-${packet.icon}`}
-          className="flex flex-col items-center"
-          initial={{ x: packet.toAI ? 14 : -14, opacity: 0 }}
-          animate={{
-            x: packet.toAI ? [14, -14] : [-14, 14],
-            opacity: [0, 1, 1, 0],
-          }}
-          transition={{ duration: 1.4, repeat: Infinity, repeatDelay: 0.3 }}
-        >
-          <span className="text-2xl leading-none">{packet.icon}</span>
-          <span className="text-[11px] text-white/70 whitespace-nowrap">{packet.label}</span>
-        </motion.div>
-      ) : (
-        <div className="h-9" />
-      )}
-      <div className="text-white/20 text-lg leading-none">⟶</div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// The AI column's thought bubble
-// ---------------------------------------------------------------------------
-function thought(scene: AgentScene, tools: ToolCard[], loop: boolean): string {
+function ThinkBubble({
+  scene,
+  accentColor,
+}: {
+  scene: AgentScene;
+  accentColor: string;
+}) {
   const t = scene.turn;
-  const names = t?.calls.map((c) => c.name).join(' + ') ?? '';
-  const c = scene.call;
-  switch (scene.phase) {
-    case 'setup':
-      return 'tools' in scene.vars ? 'This menu is sent along with every request.' : 'The menu is still being written…';
-    case 'send':
-      return `📨 Incoming: ${scene.msgCount} message${scene.msgCount === 1 ? '' : 's'}${
-        toolsSent(t, loop) ? ` + ${tools.length} tool${tools.length === 1 ? '' : 's'}` : ' (no menu this time)'
-      }`;
-    case 'thinking':
-      if (!t?.calls.length) {
-        return scene.model.turns.some((x) => x.n < (t?.n ?? 0) && x.calls.length)
-          ? 'The results are in. I can write the answer now.'
-          : 'No tool on the menu helps here. I know this one!';
-      }
-      return (t.n === 1 ? `"${truncate(scene.model.question, 40)}" → ` : 'Next step → ') + `${names} fits!`;
-    case 'decide':
-    case 'check':
-      return t?.calls.length ? "I can't run code, so I send an order slip." : 'No tool needed: I reply with text.';
-    case 'select':
-    case 'execute':
-      return `⏳ Waiting for your code to run ${c?.name ?? 'the tool'}…`;
-    case 'return':
-      return `📦 Got the result: ${truncate(unescape(unquote(c?.result)), 30)}`;
-    case 'loopback':
-      return 'Ready for the next turn.';
-    default:
-      return scene.model.turns.some((x) => x.calls.length)
-        ? '✍️ I wrote the answer from the real results.'
-        : '✍️ I answered directly.';
-  }
+  const text = scene.model.turns.some(
+    (x) => x.n < (t?.n ?? 0) && x.calls.length,
+  )
+    ? "The results are in. I can write the answer now."
+    : "No tool on the menu helps here. I know this one!";
+  return (
+    <div
+      className="max-w-[560px] rounded-2xl border px-5 py-4 text-[19px] leading-snug text-white/90"
+      style={{
+        borderColor: `${accentColor}88`,
+        backgroundColor: `${accentColor}14`,
+      }}
+    >
+      💭 {text}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
-export default function AgentDataFlow({ scene, tools, accentColor, loop, showTerminal }: AgentDataFlowProps) {
+export default function AgentDataFlow({
+  scene,
+  tools,
+  accentColor,
+  loop,
+  showTerminal,
+  collapsed = false,
+}: AgentDataFlowProps) {
   const t = scene.turn;
   const phase = scene.phase;
   const hasCalls = !!t?.calls.length;
+  const call = scene.call;
+
+  const strip = <ActorStrip scene={scene} accentColor={accentColor} />;
+  if (collapsed) return strip;
+
   const earlierNames = scene.model.turns
     .filter((x) => t && x.n < t.n && x.decideStep <= scene.step)
     .flatMap((x) => x.calls.map((c) => c.name));
 
-  let mode: MenuMode = 'idle';
-  if (!('tools' in scene.vars)) mode = 'draft';
-  else if (phase === 'thinking') mode = hasCalls ? 'scanning' : 'unused';
-  else if (AFTER_DECIDE.includes(phase)) mode = hasCalls ? 'chosen' : 'unused';
-  else if (phase === 'answer' || phase === 'done') mode = 'unused';
+  let focal: ReactNode;
+  let top: ReactNode = null;
 
-  const filledArgs: Record<string, [string, string][]> = {};
-  if (t && AFTER_DECIDE.includes(phase)) {
-    const active = scene.call;
-    for (const c of t.calls) if (!filledArgs[c.name] || c === active) filledArgs[c.name] = c.args;
-  }
-  const hf =
-    scene.phase === 'setup' && scene.focus.startsWith('menu-')
-      ? (scene.focus.slice(5) as 'name' | 'desc' | 'params')
-      : null;
-  const aiActive = phase === 'thinking' || phase === 'decide' || phase === 'send';
-  const pyActive = !aiActive;
-
-  // which view the Python column shows
-  let view: ReactNode;
-  if (phase === 'setup' || !t) view = <SetupView scene={scene} tools={tools} />;
-  else if (phase === 'send' || phase === 'thinking') view = <EnvelopeView scene={scene} tools={tools} loop={loop} />;
-  else if (hasCalls && AFTER_DECIDE.includes(phase))
-    view = <TurnView scene={scene} turn={t} loop={loop} showTerminal={showTerminal} />;
-  else {
-    const answerTurn = [...scene.model.turns].reverse().find((x) => x.answerStep <= scene.step) ?? t;
-    view = <AnswerView scene={scene} turn={answerTurn} loop={loop} showTerminal={showTerminal} />;
+  if (phase === "setup" || !t) {
+    focal = (
+      <SetupFocal
+        scene={scene}
+        tools={tools}
+        accentColor={accentColor}
+        loop={loop}
+      />
+    );
+    top = <SetupTrail scene={scene} tools={tools} />;
+  } else if (phase === "send") {
+    focal = <EnvelopeFocal scene={scene} tools={tools} loop={loop} />;
+  } else if (phase === "thinking") {
+    focal = hasCalls ? (
+      <ToolSelectionAnim
+        tools={tools}
+        mode={"scanning" as MenuMode}
+        chosen={t.calls.map((c) => c.name)}
+        usedBefore={earlierNames}
+        filledArgs={Object.fromEntries(t.calls.map((c) => [c.name, c.args]))}
+        accentColor={accentColor}
+        animKey={`${scene.step}`}
+      />
+    ) : (
+      <ThinkBubble scene={scene} accentColor={accentColor} />
+    );
+  } else if (hasCalls && (phase === "decide" || phase === "check")) {
+    focal = (
+      <div className="w-full max-w-[640px] flex flex-col items-center gap-3">
+        <div
+          className={`w-full flex gap-3 ${t.calls.length > 1 ? "" : "flex-col"}`}
+        >
+          {t.calls.map((c, i) => (
+            <Slip
+              key={c.id}
+              scene={scene}
+              call={c}
+              index={i}
+              total={t.calls.length}
+            />
+          ))}
+        </div>
+        {phase === "check" && <Badge ok text="tool_calls? YES → run" pulse />}
+      </div>
+    );
+  } else if (hasCalls && call && phase === "select") {
+    focal = <SelectFocal scene={scene} call={call} />;
+    top = <OtherCalls scene={scene} turn={t} />;
+  } else if (hasCalls && call && phase === "execute") {
+    focal = (
+      <ExecuteFocal scene={scene} call={call} showTerminal={showTerminal} />
+    );
+    top = <OtherCalls scene={scene} turn={t} />;
+  } else if (hasCalls && call && phase === "return") {
+    focal = <ReturnFocal scene={scene} call={call} />;
+    top = <OtherCalls scene={scene} turn={t} />;
+  } else if (hasCalls && phase === "loopback") {
+    focal = (
+      <div className="flex flex-col items-center gap-4">
+        <Card color="#f472b6" className="max-w-[520px]">
+          <CodeLine
+            code="while True:"
+            tag={`→ turn ${t.n + 1}`}
+            color="#f9a8d4"
+          />
+        </Card>
+        <div className="flex flex-wrap justify-center gap-1.5">
+          {t.calls.map((c) => (
+            <DoneChip key={c.id} color="#86efac">
+              ✓ {truncate(argsCall(c.name, c.args), 44)} ={" "}
+              {truncate(unescape(unquote(c.result)), 24)}
+            </DoneChip>
+          ))}
+        </div>
+      </div>
+    );
+  } else {
+    const answerTurn =
+      [...scene.model.turns]
+        .reverse()
+        .find((x) => x.answerStep <= scene.step) ?? t;
+    focal = (
+      <AnswerFocal
+        scene={scene}
+        turn={answerTurn}
+        loop={loop}
+        showTerminal={showTerminal}
+      />
+    );
   }
 
   return (
-    <div className="h-full flex min-h-0">
-      {/* ---------------- The AI ---------------- */}
+    <div className="h-full flex flex-col gap-3 min-h-0">
+      {strip}
+      {top && <div className="flex-shrink-0">{top}</div>}
       <motion.div
-        animate={{
-          borderColor: aiActive ? `${accentColor}aa` : 'rgba(255,255,255,0.1)',
-        }}
-        className="basis-[36%] min-w-[180px] max-w-[320px] flex-shrink-0 flex flex-col rounded-xl border bg-white/[0.02] p-2 min-h-0"
+        key={`focal-${phase}-${scene.focus}-${scene.turnIdx}-${scene.callIdx}`}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden"
       >
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <motion.span
-            className="text-lg leading-none"
-            animate={phase === 'thinking' ? { rotate: [0, -10, 10, 0] } : { rotate: 0 }}
-            transition={phase === 'thinking' ? { duration: 1, repeat: Infinity } : {}}
-          >
-            🤖
-          </motion.span>
-          <div className="min-w-0 text-[13px] font-semibold text-white/90 leading-tight truncate">
-            The AI <span className="text-[11px] font-normal text-white/40">· OpenAI server</span>
-          </div>
-        </div>
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <ToolSelectionAnim
-            tools={tools}
-            mode={mode}
-            chosen={t?.calls.map((c) => c.name) ?? []}
-            usedBefore={
-              phase === 'answer' || phase === 'done'
-                ? scene.model.turns.flatMap((x) => (x.decideStep <= scene.step ? x.calls.map((c) => c.name) : []))
-                : earlierNames
-            }
-            filledArgs={filledArgs}
-            highlightField={hf}
-            accentColor={accentColor}
-            animKey={`${scene.step}`}
-          />
-        </div>
-        <motion.div
-          key={`th-${scene.step}`}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-1.5 rounded-lg px-2 py-1 text-[12.5px] leading-snug text-white/85 border"
-          style={{
-            borderColor: `${accentColor}55`,
-            backgroundColor: `${accentColor}14`,
-          }}
-        >
-          💭 {thought(scene, tools, loop)}
-        </motion.div>
-      </motion.div>
-
-      {/* ---------------- packet ---------------- */}
-      <Channel scene={scene} />
-
-      {/* ---------------- Your Python code ---------------- */}
-      <motion.div
-        animate={{
-          borderColor: pyActive ? '#4ade8088' : 'rgba(255,255,255,0.1)',
-        }}
-        className="flex-1 min-w-0 flex flex-col rounded-xl border bg-white/[0.02] p-2 min-h-0"
-      >
-        <div className="flex items-center gap-1.5 mb-1.5 flex-shrink-0">
-          <span className="text-lg leading-none">🐍</span>
-          <div className="min-w-0 text-[13px] font-semibold text-white/90 leading-tight truncate">
-            Your Python code{' '}
-            <span className="text-[11px] font-normal text-white/40">· your laptop, runs the real functions</span>
-          </div>
-        </div>
-        <div className="flex-1 min-h-0 overflow-hidden">{view}</div>
-        {scene.output && !(showTerminal && phase !== 'setup') && (
-          <motion.div
-            key={`out-${scene.step}`}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-1.5 flex-shrink-0 rounded-md bg-black/40 border border-white/10 px-2 py-1 font-mono text-[12px] text-white/80 truncate"
-          >
-            <span className="text-white/40">🖨 print → </span>
-            {scene.output}
-          </motion.div>
-        )}
+        {focal}
       </motion.div>
     </div>
   );

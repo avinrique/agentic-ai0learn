@@ -1,4 +1,4 @@
-'use client';
+"use client";
 /**
  * AgentLoopDiagram — the shared "agent loop" model plus the loop counter strip.
  *
@@ -6,30 +6,40 @@
  * piece of data carries the step index at which it becomes visible. The scene for step N is
  * then a pure function of (trace, N), so Prev / Next / Reset / jumping all render correctly.
  */
-import { motion } from 'framer-motion';
-import type { TraceStep } from '@/stores/tracerStore';
+import { motion } from "framer-motion";
+import type { TraceStep } from "@/stores/tracerStore";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 export type AgentPhase =
-  'setup' | 'send' | 'thinking' | 'decide' | 'check' | 'select' | 'execute' | 'return' | 'loopback' | 'answer' | 'done';
+  | "setup"
+  | "send"
+  | "thinking"
+  | "decide"
+  | "check"
+  | "select"
+  | "execute"
+  | "return"
+  | "loopback"
+  | "answer"
+  | "done";
 
 export type SetupFocus =
-  | 'intro'
-  | 'import'
-  | 'client'
-  | 'functions'
-  | 'menu'
-  | 'menu-name'
-  | 'menu-desc'
-  | 'menu-params'
-  | 'map'
-  | 'system'
-  | 'question'
-  | 'envelope'
-  | 'loop'
-  | 'console';
+  | "intro"
+  | "import"
+  | "client"
+  | "functions"
+  | "menu"
+  | "menu-name"
+  | "menu-desc"
+  | "menu-params"
+  | "map"
+  | "system"
+  | "question"
+  | "envelope"
+  | "loop"
+  | "console";
 
 export interface AgentCall {
   id: string;
@@ -68,10 +78,10 @@ export interface AgentModel {
 }
 
 export type ConvMsg =
-  | { role: 'system'; text: string }
-  | { role: 'user'; text: string }
-  | { role: 'assistant'; text?: string; calls?: AgentCall[] }
-  | { role: 'tool'; id: string; name: string; text: string };
+  | { role: "system"; text: string }
+  | { role: "user"; text: string }
+  | { role: "assistant"; text?: string; calls?: AgentCall[] }
+  | { role: "tool"; id: string; name: string; text: string };
 
 export interface ToolCard {
   name: string;
@@ -110,9 +120,12 @@ const NEVER = Number.POSITIVE_INFINITY;
 // Small parsing helpers
 // ---------------------------------------------------------------------------
 export function unquote(v: string | undefined): string {
-  if (!v) return '';
+  if (!v) return "";
   const t = v.trim();
-  if (t.length >= 2 && ((t[0] === '"' && t.endsWith('"')) || (t[0] === "'" && t.endsWith("'")))) {
+  if (
+    t.length >= 2 &&
+    ((t[0] === '"' && t.endsWith('"')) || (t[0] === "'" && t.endsWith("'")))
+  ) {
     return t.slice(1, -1);
   }
   return t;
@@ -120,19 +133,19 @@ export function unquote(v: string | undefined): string {
 
 /** Turn the literal two characters "\n" into real new lines. */
 export function unescape(v: string): string {
-  return v.replace(/\\n/g, '\n').replace(/\\"/g, '"');
+  return v.replace(/\\n/g, "\n").replace(/\\"/g, '"');
 }
 
 /** Index of the bracket that closes the one at `open`, honouring quotes. */
 function matchBracket(s: string, open: number): number {
-  const pairs: Record<string, string> = { '[': ']', '{': '}', '(': ')' };
+  const pairs: Record<string, string> = { "[": "]", "{": "}", "(": ")" };
   const stack: string[] = [];
-  let quote = '';
+  let quote = "";
   for (let i = open; i < s.length; i++) {
     const c = s[i];
     if (quote) {
-      if (c === '\\') i++;
-      else if (c === quote) quote = '';
+      if (c === "\\") i++;
+      else if (c === quote) quote = "";
       continue;
     }
     if (c === '"' || c === "'") quote = c;
@@ -149,24 +162,24 @@ function matchBracket(s: string, open: number): number {
 export function countTopLevel(list: string | undefined): number {
   if (!list) return 0;
   const s = list.trim();
-  if (!s.startsWith('[')) return 0;
+  if (!s.startsWith("[")) return 0;
   const end = matchBracket(s, 0);
   const inner = s.slice(1, end).trim();
   if (!inner) return 0;
   let depth = 0;
-  let quote = '';
+  let quote = "";
   let count = 1;
   for (let i = 0; i < inner.length; i++) {
     const c = inner[i];
     if (quote) {
-      if (c === '\\') i++;
-      else if (c === quote) quote = '';
+      if (c === "\\") i++;
+      else if (c === quote) quote = "";
       continue;
     }
     if (c === '"' || c === "'") quote = c;
-    else if ('[{('.includes(c)) depth++;
-    else if (']})'.includes(c)) depth--;
-    else if (c === ',' && depth === 0) count++;
+    else if ("[{(".includes(c)) depth++;
+    else if ("]})".includes(c)) depth--;
+    else if (c === "," && depth === 0) count++;
   }
   return count;
 }
@@ -175,7 +188,8 @@ export function countTopLevel(list: string | undefined): number {
 export function parseArgs(v: string | undefined): [string, string][] {
   if (!v) return [];
   const out: [string, string][] = [];
-  const re = /['"]([\w.]+)['"]\s*:\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^,}]+)/g;
+  const re =
+    /['"]([\w.]+)['"]\s*:\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^,}]+)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(v))) {
     let val = m[2].trim();
@@ -186,11 +200,11 @@ export function parseArgs(v: string | undefined): [string, string][] {
 }
 
 export function argsJson(args: [string, string][]): string {
-  return `{${args.map(([k, v]) => `"${k}": ${v}`).join(', ')}}`;
+  return `{${args.map(([k, v]) => `"${k}": ${v}`).join(", ")}}`;
 }
 
 export function argsCall(name: string, args: [string, string][]): string {
-  return `${name}(${args.map(([k, v]) => `${k}=${v}`).join(', ')})`;
+  return `${name}(${args.map(([k, v]) => `${k}=${v}`).join(", ")})`;
 }
 
 interface ParsedReply {
@@ -202,37 +216,41 @@ function parseReply(v: string): ParsedReply {
   const res: ParsedReply = { calls: [] };
   const cm = v.match(/content[:=]\s*"((?:[^"\\]|\\.)*)"/);
   if (cm) res.content = cm[1];
-  const k = v.indexOf('tool_calls');
+  const k = v.indexOf("tool_calls");
   if (k >= 0) {
-    let i = k + 'tool_calls'.length;
+    let i = k + "tool_calls".length;
     while (i < v.length && /[\s:=]/.test(v[i])) i++;
-    if (v[i] === '[') {
+    if (v[i] === "[") {
       const seg = v.slice(i + 1, matchBracket(v, i));
       if (/name[:=]\s*"/.test(seg)) {
-        const names = Array.from(seg.matchAll(/name[:=]\s*"(\w+)"/g)).map((m) => m[1]);
-        const ids = Array.from(seg.matchAll(/id[:=]\s*"([^"]+)"/g)).map((m) => m[1]);
+        const names = Array.from(seg.matchAll(/name[:=]\s*"(\w+)"/g)).map(
+          (m) => m[1],
+        );
+        const ids = Array.from(seg.matchAll(/id[:=]\s*"([^"]+)"/g)).map(
+          (m) => m[1],
+        );
         res.calls = names.map((name, j) => ({ name, id: ids[j] }));
       } else {
         // form: [multiply(50, 2), add(9, 4)] — only names at depth 0
         let depth = 0;
-        let quote = '';
-        let word = '';
+        let quote = "";
+        let word = "";
         for (let j = 0; j < seg.length; j++) {
           const c = seg[j];
           if (quote) {
-            if (c === quote) quote = '';
+            if (c === quote) quote = "";
             continue;
           }
           if (c === '"' || c === "'") {
             quote = c;
-            word = '';
-          } else if (c === '(') {
+            word = "";
+          } else if (c === "(") {
             if (depth === 0 && word) res.calls.push({ name: word });
             depth++;
-            word = '';
-          } else if (c === ')') depth--;
+            word = "";
+          } else if (c === ")") depth--;
           else if (/\w/.test(c)) word += c;
-          else word = '';
+          else word = "";
         }
       }
     }
@@ -243,21 +261,21 @@ function parseReply(v: string): ParsedReply {
 // ---------------------------------------------------------------------------
 // Phase of one step, from its trigger
 // ---------------------------------------------------------------------------
-function triggerPhase(t: string): AgentPhase | 'hold' | null {
+function triggerPhase(t: string): AgentPhase | "hold" | null {
   if (!t) return null;
-  if (t === 'chatLoop' || t === 'agentLoop-enter') return null;
-  if (t.startsWith('agentLoop-send')) return 'send';
-  if (t === 'apiProcessing') return 'thinking';
-  if (t === 'agentLoop-decide') return 'decide';
-  if (t === 'agentLoop-check') return 'check';
-  if (t.startsWith('toolSelect')) return 'select';
-  if (t === 'agentLoop-execute') return 'execute';
-  if (t === 'agentLoop-return') return 'return';
-  if (t === 'agentLoop-loopback') return 'loopback';
-  if (t === 'agentLoop-hold') return 'hold';
-  if (t === 'agentLoop-finalDone') return 'done';
-  if (t.includes('final')) return 'answer';
-  return 'setup';
+  if (t === "chatLoop" || t === "agentLoop-enter") return null;
+  if (t.startsWith("agentLoop-send")) return "send";
+  if (t === "apiProcessing") return "thinking";
+  if (t === "agentLoop-decide") return "decide";
+  if (t === "agentLoop-check") return "check";
+  if (t.startsWith("toolSelect")) return "select";
+  if (t === "agentLoop-execute") return "execute";
+  if (t === "agentLoop-return") return "return";
+  if (t === "agentLoop-loopback") return "loopback";
+  if (t === "agentLoop-hold") return "hold";
+  if (t === "agentLoop-finalDone") return "done";
+  if (t.includes("final")) return "answer";
+  return "setup";
 }
 
 function varsOf(step: TraceStep | undefined): Record<string, string> {
@@ -267,50 +285,65 @@ function varsOf(step: TraceStep | undefined): Record<string, string> {
 }
 
 function newVarsOf(step: TraceStep | undefined): Set<string> {
-  return new Set((step?.variables ?? []).filter((v) => v.isNew || v.isChanged).map((v) => v.name));
+  return new Set(
+    (step?.variables ?? [])
+      .filter((v) => v.isNew || v.isChanged)
+      .map((v) => v.name),
+  );
 }
 
 function questionFrom(vars: Record<string, string>): string {
   const m = vars.messages?.match(/role:"user", content:"((?:[^"\\]|\\.)*)"/);
   if (m) return m[1];
   if (vars.user_query) return unquote(vars.user_query);
-  if (vars.user_input && unquote(vars.user_input) !== 'exit') return unquote(vars.user_input);
-  return '';
+  if (vars.user_input && unquote(vars.user_input) !== "exit")
+    return unquote(vars.user_input);
+  return "";
 }
 
 // ---------------------------------------------------------------------------
 // Build the model for a whole trace
 // ---------------------------------------------------------------------------
-export function buildAgentModel(steps: TraceStep[], toolNames: string[]): AgentModel {
+export function buildAgentModel(
+  steps: TraceStep[],
+  toolNames: string[],
+): AgentModel {
   const turns: AgentTurn[] = [];
   const info: StepInfo[] = [];
   let cur = -1;
   let ptr = -1;
   let prev: Record<string, string> = {};
-  let lastPhase: AgentPhase = 'setup';
-  let question = '';
+  let lastPhase: AgentPhase = "setup";
+  let question = "";
 
   steps.forEach((step, i) => {
     const vars = varsOf(step);
     const fresh = newVarsOf(step);
-    const t = step.animationTrigger ?? '';
-    const changed = (n: string) => n in vars && (prev[n] !== vars[n] || fresh.has(n));
+    const t = step.animationTrigger ?? "";
+    const changed = (n: string) =>
+      n in vars && (prev[n] !== vars[n] || fresh.has(n));
     if (!question) question = questionFrom(vars);
 
-    if (t.startsWith('agentLoop-send')) {
-      turns.push({ n: turns.length + 1, sendStep: i, decideStep: NEVER, calls: [], answerStep: NEVER });
+    if (t.startsWith("agentLoop-send")) {
+      turns.push({
+        n: turns.length + 1,
+        sendStep: i,
+        decideStep: NEVER,
+        calls: [],
+        answerStep: NEVER,
+      });
       cur = turns.length - 1;
       ptr = -1;
     }
     const turn = cur >= 0 ? turns[cur] : undefined;
 
-    for (const rn of ['message', 'assistant_message']) {
+    for (const rn of ["message", "assistant_message"]) {
       if (turn && changed(rn)) {
         const p = parseReply(vars[rn]);
         if (p.calls.length) {
           if (turn.calls.length === 0) {
             turn.calls = p.calls.map((c) => ({
-              id: c.id ?? '',
+              id: c.id ?? "",
               name: c.name,
               args: [],
               decideStep: i,
@@ -333,13 +366,13 @@ export function buildAgentModel(steps: TraceStep[], toolNames: string[]): AgentM
     if (turn && turn.calls.length) {
       const calls = turn.calls;
       const nameVar = vars.function_name ?? vars.tool_name;
-      if (changed('tool_call')) {
+      if (changed("tool_call")) {
         ptr = Math.min(ptr + 1, calls.length - 1);
         const idm = vars.tool_call.match(/id[:=]\s*"([^"]+)"/);
         if (idm) calls[ptr].id = idm[1];
         calls[ptr].selectStep = Math.min(calls[ptr].selectStep, i);
       }
-      if ((changed('function_name') || changed('tool_name')) && nameVar) {
+      if ((changed("function_name") || changed("tool_name")) && nameVar) {
         const nm = unquote(nameVar);
         if (ptr < 0) ptr = 0;
         if (calls[ptr].name !== nm) {
@@ -348,26 +381,30 @@ export function buildAgentModel(steps: TraceStep[], toolNames: string[]): AgentM
         }
         calls[ptr].selectStep = Math.min(calls[ptr].selectStep, i);
       }
-      if (t.startsWith('toolSelect-') && ptr < 0) {
-        const j = calls.findIndex((c) => c.name === t.slice('toolSelect-'.length));
+      if (t.startsWith("toolSelect-") && ptr < 0) {
+        const j = calls.findIndex(
+          (c) => c.name === t.slice("toolSelect-".length),
+        );
         ptr = j >= 0 ? j : 0;
       }
-      if (changed('arguments') || changed('args')) {
+      if (changed("arguments") || changed("args")) {
         if (ptr < 0) ptr = 0;
         calls[ptr].args = parseArgs(vars.arguments ?? vars.args);
         calls[ptr].argsStep = Math.min(calls[ptr].argsStep, i);
       }
-      if (t === 'agentLoop-execute' && ptr >= 0) calls[ptr].execStep = Math.min(calls[ptr].execStep, i);
-      if (changed('result') && ptr >= 0) {
+      if (t === "agentLoop-execute" && ptr >= 0)
+        calls[ptr].execStep = Math.min(calls[ptr].execStep, i);
+      if (changed("result") && ptr >= 0) {
         calls[ptr].result = vars.result;
         calls[ptr].resultStep = Math.min(calls[ptr].resultStep, i);
         calls[ptr].execStep = Math.min(calls[ptr].execStep, i);
       }
-      if (t === 'agentLoop-return' && ptr >= 0) calls[ptr].returnStep = Math.min(calls[ptr].returnStep, i);
+      if (t === "agentLoop-return" && ptr >= 0)
+        calls[ptr].returnStep = Math.min(calls[ptr].returnStep, i);
     }
 
-    if (turn && (changed('final_answer') || changed('message.content'))) {
-      turn.answer = unquote(vars.final_answer ?? vars['message.content']);
+    if (turn && (changed("final_answer") || changed("message.content"))) {
+      turn.answer = unquote(vars.final_answer ?? vars["message.content"]);
       turn.answerStep = Math.min(turn.answerStep, i);
       turn.decideStep = Math.min(turn.decideStep, i);
     }
@@ -376,28 +413,36 @@ export function buildAgentModel(steps: TraceStep[], toolNames: string[]): AgentM
     let phase: AgentPhase;
     const tp = triggerPhase(t);
     const answered = turns.some((tt) => tt.answerStep <= i);
-    if (tp === null) phase = cur < 0 ? 'setup' : answered ? 'done' : lastPhase;
-    else if (tp === 'hold') phase = cur < 0 ? 'setup' : lastPhase;
+    if (tp === null) phase = cur < 0 ? "setup" : answered ? "done" : lastPhase;
+    else if (tp === "hold") phase = cur < 0 ? "setup" : lastPhase;
     else phase = tp;
     lastPhase = phase;
 
     // ---- setup focus ----
-    let focus: SetupFocus = 'intro';
+    let focus: SetupFocus = "intro";
     const newFn = toolNames.some((n) => fresh.has(n));
-    if (t === 'import') focus = 'import';
-    else if (fresh.has('user_input') && unquote(vars.user_input) !== 'exit') focus = 'question';
-    else if (t === 'chatLoop' || t === 'agentLoop-enter') focus = 'loop';
-    else if (t === 'agentLoop-pack') focus = 'envelope';
-    else if (t.startsWith('defineTools-')) focus = `menu-${t.slice('defineTools-'.length)}` as SetupFocus;
-    else if (fresh.has('available_functions')) focus = 'map';
-    else if (fresh.has('tools')) focus = 'menu';
-    else if (newFn) focus = 'functions';
-    else if (fresh.has('system_prompt') || t === 'addSystemMsg') focus = 'system';
-    else if (fresh.has('messages') || fresh.has('user_query') || fresh.has('user_input')) {
-      focus = questionFrom(vars) ? 'question' : 'system';
-    } else if (fresh.has('client')) focus = 'client';
-    else if (t === 'defineTools') focus = 'tools' in vars ? 'menu' : 'functions';
-    else if (step.output) focus = 'console';
+    if (t === "import") focus = "import";
+    else if (fresh.has("user_input") && unquote(vars.user_input) !== "exit")
+      focus = "question";
+    else if (t === "chatLoop" || t === "agentLoop-enter") focus = "loop";
+    else if (t === "agentLoop-pack") focus = "envelope";
+    else if (t.startsWith("defineTools-"))
+      focus = `menu-${t.slice("defineTools-".length)}` as SetupFocus;
+    else if (fresh.has("available_functions")) focus = "map";
+    else if (fresh.has("tools")) focus = "menu";
+    else if (newFn) focus = "functions";
+    else if (fresh.has("system_prompt") || t === "addSystemMsg")
+      focus = "system";
+    else if (
+      fresh.has("messages") ||
+      fresh.has("user_query") ||
+      fresh.has("user_input")
+    ) {
+      focus = questionFrom(vars) ? "question" : "system";
+    } else if (fresh.has("client")) focus = "client";
+    else if (t === "defineTools")
+      focus = "tools" in vars ? "menu" : "functions";
+    else if (step.output) focus = "console";
 
     info.push({ phase, turn: cur, call: ptr, focus });
     prev = vars;
@@ -416,27 +461,53 @@ export function buildAgentModel(steps: TraceStep[], toolNames: string[]): AgentM
 // ---------------------------------------------------------------------------
 // Scene for one step
 // ---------------------------------------------------------------------------
-export function sceneAt(model: AgentModel, steps: TraceStep[], s: number): AgentScene {
+export function sceneAt(
+  model: AgentModel,
+  steps: TraceStep[],
+  s: number,
+): AgentScene {
   const step = steps[s];
   const vars = varsOf(step);
-  const inf = model.info[s] ?? { phase: 'setup', turn: -1, call: -1, focus: 'intro' };
+  const inf = model.info[s] ?? {
+    phase: "setup",
+    turn: -1,
+    call: -1,
+    focus: "intro",
+  };
   const turn = inf.turn >= 0 ? model.turns[inf.turn] : undefined;
   const call = turn && inf.call >= 0 ? turn.calls[inf.call] : undefined;
 
-  const hasSystem = steps.some((st) => /^\[\s*system/.test(varsOf(st).messages ?? ''));
-  const sysVar = vars.system_prompt ?? steps.map((st) => varsOf(st).system_prompt).find(Boolean);
-  const mfSystem = hasSystem && !sysVar ? 'You are a friendly math tutor. Use tools to solve problems.' : '';
-  const systemPrompt = unquote(sysVar ?? '') || mfSystem;
+  const hasSystem = steps.some((st) =>
+    /^\[\s*system/.test(varsOf(st).messages ?? ""),
+  );
+  const sysVar =
+    vars.system_prompt ??
+    steps.map((st) => varsOf(st).system_prompt).find(Boolean);
+  const mfSystem =
+    hasSystem && !sysVar
+      ? "You are a friendly math tutor. Use tools to solve problems."
+      : "";
+  const systemPrompt = unquote(sysVar ?? "") || mfSystem;
 
   const conversation: ConvMsg[] = [];
-  if (hasSystem) conversation.push({ role: 'system', text: systemPrompt || 'system prompt' });
-  conversation.push({ role: 'user', text: model.question });
+  if (hasSystem)
+    conversation.push({
+      role: "system",
+      text: systemPrompt || "system prompt",
+    });
+  conversation.push({ role: "user", text: model.question });
   for (const tt of model.turns) {
     if (tt.calls.length) {
-      conversation.push({ role: 'assistant', calls: tt.calls });
-      for (const c of tt.calls) conversation.push({ role: 'tool', id: c.id, name: c.name, text: c.result ?? '' });
+      conversation.push({ role: "assistant", calls: tt.calls });
+      for (const c of tt.calls)
+        conversation.push({
+          role: "tool",
+          id: c.id,
+          name: c.name,
+          text: c.result ?? "",
+        });
     } else if (tt.answer !== undefined) {
-      conversation.push({ role: 'assistant', text: tt.answer });
+      conversation.push({ role: "assistant", text: tt.answer });
     }
   }
 
@@ -446,13 +517,13 @@ export function sceneAt(model: AgentModel, steps: TraceStep[], s: number): Agent
   for (let i = 0; i <= s && i < steps.length; i++) {
     const tr = steps[i].animationTrigger;
     if (steps[i].output) outputsSoFar.push({ step: i, text: steps[i].output });
-    if (tr === 'import') importDone = true;
-    if (tr === 'chatLoop' || tr === 'agentLoop-enter') loopSeen = true;
+    if (tr === "import") importDone = true;
+    if (tr === "chatLoop" || tr === "agentLoop-enter") loopSeen = true;
   }
 
   return {
     step: s,
-    trigger: step?.animationTrigger ?? '',
+    trigger: step?.animationTrigger ?? "",
     phase: inf.phase,
     focus: inf.focus,
     model,
@@ -467,7 +538,7 @@ export function sceneAt(model: AgentModel, steps: TraceStep[], s: number): Agent
     conversation,
     msgCount: countTopLevel(vars.messages),
     prevMsgCount: s > 0 ? countTopLevel(varsOf(steps[s - 1]).messages) : 0,
-    output: step?.output ?? '',
+    output: step?.output ?? "",
     outputsSoFar,
     importDone,
     loopSeen,
@@ -477,24 +548,51 @@ export function sceneAt(model: AgentModel, steps: TraceStep[], s: number): Agent
 // ---------------------------------------------------------------------------
 // Shared visual helpers
 // ---------------------------------------------------------------------------
-const ID_COLORS = ['#f472b6', '#22d3ee', '#fbbf24', '#4ade80', '#a78bfa', '#fb923c'];
+const ID_COLORS = [
+  "#f472b6",
+  "#22d3ee",
+  "#fbbf24",
+  "#4ade80",
+  "#a78bfa",
+  "#fb923c",
+];
 
 export function idColor(model: AgentModel, id: string): string {
   const i = model.allIds.indexOf(id);
   return ID_COLORS[(i < 0 ? 0 : i) % ID_COLORS.length];
 }
 
-export function IdChip({ id, color, pulse = false }: { id: string; color: string; pulse?: boolean }) {
+export function IdChip({
+  id,
+  color,
+  pulse = false,
+}: {
+  id: string;
+  color: string;
+  pulse?: boolean;
+}) {
   return (
     <motion.span
-      className="inline-flex items-center gap-1 px-1.5 py-[1px] rounded font-mono text-[12px] font-semibold whitespace-nowrap"
-      style={{ color, backgroundColor: `${color}1f`, border: `1px solid ${color}66` }}
+      className="inline-flex items-center gap-1 px-1.5 py-[1px] rounded font-mono text-[13px] font-semibold whitespace-nowrap"
+      style={{
+        color,
+        backgroundColor: `${color}1f`,
+        border: `1px solid ${color}66`,
+      }}
       animate={
         pulse
-          ? { boxShadow: [`0 0 0px ${color}00`, `0 0 12px ${color}aa`, `0 0 0px ${color}00`] }
-          : { boxShadow: 'none' }
+          ? {
+              boxShadow: [
+                `0 0 0px ${color}00`,
+                `0 0 12px ${color}aa`,
+                `0 0 0px ${color}00`,
+              ],
+            }
+          : { boxShadow: "none" }
       }
-      transition={pulse ? { duration: 1.4, repeat: Infinity } : { duration: 0.2 }}
+      transition={
+        pulse ? { duration: 1.4, repeat: Infinity } : { duration: 0.2 }
+      }
     >
       🔗 {id}
     </motion.span>
@@ -502,8 +600,8 @@ export function IdChip({ id, color, pulse = false }: { id: string; color: string
 }
 
 export function truncate(s: string, n: number): string {
-  const one = s.replace(/\s+/g, ' ').trim();
-  return one.length > n ? one.slice(0, n - 1) + '…' : one;
+  const one = s.replace(/\s+/g, " ").trim();
+  return one.length > n ? one.slice(0, n - 1) + "…" : one;
 }
 
 /** Lessons without a loop send the tools only on the first call. */
@@ -512,92 +610,152 @@ export function toolsSent(t: AgentTurn | undefined, loop: boolean): boolean {
 }
 
 export function usedTools(sc: AgentScene): boolean {
-  return sc.model.turns.some((t) => t.calls.length > 0 && t.decideStep <= sc.step);
+  return sc.model.turns.some(
+    (t) => t.calls.length > 0 && t.decideStep <= sc.step,
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Status sentence (plain words) for the current step
 // ---------------------------------------------------------------------------
-export function statusText(sc: AgentScene, loop: boolean): { icon: string; text: string } {
+export function statusText(
+  sc: AgentScene,
+  loop: boolean,
+): { icon: string; text: string } {
   const t = sc.turn;
   const c = sc.call;
-  const callsTxt = t?.calls.map((x) => x.name).join(' + ') ?? '';
+  const callsTxt = t?.calls.map((x) => x.name).join(" + ") ?? "";
   switch (sc.phase) {
-    case 'setup': {
+    case "setup": {
       const m: Record<SetupFocus, [string, string]> = {
-        intro: ['🧰', 'Getting ready: first we set up the tools and the chat history'],
-        import: ['📦', "Importing what we need: json reads the AI's arguments"],
-        client: ['🔌', 'Creating the client: our line to the AI'],
-        functions: ['🐍', 'Writing real Python functions: only OUR code can run them'],
-        menu: ['📋', 'Writing the tool menu (tools): what the AI is allowed to ask for'],
-        'menu-name': ['🏷️', 'Each menu card has a name: the AI will send this exact name back'],
-        'menu-desc': ['📝', 'The description tells the AI WHEN a tool is useful'],
-        'menu-params': ['🔢', 'The parameters are the inputs the AI must fill in'],
-        map: ['🗂️', 'A dictionary maps each tool name (text) to the real function'],
-        system: ['⚙️', 'The system prompt gives the AI its role'],
-        question: ['👤', `The question: "${truncate(sc.question, 60)}"`],
-        envelope: ['📨', 'Packing the request: messages + tools + tool_choice'],
-        loop: ['🔁', 'Entering a while True loop: it repeats until a break'],
-        console: ['🖨️', 'Printing to the console'],
+        intro: [
+          "🧰",
+          "Getting ready: first we set up the tools and the chat history",
+        ],
+        import: ["📦", "Importing what we need: json reads the AI's arguments"],
+        client: ["🔌", "Creating the client: our line to the AI"],
+        functions: [
+          "🐍",
+          "Writing real Python functions: only OUR code can run them",
+        ],
+        menu: [
+          "📋",
+          "Writing the tool menu (tools): what the AI is allowed to ask for",
+        ],
+        "menu-name": [
+          "🏷️",
+          "Each menu card has a name: the AI will send this exact name back",
+        ],
+        "menu-desc": [
+          "📝",
+          "The description tells the AI WHEN a tool is useful",
+        ],
+        "menu-params": [
+          "🔢",
+          "The parameters are the inputs the AI must fill in",
+        ],
+        map: [
+          "🗂️",
+          "A dictionary maps each tool name (text) to the real function",
+        ],
+        system: ["⚙️", "The system prompt gives the AI its role"],
+        question: ["👤", `The question: "${truncate(sc.question, 60)}"`],
+        envelope: ["📨", "Packing the request: messages + tools + tool_choice"],
+        loop: ["🔁", "Entering a while True loop: it repeats until a break"],
+        console: ["🖨️", "Printing to the console"],
       };
       const [icon, text] = m[sc.focus];
       return { icon, text };
     }
-    case 'send':
+    case "send":
       return {
-        icon: '📨',
+        icon: "📨",
         text: `${loop ? `Loop turn ${t?.n}` : `AI call #${t?.n}`}: your code sends messages (${sc.msgCount})${
-          toolsSent(t, loop) ? ' + the tool menu' : ' (no tools this time)'
+          toolsSent(t, loop) ? " + the tool menu" : " (no tools this time)"
         } to the AI`,
       };
-    case 'thinking':
+    case "thinking":
       return t?.calls.length
-        ? { icon: '🤔', text: `The AI reads the menu and picks: ${callsTxt}` }
-        : { icon: '🤔', text: 'The AI has what it needs: no tool this time, it writes the answer' };
-    case 'decide':
-      return t?.calls.length
-        ? { icon: '🧾', text: `The AI's reply is an order slip: "please run ${callsTxt}" (no text yet)` }
-        : { icon: '💬', text: "The AI's reply is plain text: tool_calls is None" };
-    case 'check':
-      return t?.calls.length
-        ? { icon: '❓', text: 'Any tool_calls? YES → run the tools (no break)' }
+        ? { icon: "🤔", text: `The AI reads the menu and picks: ${callsTxt}` }
         : {
-            icon: '❓',
-            text: `Any tool_calls? NO → ${loop ? 'this is the final answer → break' : 'skip to the answer'}`,
+            icon: "🤔",
+            text: "The AI has what it needs: no tool this time, it writes the answer",
           };
-    case 'select':
-      return c
+    case "decide":
+      return t?.calls.length
         ? {
-            icon: '🔎',
-            text: `Your code reads the slip: name "${c.name}"${c.argsStep <= sc.step ? `, arguments ${argsJson(c.args)}` : ''}`,
+            icon: "🧾",
+            text: `The AI's reply is an order slip: "please run ${callsTxt}" (no text yet)`,
           }
-        : { icon: '🔎', text: 'Your code reads the order slip' };
-    case 'execute':
+        : {
+            icon: "💬",
+            text: "The AI's reply is plain text: tool_calls is None",
+          };
+    case "check":
+      return t?.calls.length
+        ? { icon: "❓", text: "Any tool_calls? YES → run the tools (no break)" }
+        : {
+            icon: "❓",
+            text: `Any tool_calls? NO → ${loop ? "this is the final answer → break" : "skip to the answer"}`,
+          };
+    case "select":
       return c
         ? {
-            icon: '⚙️',
+            icon: "🔎",
+            text: `Your code reads the slip: name "${c.name}"${c.argsStep <= sc.step ? `, arguments ${argsJson(c.args)}` : ""}`,
+          }
+        : { icon: "🔎", text: "Your code reads the order slip" };
+    case "execute":
+      return c
+        ? {
+            icon: "⚙️",
             text:
               c.resultStep <= sc.step
                 ? `Your Python runs ${argsCall(c.name, c.args)} → ${truncate(unescape(unquote(c.result)), 40)}`
                 : `Your Python runs ${argsCall(c.name, c.args)}…`,
           }
-        : { icon: '⚙️', text: 'Your Python code runs the function' };
-    case 'return':
-      return { icon: '📦', text: `The result goes back as role "tool" with the SAME id: ${c?.id ?? ''}` };
-    case 'loopback':
-      return { icon: '🔁', text: `Back to the top of while True → turn ${(t?.n ?? 0) + 1}` };
-    case 'answer': {
-      if (loop) return { icon: '💬', text: 'No tool_calls → final answer → break out of the loop' };
+        : { icon: "⚙️", text: "Your Python code runs the function" };
+    case "return":
+      return {
+        icon: "📦",
+        text: `The result goes back as role "tool" with the SAME id: ${c?.id ?? ""}`,
+      };
+    case "loopback":
+      return {
+        icon: "🔁",
+        text: `Back to the top of while True → turn ${(t?.n ?? 0) + 1}`,
+      };
+    case "answer": {
+      if (loop)
+        return {
+          icon: "💬",
+          text: "No tool_calls → final answer → break out of the loop",
+        };
       return usedTools(sc)
-        ? { icon: '💬', text: "The AI's final answer, written from the real result" }
-        : { icon: '💬', text: 'The AI answered directly: no tool, no Python function ran' };
+        ? {
+            icon: "💬",
+            text: "The AI's final answer, written from the real result",
+          }
+        : {
+            icon: "💬",
+            text: "The AI answered directly: no tool, no Python function ran",
+          };
     }
-    case 'done':
-      if (unquote(sc.vars.user_input) === 'exit')
-        return { icon: '👋', text: 'The user typed exit → the chat loop ends: Goodbye!' };
+    case "done":
+      if (unquote(sc.vars.user_input) === "exit")
+        return {
+          icon: "👋",
+          text: "The user typed exit → the chat loop ends: Goodbye!",
+        };
       return usedTools(sc)
-        ? { icon: '✅', text: 'Done! The AI chose, your Python did the work, the AI explained' }
-        : { icon: '✅', text: 'Done! One call to the AI, and the tool was never needed' };
+        ? {
+            icon: "✅",
+            text: "Done! The AI chose, your Python did the work, the AI explained",
+          }
+        : {
+            icon: "✅",
+            text: "Done! One call to the AI, and the tool was never needed",
+          };
   }
 }
 
@@ -617,21 +775,20 @@ export default function AgentLoopDiagram({
 }) {
   const visible = scene.model.turns.filter((t) => t.sendStep <= scene.step);
   const finished =
-    visible.some((t) => t.answerStep <= scene.step) && (scene.phase === 'answer' || scene.phase === 'done');
-  const status = statusText(scene, loop);
-
+    visible.some((t) => t.answerStep <= scene.step) &&
+    (scene.phase === "answer" || scene.phase === "done");
   return (
-    <div className="flex-shrink-0 space-y-1.5">
+    <div className="flex-shrink-0">
       <div className="flex items-center gap-1.5 min-w-0">
-        <div className="text-[12px] text-white/40 uppercase tracking-wider font-semibold mr-1 truncate min-w-[40px] flex-shrink">
+        <div className="text-[13px] text-white/45 uppercase tracking-wider font-semibold mr-1 truncate min-w-[40px] flex-shrink">
           {agentName}
         </div>
         <div className="flex-1" />
-        <span className="text-[12px] text-white/40 whitespace-nowrap flex-shrink-0">
-          {loop ? 'Loop turns:' : 'AI calls:'}
+        <span className="text-[13px] text-white/45 whitespace-nowrap flex-shrink-0">
+          {loop ? "Loop turns:" : "AI calls:"}
         </span>
         {visible.length === 0 && (
-          <span className="text-[12px] text-white/30 px-2 py-0.5 rounded-full border border-dashed border-white/15">
+          <span className="text-[13px] text-white/35 px-2 py-0.5 rounded-full border border-dashed border-white/15">
             not started
           </span>
         )}
@@ -641,21 +798,27 @@ export default function AgentLoopDiagram({
           const names = t.calls.map((c) => c.name);
           const same = names.length > 1 && names.every((x) => x === names[0]);
           const label = !decided
-            ? '…'
+            ? "…"
             : t.calls.length
-              ? `🔧 ${same ? `${names[0]} ×${names.length}` : names.join(' + ')}`
-              : '💬 answer';
+              ? `🔧 ${same ? `${names[0]} ×${names.length}` : names.join(" + ")}`
+              : "💬 answer";
           return (
             <motion.span
               key={t.n}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: isCur ? [1, 1.06, 1] : 1 }}
-              transition={isCur ? { scale: { duration: 1.4, repeat: Infinity } } : { duration: 0.3 }}
-              className="text-[12px] font-mono px-2 py-0.5 rounded-full border whitespace-nowrap flex-shrink-0"
+              transition={
+                isCur
+                  ? { scale: { duration: 1.4, repeat: Infinity } }
+                  : { duration: 0.3 }
+              }
+              className="text-[13px] font-mono px-2 py-0.5 rounded-full border whitespace-nowrap flex-shrink-0"
               style={{
-                color: isCur ? '#fff' : 'rgba(255,255,255,0.6)',
-                borderColor: isCur ? accentColor : 'rgba(255,255,255,0.15)',
-                backgroundColor: isCur ? `${accentColor}33` : 'rgba(255,255,255,0.04)',
+                color: isCur ? "#fff" : "rgba(255,255,255,0.6)",
+                borderColor: isCur ? accentColor : "rgba(255,255,255,0.15)",
+                backgroundColor: isCur
+                  ? `${accentColor}33`
+                  : "rgba(255,255,255,0.04)",
               }}
             >
               {t.n} · {label}
@@ -666,23 +829,12 @@ export default function AgentLoopDiagram({
           <motion.span
             initial={{ opacity: 0, x: -6 }}
             animate={{ opacity: 1, x: 0 }}
-            className={`text-[12px] font-mono px-2 py-0.5 rounded-full border whitespace-nowrap flex-shrink-0 ${loop ? 'border-red-400/50 bg-red-400/10 text-red-300' : 'border-green-400/50 bg-green-400/10 text-green-300'}`}
+            className={`text-[13px] font-mono px-2 py-0.5 rounded-full border whitespace-nowrap flex-shrink-0 ${loop ? "border-red-400/50 bg-red-400/10 text-red-300" : "border-green-400/50 bg-green-400/10 text-green-300"}`}
           >
-            {loop ? '⏹ break' : '✓ done'}
+            {loop ? "⏹ break" : "✓ done"}
           </motion.span>
         )}
       </div>
-      <motion.div
-        key={`${scene.step}`}
-        initial={{ opacity: 0.4, y: -2 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] text-white/90"
-        style={{ backgroundColor: `${accentColor}14`, border: `1px solid ${accentColor}40` }}
-      >
-        <span className="text-base leading-none">{status.icon}</span>
-        <span className="leading-snug">{status.text}</span>
-      </motion.div>
     </div>
   );
 }
