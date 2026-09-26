@@ -319,6 +319,12 @@ export const contextMemorySteps: ConceptStep[] = [
     animationTrigger: 'summarize',
     subtitle: 'Shrink old messages into a summary.',
   },
+  // Step 10: "Try it yourself" playground
+  {
+    explanation: 'Your turn: pick a chat and press "Next turn" to watch the whole list get re-sent each time. When it overflows, try "Drop oldest" and "Summarize" and check what the model can still see.',
+    animationTrigger: 'playground',
+    subtitle: 'You decide what the model gets to remember.',
+  },
 ];
 
 export const systemPromptSteps: ConceptStep[] = [
