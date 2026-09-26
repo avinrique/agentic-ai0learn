@@ -84,7 +84,7 @@ function writerCriticSteps(s: Story): TraceStep[] {
 
   const defs: StepDef[] = [
     {
-      at: '# 2_writer_critic.py',
+      at: '# part4/writer_critic.py',
       trig: 'intro',
       exp: "What's new: a LOOP between two agents. Wally writes, Cora checks, and they repeat until Cora says APPROVED. Like handing homework to a friend to check.",
     },

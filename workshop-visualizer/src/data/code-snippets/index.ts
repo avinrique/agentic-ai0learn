@@ -1,4 +1,4 @@
-export const basicApiCode = `# 1_basic_prompt.py
+export const basicApiCode = `# part1/basic_api.py
 from openai import OpenAI
 client = OpenAI()
 
@@ -14,7 +14,7 @@ response = client.chat.completions.create(
 print("\\nAI's Response:")
 print(response.choices[0].message.content)`;
 
-export const systemPromptsCode = `# 2_system_prompt_role_playing.py
+export const systemPromptsCode = `# part1/system_prompts.py
 from openai import OpenAI
 client = OpenAI()
 
@@ -31,7 +31,7 @@ response = client.chat.completions.create(
 print("\\nPython Tutor's Response:")
 print(response.choices[0].message.content)`;
 
-export const jsonOutputCode = `# 3_json_output.py
+export const jsonOutputCode = `# part1/json_output.py
 from openai import OpenAI
 client = OpenAI()
 
@@ -53,7 +53,7 @@ response = client.chat.completions.create(
 print("\\nAI's JSON Response:")
 print(response.choices[0].message.content)`;
 
-export const fewShotCode = `# 4_few_shot_learning.py
+export const fewShotCode = `# part1/few_shot.py
 from openai import OpenAI
 client = OpenAI()
 
@@ -82,7 +82,7 @@ response = client.chat.completions.create(
 print(f"\\nAI's classification for 'It's okay, not great.':")
 print(response.choices[0].message.content)`;
 
-export const conversationLoopCode = `# 3_conversation_loop.py
+export const conversationLoopCode = `# part1/conversation_loop.py
 from openai import OpenAI
 client = OpenAI()
 
@@ -108,7 +108,7 @@ while True:
 
 print("Goodbye!")`;
 
-export const challengeCode = `# 5_challenge_restaurant_recommender.py
+export const challengeCode = `# part1/challenge.py
 from openai import OpenAI
 import json
 
@@ -145,7 +145,7 @@ try:
 except json.JSONDecodeError:
     print("AI did not return valid JSON.")`;
 
-export const simpleAgentCode = `# calculator_agent.py
+export const simpleAgentCode = `# part2/simple_agent.py
 import json
 from openai import OpenAI
 client = OpenAI()
@@ -221,7 +221,7 @@ else:
     print("\\n--- Final Answer from AI (no tool needed): ---")
     print(message.content)`;
 
-export const multiFunctionCode = `# math_tutor.py
+export const multiFunctionCode = `# part2/multi_function.py
 import json
 from openai import OpenAI
 client = OpenAI()
@@ -287,7 +287,7 @@ while True:
             "content": str(result)
         })`;
 
-export const multiToolCode = `# study_buddy.py - Multi-Tool Agent
+export const multiToolCode = `# part3/multi_tool.py - Multi-Tool Agent
 from openai import OpenAI
 import json
 client = OpenAI()
@@ -364,7 +364,7 @@ response_final = client.chat.completions.create(
 final_answer = response_final.choices[0].message.content
 print("StudyBuddy:", final_answer)`;
 
-export const studyBuddyProCode = `# study_buddy_pro.py - 7 Tools
+export const studyBuddyProCode = `# part3/study_buddy_pro.py - 7 Tools
 from openai import OpenAI
 import json
 client = OpenAI()
@@ -445,7 +445,7 @@ response_final = client.chat.completions.create(
 final_answer = response_final.choices[0].message.content
 print("StudyBuddy Pro:", final_answer)`;
 
-export const terminalAssistantCode = `# terminal_assistant.py
+export const terminalAssistantCode = `# part3/terminal_assistant.py
 import json
 import subprocess
 from openai import OpenAI

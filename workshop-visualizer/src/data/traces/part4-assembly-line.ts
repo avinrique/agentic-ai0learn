@@ -62,7 +62,7 @@ interface TopicRun {
 function assemblyLineSteps(r: TopicRun): TraceStep[] {
   return buildTrace([
     {
-      at: '# 1_assembly_line.py',
+      at: '# part4/assembly_line.py',
       trig: 'intro',
       exp: "What's new: TWO agents in a row, like a newsroom. Rita finds facts, Wally writes them up, and our code carries the note between their desks.",
     },

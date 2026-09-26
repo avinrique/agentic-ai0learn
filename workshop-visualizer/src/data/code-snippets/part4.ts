@@ -1,7 +1,7 @@
 // Part 4 code snippets. Each must match its avinworkshop/part4 Python file exactly.
 
 // Lesson 23: Code: The Boss Agent (avinworkshop/part4/3_boss_agent.py)
-export const bossAgentCode = `# 3_boss_agent.py - The Boss Agent (its tools are other agents!)
+export const bossAgentCode = `# part4/boss_agent.py - The Boss Agent (its tools are other agents!)
 import json
 from openai import OpenAI
 client = OpenAI()
@@ -77,7 +77,7 @@ while True:
         })`;
 
 // Lesson 21 – avinworkshop/part4/1_assembly_line.py (keep identical to the .py file)
-export const assemblyLineCode = String.raw`# 1_assembly_line.py
+export const assemblyLineCode = String.raw`# part4/assembly_line.py
 # Two agents in a row: Rita finds the facts, then Wally writes them up.
 from openai import OpenAI
 client = OpenAI()
@@ -114,7 +114,7 @@ print("\nWally's paragraph:")
 print(article)`;
 
 // Lesson 22 – avinworkshop/part4/2_writer_critic.py (keep identical to the .py file)
-export const writerCriticCode = String.raw`# 2_writer_critic.py
+export const writerCriticCode = String.raw`# part4/writer_critic.py
 # Wally writes, Cora reviews. They loop until Cora says APPROVED.
 from openai import OpenAI
 client = OpenAI()
