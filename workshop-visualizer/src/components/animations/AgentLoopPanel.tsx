@@ -1,117 +1,53 @@
 'use client';
-import { motion } from 'framer-motion';
-import { useTracerStore } from '@/stores/tracerStore';
+/**
+ * AgentLoopPanel — the animation panel for all agent lessons (Parts 2 & 3).
+ *
+ *   header: agent name + loop counter (AgentLoopDiagram) + plain-words status
+ *   stage:  the AI with its tool menu  ⇄  your Python code (AgentDataFlow)
+ *   bottom: the growing messages list (MessageTimeline)
+ */
 import { useMemo } from 'react';
+import { useTracerStore } from '@/stores/tracerStore';
 import AgentDataFlow from './AgentDataFlow';
 import MessageTimeline from './MessageTimeline';
-import TerminalToolExec from './TerminalToolExec';
-import { ToolCard } from './ToolSelectionAnim';
+import AgentLoopDiagram, { ToolCard, buildAgentModel, sceneAt } from './AgentLoopDiagram';
 
 interface AgentLoopPanelProps {
   agentName: string;
   accentColor: string;
-  loopCount?: number;
   tools: ToolCard[];
-  toolLayout?: 'row' | 'grid';
+  /** true when the code has a `while True` agent loop (label turns as "loop turns") */
+  loop?: boolean;
+  /** show a terminal window for run_command / read_file / write_file */
   showTerminal?: boolean;
 }
 
 export default function AgentLoopPanel({
   agentName,
   accentColor,
-  loopCount = 1,
   tools,
-  toolLayout = 'row',
+  loop = false,
   showTerminal = false,
 }: AgentLoopPanelProps) {
-  const { currentStep, steps } = useTracerStore();
+  const currentStep = useTracerStore((s) => s.currentStep);
+  const steps = useTracerStore((s) => s.steps);
 
-  // Compute current loop and total completed loops for dots
-  const { currentLoop, completedLoops } = useMemo(() => {
-    let sendCount = 0;
-    let completedCount = 0;
-    for (let i = 0; i <= currentStep; i++) {
-      const t = steps[i]?.animationTrigger;
-      if (t?.includes('send') && !t.includes('send2') && !t.includes('send3')) sendCount++;
-      if (t?.includes('finalAnswer') || t === 'final') completedCount++;
-    }
-    // Also count send2, send3 etc as loop iterations
-    for (let i = 0; i <= currentStep; i++) {
-      const t = steps[i]?.animationTrigger;
-      if (t?.includes('send2') || t?.includes('send3') || t?.includes('send4')) {
-        sendCount++;
-      }
-    }
-    return { currentLoop: Math.max(1, sendCount), completedLoops: completedCount };
-  }, [currentStep, steps]);
-
-  const trigger = steps[currentStep]?.animationTrigger;
-  const isTerminalActive = showTerminal && trigger && (
-    trigger.startsWith('toolSelect-run_command') ||
-    trigger.startsWith('toolSelect-read_file') ||
-    trigger.startsWith('toolSelect-write_file') ||
-    trigger.includes('execute') ||
-    trigger.includes('return')
+  const toolNames = useMemo(() => tools.map((t) => t.name), [tools]);
+  const model = useMemo(() => buildAgentModel(steps, toolNames), [steps, toolNames]);
+  const scene = useMemo(
+    () => sceneAt(model, steps, Math.min(currentStep, Math.max(0, steps.length - 1))),
+    [model, steps, currentStep],
   );
 
-  // Determine effective loop count (use loopCount prop or derive from sendCount)
-  const effectiveLoopCount = loopCount > 1 ? loopCount : currentLoop;
+  if (steps.length === 0) return null;
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header: Agent name + Loop indicator dots */}
-      <div className="flex items-center justify-between px-4 pt-3 pb-1 flex-shrink-0">
-        <div className="text-xs text-white/30 uppercase tracking-wider font-medium">
-          {agentName}
-        </div>
-        {effectiveLoopCount > 1 && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-white/25 mr-1">Loop</span>
-            {Array.from({ length: effectiveLoopCount }, (_, i) => {
-              const loopNum = i + 1;
-              const isCompleted = loopNum <= completedLoops;
-              const isCurrent = loopNum === currentLoop && !isCompleted;
-              return (
-                <motion.div
-                  key={i}
-                  className="w-2 h-2 rounded-full"
-                  animate={{
-                    backgroundColor: isCompleted
-                      ? accentColor
-                      : isCurrent
-                        ? accentColor
-                        : 'rgba(255,255,255,0.15)',
-                    scale: isCurrent ? [1, 1.3, 1] : 1,
-                    opacity: isCompleted ? 1 : isCurrent ? 1 : 0.4,
-                  }}
-                  transition={isCurrent ? { scale: { duration: 1.2, repeat: Infinity } } : { duration: 0.3 }}
-                />
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Center: Enhanced AgentDataFlow */}
+    <div className="h-full flex flex-col gap-2 p-3 overflow-hidden">
+      <AgentLoopDiagram scene={scene} agentName={agentName} accentColor={accentColor} loop={loop} />
       <div className="flex-1 min-h-0">
-        <AgentDataFlow
-          accentColor={accentColor}
-          tools={tools}
-          toolLayout={toolLayout}
-        />
+        <AgentDataFlow scene={scene} tools={tools} accentColor={accentColor} loop={loop} showTerminal={showTerminal} />
       </div>
-
-      {/* Terminal: shown inline when terminal tool is active */}
-      {showTerminal && isTerminalActive && (
-        <div className="flex-shrink-0 px-3 pb-2">
-          <TerminalToolExec />
-        </div>
-      )}
-
-      {/* Bottom: Message Timeline */}
-      <div className="flex-shrink-0 px-3 pb-3">
-        <MessageTimeline />
-      </div>
+      <MessageTimeline scene={scene} />
     </div>
   );
 }

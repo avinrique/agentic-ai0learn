@@ -17,11 +17,11 @@ const ROLE: Record<string, { color: string; icon: string }> = {
 function Body({ m, scene }: { m: ConvMsg; scene: AgentScene }) {
   if (m.role === 'assistant' && m.calls) {
     return (
-      <span className="flex flex-wrap items-center gap-1">
+      <span className="inline-flex items-center gap-1">
         <span className="text-white/50">tool_calls:</span>
         {m.calls.map((c) => (
           <span key={c.id} className="inline-flex items-center gap-1">
-            <span className="font-mono text-white/85">{truncate(argsCall(c.name, c.args), 34)}</span>
+            <span className="font-mono text-white/85">{truncate(argsCall(c.name, c.args), 26)}</span>
             <IdChip id={c.id} color={idColor(scene.model, c.id)} />
           </span>
         ))}
@@ -30,18 +30,22 @@ function Body({ m, scene }: { m: ConvMsg; scene: AgentScene }) {
   }
   if (m.role === 'tool') {
     return (
-      <span className="flex flex-wrap items-center gap-1">
+      <span className="inline-flex items-center gap-1">
         <IdChip id={m.id} color={idColor(scene.model, m.id)} />
-        <span className="font-mono text-white/85">&quot;{truncate(unescape(unquote(m.text)), 34)}&quot;</span>
+        <span className="font-mono text-white/85">&quot;{truncate(unescape(unquote(m.text)), 22)}&quot;</span>
       </span>
     );
   }
-  const text = 'text' in m ? m.text ?? '' : '';
-  return <span className="text-white/85">&quot;{truncate(text, m.role === 'system' ? 40 : 60)}&quot;</span>;
+  const text = 'text' in m ? (m.text ?? '') : '';
+  return <span className="text-white/85">&quot;{truncate(text, m.role === 'system' ? 28 : 44)}&quot;</span>;
 }
 
 export default function MessageTimeline({ scene }: { scene: AgentScene }) {
-  const visible = scene.conversation.slice(0, scene.msgCount);
+  const all = scene.conversation.slice(0, scene.msgCount);
+  // Keep the newest messages visible: after 6, the oldest fold into a "+N earlier" chip.
+  const MAX = 6;
+  const hidden = all.length > MAX ? all.length - (MAX - 1) : 0;
+  const visible = all.slice(hidden);
 
   return (
     <div className="flex-shrink-0 rounded-lg border border-white/10 bg-white/[0.02] px-2.5 py-1.5">
@@ -61,8 +65,14 @@ export default function MessageTimeline({ scene }: { scene: AgentScene }) {
       {visible.length === 0 ? (
         <div className="text-[12px] text-white/30 font-mono py-1">[ ] (nothing yet)</div>
       ) : (
-        <div className="flex flex-wrap gap-1 max-h-[118px] overflow-hidden">
-          {visible.map((m, i) => {
+        <div className="flex flex-wrap gap-1 max-h-[86px] overflow-hidden">
+          {hidden > 0 && (
+            <div className="rounded-md border border-dashed border-white/20 px-1.5 py-0.5 text-[12px] text-white/50 whitespace-nowrap">
+              +{hidden} earlier
+            </div>
+          )}
+          {visible.map((m, k) => {
+            const i = k + hidden;
             const r = ROLE[m.role];
             const isNew = i >= scene.prevMsgCount && scene.msgCount > scene.prevMsgCount;
             return (
@@ -76,14 +86,14 @@ export default function MessageTimeline({ scene }: { scene: AgentScene }) {
                   boxShadow: isNew ? `0 0 14px ${r.color}88` : '0 0 0px rgba(0,0,0,0)',
                 }}
                 transition={{ type: 'spring', damping: 18, stiffness: 160 }}
-                className="flex items-center gap-1.5 rounded-md border px-1.5 py-0.5 text-[12px] max-w-full"
+                className="flex items-center gap-1.5 rounded-md border px-1.5 py-0.5 text-[12px] max-w-[49%] whitespace-nowrap overflow-hidden"
                 style={{ borderColor: isNew ? r.color : `${r.color}40`, backgroundColor: `${r.color}12` }}
               >
                 <span className="text-white/35 font-mono">{i}</span>
                 <span className="font-semibold whitespace-nowrap" style={{ color: r.color }}>
                   {r.icon} {m.role}
                 </span>
-                <span className="min-w-0">
+                <span className="min-w-0 overflow-hidden text-ellipsis">
                   <Body m={m} scene={scene} />
                 </span>
               </motion.div>

@@ -18,8 +18,11 @@ export {
 
 export {
   multiToolTrace,
+  multiToolVariants,
   studyBuddyProTrace,
+  studyBuddyProVariants,
   terminalAssistantTrace,
+  terminalAssistantVariants,
 } from './part3';
 
 export { challengeVariants } from './challengeVariants';

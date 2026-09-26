@@ -13,17 +13,7 @@ import type { TraceStep } from '@/stores/tracerStore';
 // Types
 // ---------------------------------------------------------------------------
 export type AgentPhase =
-  | 'setup'
-  | 'send'
-  | 'thinking'
-  | 'decide'
-  | 'check'
-  | 'select'
-  | 'execute'
-  | 'return'
-  | 'loopback'
-  | 'answer'
-  | 'done';
+  'setup' | 'send' | 'thinking' | 'decide' | 'check' | 'select' | 'execute' | 'return' | 'loopback' | 'answer' | 'done';
 
 export type SetupFocus =
   | 'intro'
@@ -395,6 +385,7 @@ export function buildAgentModel(steps: TraceStep[], toolNames: string[]): AgentM
     let focus: SetupFocus = 'intro';
     const newFn = toolNames.some((n) => fresh.has(n));
     if (t === 'import') focus = 'import';
+    else if (fresh.has('user_input') && unquote(vars.user_input) !== 'exit') focus = 'question';
     else if (t === 'chatLoop' || t === 'agentLoop-enter') focus = 'loop';
     else if (t === 'agentLoop-pack') focus = 'envelope';
     else if (t.startsWith('defineTools-')) focus = `menu-${t.slice('defineTools-'.length)}` as SetupFocus;
@@ -402,9 +393,10 @@ export function buildAgentModel(steps: TraceStep[], toolNames: string[]): AgentM
     else if (fresh.has('tools')) focus = 'menu';
     else if (newFn) focus = 'functions';
     else if (fresh.has('system_prompt') || t === 'addSystemMsg') focus = 'system';
-    else if (fresh.has('messages') || fresh.has('user_query') || fresh.has('user_input')) focus = 'question';
-    else if (fresh.has('client')) focus = 'client';
-    else if (t === 'defineTools') focus = 'menu';
+    else if (fresh.has('messages') || fresh.has('user_query') || fresh.has('user_input')) {
+      focus = questionFrom(vars) ? 'question' : 'system';
+    } else if (fresh.has('client')) focus = 'client';
+    else if (t === 'defineTools') focus = 'tools' in vars ? 'menu' : 'functions';
     else if (step.output) focus = 'console';
 
     info.push({ phase, turn: cur, call: ptr, focus });
@@ -497,7 +489,11 @@ export function IdChip({ id, color, pulse = false }: { id: string; color: string
     <motion.span
       className="inline-flex items-center gap-1 px-1.5 py-[1px] rounded font-mono text-[12px] font-semibold whitespace-nowrap"
       style={{ color, backgroundColor: `${color}1f`, border: `1px solid ${color}66` }}
-      animate={pulse ? { boxShadow: [`0 0 0px ${color}00`, `0 0 12px ${color}aa`, `0 0 0px ${color}00`] } : { boxShadow: 'none' }}
+      animate={
+        pulse
+          ? { boxShadow: [`0 0 0px ${color}00`, `0 0 12px ${color}aa`, `0 0 0px ${color}00`] }
+          : { boxShadow: 'none' }
+      }
       transition={pulse ? { duration: 1.4, repeat: Infinity } : { duration: 0.2 }}
     >
       🔗 {id}
@@ -508,6 +504,15 @@ export function IdChip({ id, color, pulse = false }: { id: string; color: string
 export function truncate(s: string, n: number): string {
   const one = s.replace(/\s+/g, ' ').trim();
   return one.length > n ? one.slice(0, n - 1) + '…' : one;
+}
+
+/** Lessons without a loop send the tools only on the first call. */
+export function toolsSent(t: AgentTurn | undefined, loop: boolean): boolean {
+  return loop || !t || t.n === 1;
+}
+
+export function usedTools(sc: AgentScene): boolean {
+  return sc.model.turns.some((t) => t.calls.length > 0 && t.decideStep <= sc.step);
 }
 
 // ---------------------------------------------------------------------------
@@ -521,7 +526,7 @@ export function statusText(sc: AgentScene, loop: boolean): { icon: string; text:
     case 'setup': {
       const m: Record<SetupFocus, [string, string]> = {
         intro: ['🧰', 'Getting ready: first we set up the tools and the chat history'],
-        import: ['📦', 'Importing what we need (json reads the AI\'s arguments)'],
+        import: ['📦', "Importing what we need: json reads the AI's arguments"],
         client: ['🔌', 'Creating the client: our line to the AI'],
         functions: ['🐍', 'Writing real Python functions: only OUR code can run them'],
         menu: ['📋', 'Writing the tool menu (tools): what the AI is allowed to ask for'],
@@ -530,7 +535,7 @@ export function statusText(sc: AgentScene, loop: boolean): { icon: string; text:
         'menu-params': ['🔢', 'The parameters are the inputs the AI must fill in'],
         map: ['🗂️', 'A dictionary maps each tool name (text) to the real function'],
         system: ['⚙️', 'The system prompt gives the AI its role'],
-        question: ['👤', `The question goes into messages: "${truncate(sc.question || sc.model.question, 60)}"`],
+        question: ['👤', `The question: "${truncate(sc.question, 60)}"`],
         envelope: ['📨', 'Packing the request: messages + tools + tool_choice'],
         loop: ['🔁', 'Entering a while True loop: it repeats until a break'],
         console: ['🖨️', 'Printing to the console'],
@@ -541,7 +546,9 @@ export function statusText(sc: AgentScene, loop: boolean): { icon: string; text:
     case 'send':
       return {
         icon: '📨',
-        text: `${loop ? `Loop turn ${t?.n}` : `AI call #${t?.n}`}: your code sends messages (${sc.msgCount}) + the tool menu to the AI`,
+        text: `${loop ? `Loop turn ${t?.n}` : `AI call #${t?.n}`}: your code sends messages (${sc.msgCount})${
+          toolsSent(t, loop) ? ' + the tool menu' : ' (no tools this time)'
+        } to the AI`,
       };
     case 'thinking':
       return t?.calls.length
@@ -550,11 +557,14 @@ export function statusText(sc: AgentScene, loop: boolean): { icon: string; text:
     case 'decide':
       return t?.calls.length
         ? { icon: '🧾', text: `The AI's reply is an order slip: "please run ${callsTxt}" (no text yet)` }
-        : { icon: '💬', text: 'The AI\'s reply is plain text: tool_calls is None' };
+        : { icon: '💬', text: "The AI's reply is plain text: tool_calls is None" };
     case 'check':
       return t?.calls.length
         ? { icon: '❓', text: 'Any tool_calls? YES → run the tools (no break)' }
-        : { icon: '❓', text: `Any tool_calls? NO → ${loop ? 'this is the final answer → break' : 'skip to the answer'}` };
+        : {
+            icon: '❓',
+            text: `Any tool_calls? NO → ${loop ? 'this is the final answer → break' : 'skip to the answer'}`,
+          };
     case 'select':
       return c
         ? {
@@ -576,11 +586,18 @@ export function statusText(sc: AgentScene, loop: boolean): { icon: string; text:
       return { icon: '📦', text: `The result goes back as role "tool" with the SAME id: ${c?.id ?? ''}` };
     case 'loopback':
       return { icon: '🔁', text: `Back to the top of while True → turn ${(t?.n ?? 0) + 1}` };
-    case 'answer':
-      return { icon: '💬', text: loop ? 'No tool_calls → final answer → break out of the loop' : 'The AI\'s final answer (written from the real result)' };
+    case 'answer': {
+      if (loop) return { icon: '💬', text: 'No tool_calls → final answer → break out of the loop' };
+      return usedTools(sc)
+        ? { icon: '💬', text: "The AI's final answer, written from the real result" }
+        : { icon: '💬', text: 'The AI answered directly: no tool, no Python function ran' };
+    }
     case 'done':
-      if (unquote(sc.vars.user_input) === 'exit') return { icon: '👋', text: 'The user typed exit → the chat loop ends: Goodbye!' };
-      return { icon: '✅', text: 'Done! The AI chose, your Python did the work, the AI explained' };
+      if (unquote(sc.vars.user_input) === 'exit')
+        return { icon: '👋', text: 'The user typed exit → the chat loop ends: Goodbye!' };
+      return usedTools(sc)
+        ? { icon: '✅', text: 'Done! The AI chose, your Python did the work, the AI explained' }
+        : { icon: '✅', text: 'Done! One call to the AI, and the tool was never needed' };
   }
 }
 
@@ -599,25 +616,34 @@ export default function AgentLoopDiagram({
   loop: boolean;
 }) {
   const visible = scene.model.turns.filter((t) => t.sendStep <= scene.step);
-  const finished = visible.some((t) => t.answerStep <= scene.step) && (scene.phase === 'answer' || scene.phase === 'done');
+  const finished =
+    visible.some((t) => t.answerStep <= scene.step) && (scene.phase === 'answer' || scene.phase === 'done');
   const status = statusText(scene, loop);
 
   return (
     <div className="flex-shrink-0 space-y-1.5">
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="text-[12px] text-white/40 uppercase tracking-wider font-semibold mr-1">{agentName}</div>
+      <div className="flex items-center gap-1.5 min-w-0">
+        <div className="text-[12px] text-white/40 uppercase tracking-wider font-semibold mr-1 truncate min-w-[40px] flex-shrink">
+          {agentName}
+        </div>
         <div className="flex-1" />
-        <span className="text-[12px] text-white/40">{loop ? 'Agent loop:' : 'Calls to the AI:'}</span>
+        <span className="text-[12px] text-white/40 whitespace-nowrap flex-shrink-0">
+          {loop ? 'Loop turns:' : 'AI calls:'}
+        </span>
         {visible.length === 0 && (
-          <span className="text-[12px] text-white/30 px-2 py-0.5 rounded-full border border-dashed border-white/15">not started</span>
+          <span className="text-[12px] text-white/30 px-2 py-0.5 rounded-full border border-dashed border-white/15">
+            not started
+          </span>
         )}
         {visible.map((t) => {
           const isCur = t.n - 1 === scene.turnIdx && !finished;
           const decided = t.decideStep <= scene.step;
+          const names = t.calls.map((c) => c.name);
+          const same = names.length > 1 && names.every((x) => x === names[0]);
           const label = !decided
             ? '…'
             : t.calls.length
-              ? `🔧 ${t.calls.map((c) => c.name).join(' + ')}`
+              ? `🔧 ${same ? `${names[0]} ×${names.length}` : names.join(' + ')}`
               : '💬 answer';
           return (
             <motion.span
@@ -625,14 +651,14 @@ export default function AgentLoopDiagram({
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: isCur ? [1, 1.06, 1] : 1 }}
               transition={isCur ? { scale: { duration: 1.4, repeat: Infinity } } : { duration: 0.3 }}
-              className="text-[12px] font-mono px-2 py-0.5 rounded-full border whitespace-nowrap"
+              className="text-[12px] font-mono px-2 py-0.5 rounded-full border whitespace-nowrap flex-shrink-0"
               style={{
                 color: isCur ? '#fff' : 'rgba(255,255,255,0.6)',
                 borderColor: isCur ? accentColor : 'rgba(255,255,255,0.15)',
                 backgroundColor: isCur ? `${accentColor}33` : 'rgba(255,255,255,0.04)',
               }}
             >
-              {loop ? 'turn' : 'call'} {t.n} · {label}
+              {t.n} · {label}
             </motion.span>
           );
         })}
@@ -640,9 +666,9 @@ export default function AgentLoopDiagram({
           <motion.span
             initial={{ opacity: 0, x: -6 }}
             animate={{ opacity: 1, x: 0 }}
-            className="text-[12px] font-mono px-2 py-0.5 rounded-full border border-red-400/50 bg-red-400/10 text-red-300 whitespace-nowrap"
+            className={`text-[12px] font-mono px-2 py-0.5 rounded-full border whitespace-nowrap flex-shrink-0 ${loop ? 'border-red-400/50 bg-red-400/10 text-red-300' : 'border-green-400/50 bg-green-400/10 text-green-300'}`}
           >
-            {loop ? 'no tool_calls → break ⏹' : 'done ✓'}
+            {loop ? '⏹ break' : '✓ done'}
           </motion.span>
         )}
       </div>

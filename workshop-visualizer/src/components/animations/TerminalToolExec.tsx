@@ -7,16 +7,23 @@
 import { motion } from 'framer-motion';
 import { AgentCall, AgentScene, unescape, unquote } from './AgentLoopDiagram';
 
-type Line = { key: string; text: string; kind: 'out' | 'user' | 'assistant' | 'cmd' | 'result' | 'file' | 'info'; active?: boolean };
+type Line = {
+  key: string;
+  text: string;
+  kind: 'out' | 'user' | 'assistant' | 'cmd' | 'result' | 'file' | 'info';
+  active?: boolean;
+};
 
 function argVal(c: AgentCall, k: string): string {
   return unescape(unquote(c.args.find(([n]) => n === k)?.[1] ?? ''));
 }
 
 export function safetyFor(name: string): { text: string; color: string } {
-  if (name === 'run_command') return { text: '⚠️ shell=True: runs ANY command the AI writes. Confirm risky ones (rm)!', color: '#f87171' };
+  if (name === 'run_command')
+    return { text: '⚠️ shell=True: runs ANY command the AI writes. Confirm risky ones (rm)!', color: '#f87171' };
   if (name === 'read_file') return { text: '🔒 read_file only reads: no shell, nothing changes', color: '#4ade80' };
-  if (name === 'write_file') return { text: '✏️ write_file changes your disk: it overwrites the file!', color: '#fbbf24' };
+  if (name === 'write_file')
+    return { text: '✏️ write_file changes your disk: it overwrites the file!', color: '#fbbf24' };
   return { text: '', color: '#fff' };
 }
 
@@ -26,7 +33,11 @@ export default function TerminalToolExec({ scene }: { scene: AgentScene }) {
 
   const events: { step: number; order: number; lines: Line[] }[] = [];
   for (const o of scene.outputsSoFar) {
-    const kind: Line['kind'] = o.text.startsWith('You:') ? 'user' : o.text.startsWith('Assistant:') ? 'assistant' : 'out';
+    const kind: Line['kind'] = o.text.startsWith('You:')
+      ? 'user'
+      : o.text.startsWith('Assistant:')
+        ? 'assistant'
+        : 'out';
     events.push({ step: o.step, order: 0, lines: [{ key: `o${o.step}`, text: o.text, kind }] });
   }
   for (const c of calls) {
@@ -40,7 +51,12 @@ export default function TerminalToolExec({ scene }: { scene: AgentScene }) {
     } else if (c.name === 'read_file') {
       lines.push({ key: `${c.id}c`, text: `📖 open("${argVal(c, 'path')}").read()`, kind: 'cmd', active: isActive });
     } else if (c.name === 'write_file') {
-      lines.push({ key: `${c.id}c`, text: `✏️ open("${argVal(c, 'path')}", "w").write(...)`, kind: 'cmd', active: isActive });
+      lines.push({
+        key: `${c.id}c`,
+        text: `✏️ open("${argVal(c, 'path')}", "w").write(...)`,
+        kind: 'cmd',
+        active: isActive,
+      });
       argVal(c, 'content')
         .split('\n')
         .filter(Boolean)
@@ -52,7 +68,13 @@ export default function TerminalToolExec({ scene }: { scene: AgentScene }) {
       body
         .replace(/\n$/, '')
         .split('\n')
-        .forEach((l, k) => lines.push({ key: `${c.id}r${k}`, text: c.name === 'read_file' ? `   │ ${l}` : l, kind: c.name === 'read_file' ? 'file' : 'result' }));
+        .forEach((l, k) =>
+          lines.push({
+            key: `${c.id}r${k}`,
+            text: c.name === 'read_file' ? `   │ ${l}` : l,
+            kind: c.name === 'read_file' ? 'file' : 'result',
+          }),
+        );
     } else {
       lines.push({ key: `${c.id}run`, text: '▌', kind: 'info' });
     }
@@ -62,7 +84,7 @@ export default function TerminalToolExec({ scene }: { scene: AgentScene }) {
   const all = events.flatMap((e) => e.lines);
   const shown = all.slice(-13);
 
-  const focusCall = scene.call && ['select', 'execute', 'return'].includes(scene.phase) ? scene.call : undefined;
+  const focusCall = scene.call && ['select', 'execute'].includes(scene.phase) ? scene.call : undefined;
   const badge = focusCall ? safetyFor(focusCall.name) : undefined;
 
   const color: Record<Line['kind'], string> = {
@@ -81,7 +103,9 @@ export default function TerminalToolExec({ scene }: { scene: AgentScene }) {
         <span className="w-2.5 h-2.5 rounded-full bg-[#f87171]" />
         <span className="w-2.5 h-2.5 rounded-full bg-[#fbbf24]" />
         <span className="w-2.5 h-2.5 rounded-full bg-[#4ade80]" />
-        <span className="ml-2 text-[12px] font-mono text-white/40 truncate">terminal — python terminal_assistant.py</span>
+        <span className="ml-2 text-[12px] font-mono text-white/40 truncate">
+          terminal — python terminal_assistant.py
+        </span>
       </div>
       {badge && (
         <motion.div
@@ -89,7 +113,11 @@ export default function TerminalToolExec({ scene }: { scene: AgentScene }) {
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
           className="px-2.5 py-1 text-[12px] font-semibold flex-shrink-0"
-          style={{ color: badge.color, backgroundColor: `${badge.color}14`, borderBottom: `1px solid ${badge.color}40` }}
+          style={{
+            color: badge.color,
+            backgroundColor: `${badge.color}14`,
+            borderBottom: `1px solid ${badge.color}40`,
+          }}
         >
           {badge.text}
         </motion.div>
@@ -102,7 +130,7 @@ export default function TerminalToolExec({ scene }: { scene: AgentScene }) {
             initial={{ opacity: 0, x: -6 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.25 }}
-            className={`whitespace-pre truncate ${l.active ? 'bg-yellow-300/10 rounded' : ''}`}
+            className={`flex-shrink-0 whitespace-pre truncate ${l.active ? 'bg-yellow-300/10 rounded' : ''}`}
             style={{ color: color[l.kind] }}
           >
             {l.kind === 'info' ? (

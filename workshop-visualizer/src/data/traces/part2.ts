@@ -35,11 +35,14 @@ function buildTrace(defs: StepDef[]): TraceStep[] {
   });
 }
 
-// Animation triggers (see AgentLoopPanel → AgentDataFlow / MessageTimeline / ToolSelectionAnim).
-// HOLD: our code is working between stages. AgentDataFlow shows the neutral User → AI flow;
-//       MessageTimeline and the loop dots ignore it.
-// DONE: after the final answer. AgentDataFlow keeps the final-answer view (it matches "final");
-//       MessageTimeline and the loop dots ignore it, so the answer is not added twice.
+// Animation triggers (read by AgentLoopPanel → AgentLoopDiagram's buildAgentModel).
+// Phases: agentLoop-send* (request goes out), apiProcessing (AI reads the menu), agentLoop-decide
+// (the reply arrives), agentLoop-check (the `if tool_calls` test), toolSelect-<name> (our code reads
+// the slip), agentLoop-execute (the real function runs), agentLoop-return (role "tool" message),
+// agentLoop-loopback (back to the top of while True), agentLoop-finalAnswer (the answer).
+// Setup: import, defineTools[-name|-desc|-params], addSystemMsg, agentLoop-pack, agentLoop-enter.
+// HOLD: our code is between stages; the panel keeps showing the previous phase.
+// DONE: after the final answer; the answer stays on screen.
 const HOLD = 'agentLoop-hold';
 const DONE = 'agentLoop-finalDone';
 
@@ -86,17 +89,17 @@ export const simpleAgentTrace: TraceStep[] = buildTrace([
   },
   {
     line: 17,
-    anim: 'defineTools',
+    anim: 'defineTools-name',
     say: 'The "name" is "add". When the AI wants this tool, it sends back this exact name, so it should match our function name.',
   },
   {
     line: 18,
-    anim: 'defineTools',
+    anim: 'defineTools-desc',
     say: 'The "description" says what the tool does. The AI reads this sentence to decide WHEN to use the tool, so write it clearly.',
   },
   {
     line: 19,
-    anim: 'defineTools',
+    anim: 'defineTools-params',
     say: 'The "parameters" part lists the inputs: a and b, both numbers (lines 22–23). The AI must fill in these values when it asks for the tool.',
   },
   {
@@ -116,10 +119,12 @@ export const simpleAgentTrace: TraceStep[] = buildTrace([
   },
   {
     line: 40,
+    anim: 'agentLoop-pack',
     say: 'This call looks like Part 1, with one new part: tools=tools. We send the menu along with the chat history.',
   },
   {
     line: 41,
+    anim: 'agentLoop-pack',
     say: 'tool_choice="auto" means the AI chooses for itself: use a tool, or just answer with text. We do not force it.',
   },
   {
@@ -147,7 +152,7 @@ export const simpleAgentTrace: TraceStep[] = buildTrace([
   },
   {
     line: 48,
-    anim: HOLD,
+    anim: 'agentLoop-check',
     say: 'Did the AI ask for a tool? Yes, tool_calls is not empty, so we go inside the if. (If the AI had answered with text, the else part would print it.)',
   },
   {
@@ -189,12 +194,12 @@ export const simpleAgentTrace: TraceStep[] = buildTrace([
   },
   {
     line: 60,
-    anim: 'agentLoop-execute',
+    anim: 'agentLoop-return',
     say: 'We add a new message to the history. Its role is "tool", which means: "this is a tool\'s answer", not the user and not the AI.',
   },
   {
     line: 61,
-    anim: 'agentLoop-execute',
+    anim: 'agentLoop-return',
     say: 'tool_call_id copies the id of the AI\'s request ("call_abc123"). The AI can ask for several tools at once, so the id says which request this answer belongs to.',
   },
   {
@@ -335,7 +340,7 @@ const simpleAgent100Plus200Steps: TraceStep[] = buildTrace([
   },
   {
     line: 61,
-    anim: 'agentLoop-execute',
+    anim: 'agentLoop-return',
     say: 'We build a role "tool" message. tool_call_id links this answer to the AI\'s request.',
   },
   {
@@ -371,6 +376,99 @@ const simpleAgent100Plus200Steps: TraceStep[] = buildTrace([
   },
 ]);
 
+const SA_FR_Q = "What's the capital of France?";
+const SA_FR_A = 'The capital of France is Paris.';
+
+const simpleAgentNoToolSteps: TraceStep[] = buildTrace([
+  {
+    line: 1,
+    say: `Same calculator agent, but a question that has nothing to do with math: "${SA_FR_Q}" Will the AI still use the add tool?`,
+  },
+  {
+    line: 4,
+    set: { json: 'module', client: 'OpenAI()' },
+    anim: 'import',
+    say: 'Lines 2–4: import json and OpenAI, then create the client. Same as before.',
+  },
+  {
+    line: 7,
+    set: { add: 'function add(a, b) → a + b' },
+    anim: 'defineTools',
+    say: 'Our only tool is still add(a, b).',
+  },
+  {
+    line: 13,
+    set: { tools: '[{type:"function", function:{name:"add", description:..., parameters:...}}]' },
+    anim: 'defineTools',
+    say: 'The menu has one card: add, "Add two numbers together".',
+  },
+  {
+    line: 32,
+    set: { messages: SA_USER(SA_FR_Q) },
+    say: `The history starts with the new question: "${SA_FR_Q}"`,
+  },
+  {
+    line: 33,
+    out: `User: ${SA_FR_Q}`,
+    say: 'We print the question.',
+  },
+  {
+    line: 36,
+    out: '--- 1. Sending to AI (with tools)... ---',
+    say: 'A label for the first call.',
+  },
+  {
+    line: 41,
+    anim: 'agentLoop-pack',
+    say: 'tool_choice="auto" matters now: the AI is allowed to skip the tools and just answer.',
+  },
+  {
+    line: 37,
+    anim: 'agentLoop-send',
+    say: 'We send the question and the menu, exactly as before.',
+  },
+  {
+    line: 37,
+    set: { response: 'ChatCompletion(...)' },
+    anim: 'apiProcessing',
+    say: 'The AI reads the menu. add adds numbers, which does not help with a geography question. It knows the answer itself.',
+  },
+  {
+    line: 44,
+    set: { message: `{role:"assistant", content:"${SA_FR_A}", tool_calls:None}` },
+    anim: 'agentLoop-decide',
+    say: 'This reply is normal text in message.content, and tool_calls is None. No order slip this time.',
+  },
+  {
+    line: 45,
+    set: { messages: `[{role:"user", content:"${SA_FR_Q}"}, {role:"assistant", content:"${SA_FR_A}"}]` },
+    anim: HOLD,
+    say: 'We still save the reply in the history.',
+  },
+  {
+    line: 48,
+    anim: 'agentLoop-check',
+    say: 'Did the AI ask for a tool? No, tool_calls is None, so the if is False. Python skips lines 49–72 and jumps to else.',
+  },
+  {
+    line: 74,
+    out: '--- Final Answer from AI (no tool needed): ---',
+    anim: 'agentLoop-finalAnswer',
+    say: 'We are in the else part. It prints a header saying no tool was needed.',
+  },
+  {
+    line: 75,
+    out: SA_FR_A,
+    anim: DONE,
+    say: 'We print message.content. Only ONE call to the AI, and add never ran.',
+  },
+  {
+    line: 75,
+    anim: DONE,
+    say: 'What you learned: tools are optional. The AI uses a tool only when it helps; otherwise it answers directly, and the else branch handles that.',
+  },
+]);
+
 export const simpleAgentVariants: TraceVariant[] = [
   {
     id: 'default',
@@ -383,6 +481,12 @@ export const simpleAgentVariants: TraceVariant[] = [
     label: 'What is 100 + 200?',
     inputValue: 'What is 100 + 200?',
     steps: simpleAgent100Plus200Steps,
+  },
+  {
+    id: 'variant3',
+    label: "What's the capital of France? (no tool)",
+    inputValue: SA_FR_Q,
+    steps: simpleAgentNoToolSteps,
   },
 ];
 
@@ -462,6 +566,7 @@ function buildMathTutorTrace(c: MathCase): TraceStep[] {
     },
     {
       line: 40,
+      anim: 'agentLoop-enter',
       say: 'while True means "repeat forever", until a break inside stops it. This loop is the heart of the agent: ask the AI, run the tools it asks for, repeat.',
     },
 
@@ -481,7 +586,7 @@ function buildMathTutorTrace(c: MathCase): TraceStep[] {
     {
       line: 46,
       set: { message: `{role:"assistant", content:None, tool_calls:[${call(s1)}]}` },
-      anim: HOLD,
+      anim: 'agentLoop-decide',
       say: `The reply has no text. It has one tool request: ${call(s1)}. ${c.whyFirst}`,
     },
     {
@@ -492,7 +597,7 @@ function buildMathTutorTrace(c: MathCase): TraceStep[] {
     },
     {
       line: 49,
-      anim: HOLD,
+      anim: 'agentLoop-check',
       say: 'The exit check: are there no tool_calls? False, the AI asked for a tool. So we do NOT break. We skip this block and keep going.',
     },
     {
@@ -504,13 +609,13 @@ function buildMathTutorTrace(c: MathCase): TraceStep[] {
     {
       line: 55,
       set: { tool_call: toolCall(s1) },
-      anim: HOLD,
+      anim: `toolSelect-${s1.op}`,
       say: 'The AI may ask for several tools at once, so we loop over every request with a for loop. Here there is just one.',
     },
     {
       line: 57,
       set: { function_name: `"${s1.op}"`, arguments: argsDict(s1) },
-      anim: 'agentLoop-decide',
+      anim: `toolSelect-${s1.op}`,
       say: `Line 56 reads the name, "${s1.op}". This line uses json.loads to turn the argument text into a dict: ${argsDict(s1)}.`,
     },
     {
@@ -540,7 +645,7 @@ function buildMathTutorTrace(c: MathCase): TraceStep[] {
     },
     {
       line: 40,
-      anim: HOLD,
+      anim: 'agentLoop-loopback',
       say: 'The for loop is done (only one request). We reach the end of the while block, so Python jumps back to the top: while True. Turn 2 begins.',
     },
 
@@ -560,7 +665,7 @@ function buildMathTutorTrace(c: MathCase): TraceStep[] {
     {
       line: 46,
       set: { message: `{role:"assistant", content:None, tool_calls:[${call(s2)}]}` },
-      anim: HOLD,
+      anim: 'agentLoop-decide',
       say: `Again no text, just a tool request: ${call(s2)}. Notice the AI used the result we sent back.`,
     },
     {
@@ -571,7 +676,7 @@ function buildMathTutorTrace(c: MathCase): TraceStep[] {
     },
     {
       line: 49,
-      anim: HOLD,
+      anim: 'agentLoop-check',
       say: 'Exit check again: are there no tool_calls? False, there is one. So no break; the loop keeps going.',
     },
     {
@@ -583,7 +688,7 @@ function buildMathTutorTrace(c: MathCase): TraceStep[] {
     {
       line: 57,
       set: { tool_call: toolCall(s2), function_name: `"${s2.op}"`, arguments: argsDict(s2) },
-      anim: 'agentLoop-decide',
+      anim: `toolSelect-${s2.op}`,
       say: `The for loop takes the new request. Now function_name is "${s2.op}" and arguments is ${argsDict(s2)}.`,
     },
     {
@@ -612,7 +717,7 @@ function buildMathTutorTrace(c: MathCase): TraceStep[] {
     },
     {
       line: 40,
-      anim: HOLD,
+      anim: 'agentLoop-loopback',
       say: 'End of the loop body again, so back to the top of while True. Turn 3 begins.',
     },
 
@@ -632,7 +737,7 @@ function buildMathTutorTrace(c: MathCase): TraceStep[] {
     {
       line: 46,
       set: { message: `{role:"assistant", content:"${c.answer.split('.')[0]}...", tool_calls:None}` },
-      anim: HOLD,
+      anim: 'agentLoop-decide',
       say: 'The reply has text in message.content, and tool_calls is None (empty).',
     },
     {
@@ -643,7 +748,7 @@ function buildMathTutorTrace(c: MathCase): TraceStep[] {
     },
     {
       line: 49,
-      anim: HOLD,
+      anim: 'agentLoop-check',
       say: 'The exit check: are there no tool_calls? TRUE this time. So we go inside the if. This is how the loop knows the AI is finished.',
     },
     {
@@ -689,6 +794,288 @@ const multiFunction100Div5Plus3Steps: TraceStep[] = buildMathTutorTrace({
   answer: '100 / 5 + 3 = 23. First, 100 divided by 5 is 20. Then 20 plus 3 is 23.',
 });
 
+// ---------------------------------------------------------------------------
+// Variant 3: two tool calls in ONE reply (the for loop runs twice)
+// ---------------------------------------------------------------------------
+const PAR_Q = 'What is 7 * 8 + 9 * 4?';
+const PAR_ANSWER = '7 * 8 + 9 * 4 = 92. First, 7 times 8 is 56 and 9 times 4 is 36. Then 56 plus 36 is 92.';
+
+function buildParallelTrace(): TraceStep[] {
+  const user = `{role:"user", content:"${PAR_Q}"}`;
+  const hist = (...rest: string[]) => `[system, ${[user, ...rest].join(', ')}]`;
+  const A1 = 'assistant→multiply(7, 8)+multiply(9, 4)';
+  const A2 = 'assistant→add(56, 36)';
+  const tc = (id: string, op: string, a: number, b: number) =>
+    `{id:"${id}", function:{name:"${op}", arguments:'{"a": ${a}, "b": ${b}}'}}`;
+
+  return buildTrace([
+    {
+      line: 1,
+      say: `Same math tutor, new question: "${PAR_Q}" Watch turn 1 closely: the AI asks for TWO tools in a single reply.`,
+    },
+    {
+      line: 4,
+      set: { json: 'module', client: 'OpenAI()' },
+      anim: 'import',
+      say: 'Lines 2–4: import json and OpenAI, then create the client.',
+    },
+    {
+      line: 7,
+      set: {
+        add: 'function add(a, b) → a + b',
+        subtract: 'function subtract(a, b) → a - b',
+        multiply: 'function multiply(a, b) → a * b',
+        divide: 'function divide(a, b) → a / b',
+      },
+      anim: 'defineTools',
+      say: 'The same four tools: add, subtract, multiply and divide.',
+    },
+    {
+      line: 25,
+      set: { tools: '[add, subtract, multiply, divide]' },
+      anim: 'defineTools',
+      say: 'The menu with four cards.',
+    },
+    {
+      line: 33,
+      set: { messages: hist() },
+      anim: 'addSystemMsg',
+      say: `The history: the tutor system message and the question "${PAR_Q}"`,
+    },
+    {
+      line: 37,
+      out: `User: ${PAR_Q}`,
+      say: 'We print the question.',
+    },
+    {
+      line: 40,
+      anim: 'agentLoop-enter',
+      say: 'The agent loop starts: ask the AI, run the tools it asks for, repeat.',
+    },
+    {
+      line: 41,
+      out: '--- 1. Sending to AI (with tools)... ---',
+      anim: 'agentLoop-send',
+      say: 'Loop turn 1: we send the history and the four tools.',
+    },
+    {
+      line: 42,
+      set: { response: 'ChatCompletion (turn 1)' },
+      anim: 'apiProcessing',
+      say: '7 * 8 and 9 * 4 do not depend on each other, so the AI can ask for both at the same time.',
+    },
+    {
+      line: 46,
+      set: { message: '{role:"assistant", content:None, tool_calls:[multiply(7, 8), multiply(9, 4)]}' },
+      anim: 'agentLoop-decide',
+      say: 'One reply, TWO order slips: multiply(7, 8) and multiply(9, 4). Each has its own id: call_a and call_b.',
+    },
+    {
+      line: 47,
+      set: { messages: hist(A1) },
+      anim: HOLD,
+      say: 'We save the reply (with both requests) in the history.',
+    },
+    {
+      line: 49,
+      anim: 'agentLoop-check',
+      say: 'Are there no tool_calls? False, there are two. So no break.',
+    },
+    {
+      line: 54,
+      out: '--- 2. AI calls 2 function(s) ---',
+      anim: HOLD,
+      say: 'len(message.tool_calls) is 2 this time. That is why the code uses a for loop.',
+    },
+    {
+      line: 55,
+      set: { tool_call: tc('call_a', 'multiply', 7, 8) },
+      anim: 'toolSelect-multiply',
+      say: 'The for loop takes the FIRST request, id call_a.',
+    },
+    {
+      line: 57,
+      set: { function_name: '"multiply"', arguments: "{'a': 7, 'b': 8}" },
+      anim: 'toolSelect-multiply',
+      say: 'Its name is "multiply" and json.loads gives the dict {\'a\': 7, \'b\': 8}.',
+    },
+    {
+      line: 58,
+      set: { available_functions: '{"add": add, "subtract": subtract, "multiply": multiply, "divide": divide}' },
+      anim: 'toolSelect-multiply',
+      say: 'The dictionary finds the real multiply function by its name.',
+    },
+    {
+      line: 60,
+      set: { result: '56' },
+      out: '[Debug: multiply(a=7, b=8)]',
+      anim: 'agentLoop-execute',
+      say: 'Our code runs multiply(7, 8). result = 56.',
+    },
+    {
+      line: 61,
+      out: "--- 3. multiply({'a': 7, 'b': 8}) = 56 ---",
+      anim: 'agentLoop-execute',
+      say: 'We print the first result.',
+    },
+    {
+      line: 63,
+      set: { messages: hist(A1, 'tool:"56"') },
+      anim: 'agentLoop-return',
+      say: 'We append {role:"tool", tool_call_id:"call_a", content:"56"}. The id says: this answers request call_a.',
+    },
+    {
+      line: 55,
+      set: { tool_call: tc('call_b', 'multiply', 9, 4) },
+      anim: 'toolSelect-multiply',
+      say: 'The for loop is not done yet. It takes the SECOND request, id call_b.',
+    },
+    {
+      line: 57,
+      set: { arguments: "{'a': 9, 'b': 4}" },
+      anim: 'toolSelect-multiply',
+      say: 'Same function name, "multiply", but new arguments: {\'a\': 9, \'b\': 4}.',
+    },
+    {
+      line: 60,
+      set: { result: '36' },
+      out: '[Debug: multiply(a=9, b=4)]',
+      anim: 'agentLoop-execute',
+      say: 'Our code runs multiply(9, 4). result = 36.',
+    },
+    {
+      line: 61,
+      out: "--- 3. multiply({'a': 9, 'b': 4}) = 36 ---",
+      anim: 'agentLoop-execute',
+      say: 'We print the second result.',
+    },
+    {
+      line: 63,
+      set: { messages: hist(A1, 'tool:"56"', 'tool:"36"') },
+      anim: 'agentLoop-return',
+      say: 'This tool message gets id call_b. Both answers look alike, so the ids are how the AI tells 56 and 36 apart.',
+    },
+    {
+      line: 40,
+      anim: 'agentLoop-loopback',
+      say: 'Both requests are answered, so the for loop ends. Back to the top of while True: turn 2.',
+    },
+    {
+      line: 41,
+      out: '--- 1. Sending to AI (with tools)... ---',
+      anim: 'agentLoop-send2',
+      say: 'Loop turn 2. The history now holds both results.',
+    },
+    {
+      line: 42,
+      set: { response: 'ChatCompletion (turn 2)' },
+      anim: 'apiProcessing',
+      say: 'The AI reads 56 and 36 and plans the last step: add them.',
+    },
+    {
+      line: 46,
+      set: { message: '{role:"assistant", content:None, tool_calls:[add(56, 36)]}' },
+      anim: 'agentLoop-decide',
+      say: 'One request this time: add(56, 36).',
+    },
+    {
+      line: 47,
+      set: { messages: hist(A1, 'tool:"56"', 'tool:"36"', A2) },
+      anim: HOLD,
+      say: 'We save it in the history.',
+    },
+    {
+      line: 49,
+      anim: 'agentLoop-check',
+      say: 'Exit check: there is a tool call, so no break.',
+    },
+    {
+      line: 57,
+      set: { tool_call: tc('call_c', 'add', 56, 36), function_name: '"add"', arguments: "{'a': 56, 'b': 36}" },
+      anim: 'toolSelect-add',
+      say: 'The for loop runs once: function_name is "add" and arguments is {\'a\': 56, \'b\': 36}.',
+    },
+    {
+      line: 60,
+      set: { result: '92' },
+      out: '[Debug: add(a=56, b=36)]',
+      anim: 'agentLoop-execute',
+      say: 'Our code runs add(56, 36). result = 92.',
+    },
+    {
+      line: 61,
+      out: "--- 3. add({'a': 56, 'b': 36}) = 92 ---",
+      anim: 'agentLoop-execute',
+      say: 'We print the result.',
+    },
+    {
+      line: 63,
+      set: { messages: hist(A1, 'tool:"56"', 'tool:"36"', A2, 'tool:"92"') },
+      anim: 'agentLoop-return',
+      say: 'The result "92" goes back with id call_c.',
+    },
+    {
+      line: 40,
+      anim: 'agentLoop-loopback',
+      say: 'Back to the top of while True: turn 3.',
+    },
+    {
+      line: 41,
+      out: '--- 1. Sending to AI (with tools)... ---',
+      anim: 'agentLoop-send3',
+      say: 'Loop turn 3: the history has all three results.',
+    },
+    {
+      line: 42,
+      set: { response: 'ChatCompletion (turn 3)' },
+      anim: 'apiProcessing',
+      say: 'All the math is done, so the AI writes a text answer.',
+    },
+    {
+      line: 46,
+      set: { message: '{role:"assistant", content:"7 * 8 + 9 * 4 = 92...", tool_calls:None}' },
+      anim: 'agentLoop-decide',
+      say: 'Text in message.content, and tool_calls is None.',
+    },
+    {
+      line: 47,
+      set: { messages: hist(A1, 'tool:"56"', 'tool:"36"', A2, 'tool:"92"', 'assistant:"text answer"') },
+      anim: HOLD,
+      say: 'We save the answer in the history.',
+    },
+    {
+      line: 49,
+      anim: 'agentLoop-check',
+      say: 'Are there no tool_calls? TRUE this time, so we go inside the if.',
+    },
+    {
+      line: 50,
+      out: '--- Final Answer from AI: ---',
+      anim: HOLD,
+      say: 'We print a header for the final answer.',
+    },
+    {
+      line: 51,
+      set: { final_answer: PAR_ANSWER },
+      out: PAR_ANSWER,
+      anim: 'agentLoop-finalAnswer',
+      say: 'We print the AI\'s explanation.',
+    },
+    {
+      line: 52,
+      anim: DONE,
+      say: 'break ends the loop. 3 AI calls, but 3 tool runs: two of them came from a single reply.',
+    },
+    {
+      line: 40,
+      anim: DONE,
+      say: 'What you learned: one reply can hold several tool_calls. The for loop runs each one, and every result carries its own tool_call_id.',
+    },
+  ]);
+}
+
+const multiFunctionParallelSteps: TraceStep[] = buildParallelTrace();
+
 export const multiFunctionVariants: TraceVariant[] = [
   {
     id: 'default',
@@ -701,5 +1088,11 @@ export const multiFunctionVariants: TraceVariant[] = [
     label: '100 / 5 + 3',
     inputValue: 'What is 100 / 5 + 3?',
     steps: multiFunction100Div5Plus3Steps,
+  },
+  {
+    id: 'variant3',
+    label: '7 * 8 + 9 * 4 (2 tools at once)',
+    inputValue: PAR_Q,
+    steps: multiFunctionParallelSteps,
   },
 ];

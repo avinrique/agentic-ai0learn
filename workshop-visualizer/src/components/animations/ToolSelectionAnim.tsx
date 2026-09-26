@@ -31,7 +31,7 @@ export default function ToolSelectionAnim({
   accentColor,
   animKey,
 }: ToolSelectionAnimProps) {
-  const compact = tools.length > 4;
+  const compact = tools.length > 2;
   const scanDelay = 0.22;
 
   return (
@@ -41,7 +41,10 @@ export default function ToolSelectionAnim({
         const wasUsed = usedBefore.includes(tool.name);
         const dim = mode === 'draft' || (mode === 'chosen' && !isChosen) || mode === 'unused';
         const args = filledArgs[tool.name];
-        const showParams = !compact || isChosen || highlightField === 'params';
+        // big menus: one line per card; the picked card opens up to show its description + arguments
+        const inline = compact && !isChosen;
+        const hl = (f: 'name' | 'desc' | 'params') =>
+          highlightField === f ? 'ring-1 ring-yellow-300/70 bg-yellow-300/10 text-white/90' : '';
         return (
           <motion.div
             key={`${animKey}-${tool.name}`}
@@ -54,7 +57,7 @@ export default function ToolSelectionAnim({
               scale: isChosen ? 1.02 : 1,
             }}
             transition={{ duration: 0.35, delay: mode === 'scanning' && isChosen ? tools.length * scanDelay : 0 }}
-            className={`relative rounded-lg border ${compact ? 'px-2 py-1' : 'px-2.5 py-1.5'} ${mode === 'draft' ? 'border-dashed' : ''}`}
+            className={`relative rounded-lg border ${compact ? (isChosen ? 'px-2 py-1' : 'px-2 py-0.5') : 'px-2.5 py-1.5'} ${mode === 'draft' ? 'border-dashed' : ''}`}
           >
             {/* scanning "eye" sweep */}
             {mode === 'scanning' && (
@@ -68,44 +71,67 @@ export default function ToolSelectionAnim({
             )}
             <div className="flex items-center gap-1.5 min-w-0">
               <span
-                className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-[12px] font-bold"
+                className={`flex-shrink-0 ${compact ? 'w-4 h-4 text-[11px]' : 'w-5 h-5 text-[12px]'} rounded flex items-center justify-center font-bold`}
                 style={{ backgroundColor: `${tool.color}26`, color: tool.color }}
               >
                 {tool.icon}
               </span>
               <span
-                className={`font-mono text-[13px] font-semibold truncate rounded px-0.5 ${highlightField === 'name' ? 'ring-1 ring-yellow-300/70 bg-yellow-300/10' : ''}`}
+                className={`${isChosen ? 'min-w-0 truncate' : 'flex-shrink-0'} font-mono text-[13px] font-semibold rounded px-0.5 ${hl('name')}`}
                 style={{ color: isChosen ? '#fff' : tool.color }}
               >
                 {tool.name}
               </span>
-              <div className="flex-1" />
+              {inline && tool.description && highlightField !== 'params' && (
+                <span className={`flex-1 min-w-0 truncate text-[12px] text-white/45 rounded px-0.5 ${hl('desc')}`}>
+                  {tool.description}
+                </span>
+              )}
+              {inline && highlightField === 'params' && (
+                <span
+                  className={`flex-1 min-w-0 truncate font-mono text-[12px] text-white/70 rounded px-0.5 ${hl('params')}`}
+                >
+                  ({(tool.params ?? []).join(', ')})
+                </span>
+              )}
+              {!inline && <div className="flex-1" />}
               {wasUsed && !isChosen && (
-                <span className="text-[11px] text-white/40 whitespace-nowrap">used ✓</span>
+                <span className="flex-shrink-0 text-[11px] text-white/40 whitespace-nowrap">used ✓</span>
               )}
               {isChosen && (
                 <motion.span
                   initial={{ opacity: 0, scale: 0.6 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: mode === 'scanning' ? tools.length * scanDelay : 0.1 }}
-                  className="text-[11px] font-bold px-1.5 rounded-full whitespace-nowrap"
+                  className="flex-shrink-0 text-[11px] font-bold px-1.5 rounded-full whitespace-nowrap"
                   style={{ color: '#0a0a1a', backgroundColor: tool.color }}
                 >
                   PICKED
                 </motion.span>
               )}
             </div>
-            {tool.description && (
+            {compact && isChosen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="font-mono text-[12px] truncate"
+                style={{ color: tool.color }}
+              >
+                {args && args.length
+                  ? args.map(([k, v]) => `${k}=${v}`).join(', ')
+                  : `(${(tool.params ?? []).join(', ')})`}
+              </motion.div>
+            )}
+            {!compact && tool.description && (
               <div
-                className={`text-[12px] leading-snug text-white/60 rounded px-0.5 ${compact && !isChosen ? 'truncate' : ''} ${highlightField === 'desc' ? 'ring-1 ring-yellow-300/70 bg-yellow-300/10 text-white/90' : ''}`}
+                className={`text-[12px] leading-snug text-white/60 rounded px-0.5 ${compact ? 'truncate' : ''} ${hl('desc')}`}
               >
                 {tool.description}
               </div>
             )}
-            {showParams && tool.params && tool.params.length > 0 && (
-              <div
-                className={`flex flex-wrap gap-1 mt-1 rounded ${highlightField === 'params' ? 'ring-1 ring-yellow-300/70 bg-yellow-300/10 p-0.5' : ''}`}
-              >
+            {!compact && tool.params && tool.params.length > 0 && (
+              <div className={`flex flex-wrap gap-1 mt-1 rounded ${hl('params')}`}>
                 {tool.params.map((p, k) => {
                   const val = isChosen ? args?.find(([name]) => name === p)?.[1] : undefined;
                   return (
@@ -126,7 +152,8 @@ export default function ToolSelectionAnim({
                           transition={{ delay: 0.3 + k * 0.25 }}
                           style={{ color: tool.color }}
                         >
-                          {' '}= {val.length > 22 ? val.slice(0, 21) + '…"' : val}
+                          {' '}
+                          = {val.length > 22 ? val.slice(0, 21) + '…"' : val}
                         </motion.span>
                       )}
                     </motion.span>
