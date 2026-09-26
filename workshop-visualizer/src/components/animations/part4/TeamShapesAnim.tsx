@@ -194,7 +194,7 @@ const lineArrows = [
 
 function Belt() {
   return (
-    <div className="absolute left-[8%] right-[8%] rounded-full overflow-hidden" style={{ top: 272, height: 12, background: '#1e293b' }}>
+    <div className="absolute left-[8%] right-[8%] rounded-full overflow-hidden" style={{ top: 284, height: 12, background: '#1e293b' }}>
       <motion.div
         className="h-full w-[200%]"
         style={{ background: 'repeating-linear-gradient(90deg, #334155 0 14px, #1e293b 14px 28px)' }}
@@ -218,7 +218,7 @@ function LineIdeaScene() {
         ]}
       />
       <div className="w-full max-w-3xl">
-        <Stage height={290} bots={lineBots(null)} arrows={lineArrows}>
+        <Stage height={300} bots={lineBots(null)} arrows={lineArrows}>
           <Belt />
           {['1. find facts', '2. write it', '3. polish it'].map((t, i) => (
             <motion.div
@@ -234,7 +234,7 @@ function LineIdeaScene() {
           ))}
           <motion.div
             className="absolute text-2xl"
-            style={{ top: 238 }}
+            style={{ top: 262 }}
             initial={{ left: '8%' }}
             animate={{ left: ['8%', '88%'] }}
             transition={{ repeat: Infinity, duration: 4, ease: 'linear' }}
@@ -684,11 +684,11 @@ function CriticRoundScene({ round }: { round: 1 | 2 }) {
       <RoundCounter round={round} done={round === 2 ? 'approved' : undefined} />
       <div className="w-full max-w-3xl">
         <Stage
-          height={300}
+          height={255}
           size={74}
           bots={[
-            { who: 'writer', x: 18, y: 80, active: true, mood: round === 2 ? 'proud' : 'working' },
-            { who: 'critic', x: 82, y: 80, mood: round === 2 ? 'proud' : 'thinking' },
+            { who: 'writer', x: 18, y: 70, active: true, mood: round === 2 ? 'proud' : 'working' },
+            { who: 'critic', x: 82, y: 70, mood: round === 2 ? 'proud' : 'thinking' },
           ]}
           arrows={[
             { from: { x: 27, y: 105 }, to: { x: 73, y: 105 }, color: C.wally },
@@ -882,7 +882,7 @@ function WhiteboardScene() {
           <Bot who="writer" size={64} active role="reads it all" />
         </motion.div>
       </div>
-      <div className="flex gap-4 items-center w-full max-w-5xl">
+      <div className="flex gap-4 items-center w-full max-w-5xl [&>pre]:shrink-0">
         <Code
           delay={0.8}
           lines={[
@@ -1011,7 +1011,7 @@ function TakeawaysScene() {
           </motion.div>
         ))}
       </div>
-      <div className="flex gap-2 mt-2">
+      <div className="flex gap-4 mt-2">
         {(['researcher', 'writer', 'critic', 'boss', 'math', 'receptionist'] as Who[]).map((w) => (
           <Bot key={w} who={w} size={46} mood="proud" hideRole />
         ))}

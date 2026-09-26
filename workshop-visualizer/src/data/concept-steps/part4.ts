@@ -105,3 +105,121 @@ export const whyTeamsSteps: ConceptStep[] = [
     subtitle: 'Use a team only when the job is big enough.',
   },
 ];
+
+// ===== Lesson 20: Team Shapes: How Agents Work Together =====
+export const teamShapesSteps: ConceptStep[] = [
+  // Step 0
+  {
+    explanation: "What you'll learn: four ways to organise a team of agents. Each card shows a shape and the everyday thing it works like.",
+    animationTrigger: 'intro',
+    subtitle: 'New today: same robots, four ways to pass the notes.',
+  },
+  // Step 1
+  {
+    explanation: 'Shape 1, the assembly line: like a car factory or a relay race. Each robot does one job, then passes the work to the next one.',
+    animationTrigger: 'lineIdea',
+    subtitle: 'Always the same order.',
+  },
+  // Step 2
+  {
+    explanation: 'Task: make an octopus fact card. Rita goes first. Read her sticky note flying to Wally: it is just the text her LLM call returned.',
+    animationTrigger: 'lineRun1',
+    subtitle: 'Call 1: Rita finds the facts.',
+  },
+  // Step 3
+  {
+    explanation: 'Wally turns the facts into a card and passes it to Cora, who polishes it. Three calls, always in this order. Great when the steps never change.',
+    animationTrigger: 'lineRun2',
+    subtitle: 'Calls 2 and 3: write, then polish.',
+  },
+  // Step 4
+  {
+    explanation: "Shape 2, boss & helpers: like a head chef calling out orders. Max 👑 doesn't cook. He reads the request and decides which helpers to ask.",
+    animationTrigger: 'bossIdea',
+    subtitle: 'The boss plans; the helpers work.',
+  },
+  // Step 5
+  {
+    explanation: "Look at Max's reply on the right: tool calls, just like Part 2! But each 'tool' is another agent. He picks Milo for the cost and Wally for the invite.",
+    animationTrigger: 'bossPlan',
+    subtitle: 'The tools are other agents.',
+  },
+  // Step 6
+  {
+    explanation: "Our code runs each chosen helper and sends their answers back up to Max. Rita and Cora stay asleep: this request didn't need them.",
+    animationTrigger: 'bossCollect',
+    subtitle: 'Only the chosen helpers are called.',
+  },
+  // Step 7
+  {
+    explanation: 'Max writes one final reply from the answers. A different request would get different helpers. Use a boss when the steps change from request to request.',
+    animationTrigger: 'bossFinal',
+    subtitle: '1 plan + 2 helpers + 1 final = 4 calls.',
+  },
+  // Step 8
+  {
+    explanation: "Shape 3, the receptionist: like a hospital front desk. Rosa 🛎️ doesn't answer questions herself. She sends each one to exactly ONE specialist.",
+    animationTrigger: 'routerIdea',
+    subtitle: 'Pick one expert, then step aside.',
+  },
+  // Step 9
+  {
+    explanation: 'Rosa replies with one word, “math”, so our code sends the question to Milo. Only 2 calls: cheap and fast. See more examples on the right.',
+    animationTrigger: 'routerRun',
+    subtitle: 'One label, one expert, one answer.',
+  },
+  // Step 10
+  {
+    explanation: 'Shape 4, writer & critic: like a teacher marking homework. Wally writes, Cora marks it with a red pen, Wally fixes it. Round and round.',
+    animationTrigger: 'criticIdea',
+    subtitle: 'Write → review → fix → repeat.',
+  },
+  // Step 11
+  {
+    explanation: "Round 1: Wally's first dragon story is short and dull. Read Cora's red-pen note at the bottom: she says exactly what to fix.",
+    animationTrigger: 'criticRound1',
+    subtitle: 'A good critic gives clear, fixable notes.',
+  },
+  // Step 12
+  {
+    explanation: 'Round 2: Wally fixes it and Cora writes “APPROVED”. Our code spots that word and stops the loop. 4 calls in total.',
+    animationTrigger: 'criticRound2',
+    subtitle: 'The magic word ends the loop.',
+  },
+  // Step 13
+  {
+    explanation: 'What if Cora is never happy? Without a limit (left) the loop never ends and the bill keeps growing. So we stop after MAX_ROUNDS and keep the latest draft.',
+    animationTrigger: 'criticLimit',
+    subtitle: 'Always set a maximum number of rounds.',
+  },
+  // Step 14
+  {
+    explanation: 'All four shapes side by side. Read the “Use it when…” column: pick the shape that matches how your task behaves.',
+    animationTrigger: 'compare',
+    subtitle: 'Match the shape to the job.',
+  },
+  // Step 15
+  {
+    explanation: "Teams can share a whiteboard: a plain list our code keeps. Rita and Milo write to it, then Wally reads it all to make the plan. That's shared memory.",
+    animationTrigger: 'whiteboard',
+    subtitle: 'Shared memory = a list everyone reads.',
+  },
+  // Step 16
+  {
+    explanation: 'An honest warning: every extra agent means another call, more cost, more waiting, and one more place for a mistake. Watch a wrong fact travel down the line.',
+    animationTrigger: 'warning',
+    subtitle: 'More agents is not automatically better.',
+  },
+  // Step 17
+  {
+    explanation: 'Your turn: pick a request and a team shape, then watch the notes fly. Check the API-call counter and the verdict: does this shape fit this request?',
+    animationTrigger: 'playground',
+    subtitle: 'Try an assembly line on 15 × 12, then a receptionist.',
+  },
+  // Step 18
+  {
+    explanation: 'What you learned: (1) four shapes: assembly line, boss & helpers, receptionist, writer & critic. (2) Each agent is just an LLM call; our code passes notes. (3) Pick the simplest shape that fits.',
+    animationTrigger: 'takeaways',
+    subtitle: 'Simple shapes, clear jobs, few calls.',
+  },
+];

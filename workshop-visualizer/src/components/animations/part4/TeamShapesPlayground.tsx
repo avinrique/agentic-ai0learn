@@ -31,7 +31,7 @@ const SHAPES: { id: ShapeId; icon: string; name: string }[] = [
   { id: 'loop', icon: '📝', name: 'Writer & critic' },
 ];
 
-const POS: Record<ShapeId, Partial<Record<Who, { x: number; y: number }>>> = {
+export const POS: Record<ShapeId, Partial<Record<Who, { x: number; y: number }>>> = {
   line: { you: { x: 9, y: 170 }, researcher: { x: 33, y: 170 }, writer: { x: 57, y: 170 }, critic: { x: 81, y: 170 } },
   boss: {
     you: { x: 10, y: 20 },
@@ -60,7 +60,7 @@ const ARROWS: Record<ShapeId, [Who, Who][]> = {
 
 const q = (text: string, first: Who): Ev => ({ who: 'you', to: first, text, call: false });
 
-const REQUESTS: { chip: string; combos: Record<ShapeId, Combo> }[] = [
+export const REQUESTS: { chip: string; combos: Record<ShapeId, Combo> }[] = [
   {
     chip: 'What is 15 × 12?',
     combos: {
@@ -259,8 +259,8 @@ const STEP_MS = 1700;
 
 function restSpot(p: { x: number; y: number }) {
   return {
-    x: Math.min(84, Math.max(16, p.x)),
-    y: p.y >= 150 ? p.y - 64 : p.y + 108,
+    x: Math.min(83, Math.max(17, p.x)),
+    y: p.y >= 150 ? p.y - 100 : p.y + 108,
   };
 }
 
