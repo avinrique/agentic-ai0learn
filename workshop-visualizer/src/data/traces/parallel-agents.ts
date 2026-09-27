@@ -230,7 +230,7 @@ function parallelSteps(run: ParallelRun): TraceStep[] {
       at: 'fact_list = "\\n".join(facts)',
       trig: 'join',
       set: { fact_list: str(factList) },
-      exp: 'Glue the facts into one note, one per line. Wally needs ALL of them, so his step can only start after the whole team is done.',
+      exp: 'join glues the facts into one note, with "\\n" (a new line) between them. Wally needs ALL of them, so he can only start once the whole team is done.',
     },
     {
       at: 'poster = run_agent(writer_prompt',

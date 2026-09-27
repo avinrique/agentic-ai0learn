@@ -140,7 +140,7 @@ function HelperDesk({ who, s, size }: { who: Helper; s: BossScene; size: DeskSiz
       <div className="flex-1 min-w-0 flex flex-col gap-2">
         {showPlate && (
           <div
-            className={`font-mono rounded px-2 py-0.5 self-start ${big ? 'text-[15px]' : 'text-[13px]'}`}
+            className={`font-mono rounded px-2 py-0.5 self-start max-w-full break-words ${big ? 'text-[15px]' : 'text-[13px]'}`}
             style={{
               background: plateGlow ? `${ACCENT}33` : 'rgba(255,255,255,0.06)',
               color: plateGlow ? ACCENT : 'rgba(255,255,255,0.6)',
@@ -197,7 +197,8 @@ export default function BossAgentAnim() {
   const deskSize = (who: Helper): DeskSize =>
     helperFocus ? (helperFocus === who ? 'big' : 'small') : s.focus === 'all' ? 'mid' : 'small';
 
-  const inboxShown = !['intro', 'runAgent', 'helpers', 'tools', 'phonebook', 'bossPrompt'].includes(s.phase);
+  // The inbox stays on Max's desk, but steps aside while a helper's desk is the focal point.
+  const inboxShown = !['intro', 'runAgent', 'helpers', 'tools', 'phonebook', 'bossPrompt'].includes(s.phase) && !helperFocus;
   const inboxBig = s.phase === 'inbox';
   const showSlips = !helperFocus && !setup && (s.slips.length > 0 || s.phase === 'reply' || s.phase === 'check');
 
@@ -205,7 +206,7 @@ export default function BossAgentAnim() {
   const spot = {
     max: { left: '4%', top: '45%' },
     rita: { left: '50%', top: '22%' },
-    milo: { left: '50%', top: '62%' },
+    milo: { left: '50%', top: '46%' },
   };
 
   return (
@@ -254,99 +255,103 @@ export default function BossAgentAnim() {
 
       {/* Stage */}
       <div className="relative flex-1 min-h-0 flex gap-4">
-        {/* Max's desk */}
-        <motion.div
-          layout
-          className="min-h-0 flex flex-col justify-center gap-3"
-          style={{ width: helperFocus ? '34%' : s.focus === 'all' ? '56%' : '70%' }}
-        >
-          {inboxShown && (
-            <div
-              className={`rounded-lg px-3 ${inboxBig ? 'py-2.5 text-[16px]' : 'py-1 text-[13px] truncate'} leading-snug`}
-              style={{
-                background: inboxBig ? `${ACCENT}1a` : 'rgba(255,255,255,0.05)',
-                boxShadow: inboxBig ? `inset 0 0 0 1.5px ${ACCENT}` : 'none',
-                opacity: maxFocal ? 1 : 0.5,
-              }}
+        {!(finished && s.final) && (
+          <>
+            {/* Max's desk */}
+            <motion.div
+              layout
+              className="min-h-0 flex flex-col justify-center gap-3"
+              style={{ width: helperFocus ? '34%' : s.focus === 'all' ? '46%' : '70%' }}
             >
-              📥 <span className="text-white/90">&quot;{s.request}&quot;</span>
-            </div>
-          )}
+              {inboxShown && (
+                <div
+                  className={`rounded-lg px-3 ${inboxBig ? 'py-2.5 text-[16px]' : 'py-1 text-[13px] truncate'} leading-snug`}
+                  style={{
+                    background: inboxBig ? `${ACCENT}1a` : 'rgba(255,255,255,0.05)',
+                    boxShadow: inboxBig ? `inset 0 0 0 1.5px ${ACCENT}` : 'none',
+                    opacity: maxFocal ? 1 : 0.5,
+                  }}
+                >
+                  📥 <span className="text-white/90">&quot;{s.request}&quot;</span>
+                </div>
+              )}
 
-          <div className="flex items-center gap-3">
-            <AgentBot
-              color={TEAM.boss.color}
-              badge={TEAM.boss.badge}
-              name={TEAM.boss.name}
-              mood={maxMood(s)}
-              size={maxFocal ? 88 : 56}
-              active={s.focus === 'max' && !finished}
-              dimmed={!maxFocal && s.focus !== 'none'}
-            />
-            {maxFocal && (
+              <div className="flex items-center gap-3">
+                <AgentBot
+                  color={TEAM.boss.color}
+                  badge={TEAM.boss.badge}
+                  name={TEAM.boss.name}
+                  mood={maxMood(s)}
+                  size={maxFocal ? 88 : 56}
+                  active={s.focus === 'max' && !finished}
+                  dimmed={!maxFocal && s.focus !== 'none'}
+                />
+                {maxFocal && (
+                  <motion.div
+                    key={`say-${idx}`}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-2xl rounded-bl-sm px-3.5 py-2 text-[16px] leading-snug bg-white text-[#1c1c44] font-medium"
+                  >
+                    {maxSays(s)}
+                  </motion.div>
+                )}
+              </div>
+
+              {showSlips && (
+                <div className="flex flex-col gap-1.5 min-h-0 overflow-hidden">
+                  {s.slips.length === 0 ? (
+                    <div className="text-[14px] text-white/60">📝 no order slips → final answer</div>
+                  ) : (
+                    s.slips.map((sl, i) => <SlipChip key={sl.id} slip={sl} active={i === s.current && s.phase === 'read'} />)
+                  )}
+                </div>
+              )}
+            </motion.div>
+
+            {/* Helper desks: the one at work is big, the other shrinks */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center gap-3 min-h-0">
+              {(['rita', 'milo'] as Helper[]).map((who) => {
+                const sz = deskSize(who);
+                return (
+                  <motion.div key={who} layout className="min-h-0" style={{ flex: sz === 'big' ? 3 : helperFocus ? 1 : '0 0 auto' }}>
+                    <HelperDesk who={who} s={s} size={sz} />
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* A slip flying to a helper, or a result note flying back to Max */}
+            {slip && s.phase === 'send' && (
               <motion.div
-                key={`say-${idx}`}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-2xl rounded-bl-sm px-3.5 py-2 text-[16px] leading-snug bg-white text-[#1c1c44] font-medium"
+                key={`fly-${idx}`}
+                className="absolute z-20 w-[44%] rounded-md px-3 py-2 text-[15px] shadow-lg pointer-events-none"
+                style={{ background: '#fef3c7', color: '#1c1c44' }}
+                initial={{ ...spot.max, opacity: 0.4, rotate: -6 }}
+                animate={{ ...spot[slip.to], left: '54%', opacity: 1, rotate: 0 }}
+                transition={{ duration: 0.9, ease: 'easeInOut' }}
               >
-                {maxSays(s)}
+                <div className="font-mono text-[13px] font-semibold">📝 {slip.id}</div>
+                <div className="line-clamp-2">&quot;{slip.arg}&quot;</div>
               </motion.div>
             )}
-          </div>
-
-          {showSlips && (
-            <div className="flex flex-col gap-1.5 min-h-0 overflow-hidden">
-              {s.slips.length === 0 ? (
-                <div className="text-[14px] text-white/60">📝 no order slips → final answer</div>
-              ) : (
-                s.slips.map((sl, i) => <SlipChip key={sl.id} slip={sl} active={i === s.current && s.phase === 'read'} />)
-              )}
-            </div>
-          )}
-        </motion.div>
-
-        {/* Helper desks: the one at work is big, the other shrinks */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center gap-3 min-h-0">
-          {(['rita', 'milo'] as Helper[]).map((who) => {
-            const sz = deskSize(who);
-            return (
-              <motion.div key={who} layout className="min-h-0" style={{ flex: sz === 'big' ? 3 : helperFocus ? 1 : '0 0 auto' }}>
-                <HelperDesk who={who} s={s} size={sz} />
+            {slip && s.phase === 'noteBack' && (
+              <motion.div
+                key={`back-${idx}`}
+                className="absolute z-20 w-[34%] rounded-md px-3 py-2 text-[15px] shadow-lg pointer-events-none"
+                style={{ background: '#dcfce7', color: '#14301f', border: `2px solid ${HELPERS[slip.to].bot.color}` }}
+                initial={{ ...spot[slip.to], opacity: 0.4 }}
+                animate={{ left: '0%', top: '8%', opacity: 1 }}
+                transition={{ duration: 0.9, ease: 'easeInOut' }}
+              >
+                <div className="font-mono text-[13px] font-semibold">📄 tool · {slip.id}</div>
+                <div className="line-clamp-4">{slip.result}</div>
               </motion.div>
-            );
-          })}
-        </div>
-
-        {/* A slip flying to a helper, or a result note flying back to Max */}
-        {slip && s.phase === 'send' && (
-          <motion.div
-            key={`fly-${idx}`}
-            className="absolute z-20 w-[44%] rounded-md px-3 py-2 text-[15px] shadow-lg pointer-events-none"
-            style={{ background: '#fef3c7', color: '#1c1c44' }}
-            initial={{ ...spot.max, opacity: 0.4, rotate: -6 }}
-            animate={{ ...spot[slip.to], left: '54%', opacity: 1, rotate: 0 }}
-            transition={{ duration: 0.9, ease: 'easeInOut' }}
-          >
-            <div className="font-mono text-[13px] font-semibold">📝 {slip.id}</div>
-            <div className="line-clamp-2">&quot;{slip.arg}&quot;</div>
-          </motion.div>
-        )}
-        {slip && s.phase === 'noteBack' && (
-          <motion.div
-            key={`back-${idx}`}
-            className="absolute z-20 w-[34%] rounded-md px-3 py-2 text-[15px] shadow-lg pointer-events-none"
-            style={{ background: '#dcfce7', color: '#14301f', border: `2px solid ${HELPERS[slip.to].bot.color}` }}
-            initial={{ ...spot[slip.to], opacity: 0.4 }}
-            animate={{ left: '0%', top: '8%', opacity: 1 }}
-            transition={{ duration: 0.9, ease: 'easeInOut' }}
-          >
-            <div className="font-mono text-[13px] font-semibold">📄 tool · {slip.id}</div>
-            <div className="line-clamp-4">{slip.result}</div>
-          </motion.div>
+            )}
+          </>
         )}
 
-        {/* Final answer card */}
+        {/* Final answer card: the only thing on the stage once Max is done */}
         {finished && s.final && (
           <div className="absolute inset-0 z-30 flex items-center justify-center px-[3%]">
           <motion.div

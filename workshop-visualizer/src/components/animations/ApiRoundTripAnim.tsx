@@ -126,6 +126,30 @@ function Glow({ on, color, children, className = '' }: { on: boolean; color: str
   );
 }
 
+// A small terminal card for the two early print() steps (the full terminal comes later).
+function MiniTerminal({ lines, className = '' }: { lines: { text: string; hot: boolean }[]; className?: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={spring}
+      className={`rounded-xl bg-black/60 px-4 py-2.5 font-mono text-[15px] leading-relaxed ${className}`}
+    >
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className="w-2 h-2 rounded-full bg-accent-red/70" />
+        <span className="w-2 h-2 rounded-full bg-accent-gold/70" />
+        <span className="w-2 h-2 rounded-full bg-accent-green/70" />
+        <span className="text-[13px] text-white/40 ml-1.5 font-sans">Terminal</span>
+      </div>
+      {lines.map((l, i) => (
+        <div key={i} className={`whitespace-pre-wrap ${l.hot ? 'text-white' : 'text-white/40'}`}>
+          {l.text}
+        </div>
+      ))}
+    </motion.div>
+  );
+}
+
 // One layer of the nested response object.
 function Layer({
   name,
@@ -309,6 +333,13 @@ export default function ApiRoundTripAnim() {
                   </Glow>
                 )}
               </div>
+
+              {at('printStart') && (
+                <MiniTerminal
+                  className="mt-auto"
+                  lines={outputs.map((o) => ({ text: o.text, hot: o.idx === currentStep }))}
+                />
+              )}
 
               {/* Request envelope being packed */}
               {reached >= 5 && !sent && (
@@ -530,6 +561,12 @@ export default function ApiRoundTripAnim() {
               </Layer>
             </Layer>
           )}
+          {at('printHeading') && (
+            <MiniTerminal
+              className="self-center w-full max-w-[460px]"
+              lines={outputs.map((o) => ({ text: o.text, hot: o.idx === currentStep }))}
+            />
+          )}
         </motion.div>
       )}
 
@@ -547,7 +584,7 @@ export default function ApiRoundTripAnim() {
             <span className="text-[13px] text-white/40 ml-2">Terminal</span>
           </div>
           <div className="flex-1 min-h-0 px-4 pb-4 font-mono text-[15px] leading-relaxed overflow-hidden flex flex-col justify-end">
-            <div className="text-white/40">$ python 1_basic_prompt.py</div>
+            <div className="text-white/40">$ python run.py part1/basic_api.py</div>
             {outputs.map((o) => {
               const isLast = o.idx === currentStep;
               const text = isLast && at('printOutput') ? o.text.slice(0, outShown) : o.text;

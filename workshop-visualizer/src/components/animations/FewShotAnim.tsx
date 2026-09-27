@@ -67,7 +67,12 @@ export default function FewShotAnim({ zeroShotReplies = {} }: Props) {
   const sending = trig === 'apiCall';
   const thinking = trig === 'apiProcessing';
   const predicted = reached('showPrediction');
-  const labelPrinted = steps.slice(0, currentStep + 1).some((s) => s.lineNumber === 28 && s.output);
+  // The two print() lines at the end: show what the terminal now says.
+  const printing = !!step?.output && (line === 27 || line === 28);
+  const printsSoFar = steps
+    .slice(0, currentStep + 1)
+    .map((s, i) => ({ text: s.output ?? '', hot: i === currentStep, idx: i }))
+    .filter((o) => o.text && steps[o.idx].lineNumber >= 27);
   const compare = reached('compare');
   const isLast = compare && currentStep === steps.length - 1;
 
@@ -240,7 +245,9 @@ export default function FewShotAnim({ zeroShotReplies = {} }: Props) {
               className="rounded-xl bg-accent-purple/10 px-4 py-2.5"
             >
               <div className="text-[13px] font-semibold text-accent-purple mb-0.5">system</div>
-              <div className="text-[14px] text-white/80 font-mono leading-snug">&quot;{sys.content}&quot;</div>
+              <div className={`text-[14px] text-white/80 font-mono leading-snug ${printing ? 'truncate' : ''}`}>
+                &quot;{sys.content}&quot;
+              </div>
             </motion.div>
           )}
 
@@ -289,7 +296,34 @@ export default function FewShotAnim({ zeroShotReplies = {} }: Props) {
                 </motion.div>
               </div>
               <span className="text-white/60">☁️ OpenAI</span>
-              {labelPrinted && <span className="text-accent-green">✓ printed</span>}
+            </motion.div>
+          )}
+
+          {/* Terminal: the heading (an f-string with the sentence filled in), then the label */}
+          {printing && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={spring}
+              className="mx-3 rounded-xl bg-black/60 px-4 py-2.5 font-mono text-[15px] leading-relaxed"
+            >
+              <div className="font-sans text-[13px] text-white/40">Terminal</div>
+              {printsSoFar.map((o) => (
+                <div key={o.idx} className={`whitespace-pre-wrap ${o.hot ? 'text-white' : 'text-white/45'}`}>
+                  {/* The value the f-string filled in is lit up */}
+                  {real?.input && o.text.includes(real.input)
+                    ? o.text
+                        .replace(/^\n/, '')
+                        .split(real.input)
+                        .map((part, k) => (
+                          <span key={k}>
+                            {k > 0 && <span className={o.hot ? 'text-accent-gold' : ''}>{real.input}</span>}
+                            {part}
+                          </span>
+                        ))
+                    : o.text.replace(/^\n/, '')}
+                </div>
+              ))}
             </motion.div>
           )}
 

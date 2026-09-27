@@ -111,6 +111,12 @@ const autoSteps = [
 
 type AutoPhase = 0 | 1 | 2 | 3;
 
+// Step 17: a short chat, word by word. The window holds only the last CW_SIZE tokens.
+const CW_TOKENS = ['My', 'name', 'is', 'Alex.', 'I', 'love', 'pizza', 'and', 'long', 'walks.', 'Plan', 'my', 'party!', 'What', 'is', 'my', 'name?'];
+const CW_SIZE = 8;
+const CW_OFF = 3; // token slots shown to the left of the window
+const CW_STEP = 70; // px per token slot
+
 const tempStates = [
   { label: 'Temp = 0', desc: 'Always picks "Paris" — deterministic', bars: [100, 0, 0, 0, 0], thermColor: '#4a9eff' },
   { label: 'Temp = 0.7', desc: 'Balanced — usually "Paris" but sometimes surprises', bars: [92, 3, 2, 1.5, 1.5], thermColor: '#fbbf24' },
@@ -275,14 +281,16 @@ export default function LLMPipelineAnim() {
     return () => clearInterval(timer);
   }, [s]);
 
-  // Step 17: Context window sliding
+  // Step 17: tokens arrive one by one; the window keeps only the last CW_SIZE
   useEffect(() => {
     if (s !== 17) { setWindowOffset(0); return; }
     const timer = setInterval(() => {
-      setWindowOffset((prev) => (prev + 1) % 20);
-    }, 400);
+      setWindowOffset((prev) => (prev + 1) % (CW_TOKENS.length + 8));
+    }, 450);
     return () => clearInterval(timer);
   }, [s]);
+  const cwShown = Math.min(windowOffset, CW_TOKENS.length);
+  const cwStart = Math.max(0, cwShown - CW_SIZE);
 
   // Step 19: Pipeline pulse
   useEffect(() => {
@@ -502,24 +510,19 @@ export default function LLMPipelineAnim() {
         >
           How does it actually work?
         </motion.p>
-        {/* Orbiting question fragments */}
-        {['How does it understand?', 'Where does it learn?', 'Why is it so good?'].map((q, i) => {
-          const angle = (i / 3) * Math.PI * 2;
-          return (
+        {/* The questions this lesson answers */}
+        <div className="flex flex-wrap justify-center gap-2 mt-3 px-6">
+          {['How does it understand?', 'Where does it learn?', 'Why is it so good?'].map((q, i) => (
             <motion.span
               key={q}
-              className="absolute text-sm text-white/20"
-              style={{ left: '50%', top: '50%' }}
-              animate={s === 3 ? {
-                x: [Math.cos(angle) * 120, Math.cos(angle + Math.PI * 2) * 120],
-                y: [Math.sin(angle) * 80 - 20, Math.sin(angle + Math.PI * 2) * 80 - 20],
-              } : { opacity: 0 }}
-              transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+              className="px-3 py-1 rounded-full border border-white/10 bg-white/[0.03] text-sm text-white/45"
+              animate={{ opacity: s === 3 ? 1 : 0, y: s === 3 ? 0 : 8 }}
+              transition={{ ...spring, delay: s === 3 ? 0.5 + i * 0.15 : 0 }}
             >
               {q}
             </motion.span>
-          );
-        })}
+          ))}
+        </div>
         <motion.div
           className="mt-4 flex items-center gap-2 text-accent-blue/60"
           animate={{ opacity: s === 3 ? 1 : 0, y: s === 3 ? 0 : 10 }}
@@ -740,7 +743,7 @@ export default function LLMPipelineAnim() {
             transition={{ ...spring, delay: 0.3 }}
           >
             <p className="text-xs text-white/40 uppercase tracking-wider mb-2">Embedding locates meaning</p>
-            <p className="text-2xl font-mono text-accent-blue">[0.82, -0.45, ...]</p>
+            <p className="text-2xl font-mono text-accent-blue whitespace-nowrap">[0.31, 0.88, …]</p>
             <motion.p
               className="text-sm text-accent-blue mt-2 font-bold"
               animate={{ opacity: s === 7 ? 1 : 0 }}
@@ -766,11 +769,11 @@ export default function LLMPipelineAnim() {
           transition={{ ...spring, delay: 0.7 }}
         >
           {[
-            { tok: 'The', vals: [0.12, -0.03, 0.08, -0.01], color: tokenColors[0] },
+            { tok: 'The', vals: [0.12, -0.63, 0.38, -0.21], color: tokenColors[0] },
             { tok: 'capital', vals: [0.67, 0.34, -0.51, 0.22], color: tokenColors[1] },
-            { tok: 'of', vals: [0.05, -0.02, 0.11, -0.06], color: tokenColors[2] },
+            { tok: 'of', vals: [-0.45, 0.22, 0.61, -0.16], color: tokenColors[2] },
             { tok: 'France', vals: [0.82, -0.45, 0.73, 0.91], color: tokenColors[3] },
-            { tok: 'is', vals: [0.09, 0.01, -0.04, 0.07], color: tokenColors[4] },
+            { tok: 'is', vals: [0.29, -0.51, -0.14, 0.47], color: tokenColors[4] },
           ].map((item, i) => (
             <motion.div
               key={item.tok}
@@ -824,25 +827,25 @@ export default function LLMPipelineAnim() {
         </motion.div>
 
         <motion.p
-          className="text-sm text-white/25 mt-5"
+          className="text-sm text-white/35 mt-5"
           animate={{ opacity: s === 7 ? 1 : 0 }}
           transition={{ ...spring, delay: 1.8 }}
         >
-          Notice: &quot;France&quot; has large numbers (lots of meaning) — &quot;of&quot; has tiny numbers (little meaning)
+          Illustrative numbers: a real embedding has hundreds or thousands of numbers per token
         </motion.p>
       </motion.div>
 
       {/* ===== STEP 8: "The Meaning Map" ===== */}
       <motion.div
-        className="absolute inset-0 flex items-center justify-center pointer-events-none px-8"
+        className="absolute inset-0 flex items-center justify-center pointer-events-none px-8 py-4"
         animate={{ opacity: s === 8 ? 1 : 0 }}
         transition={smooth}
       >
-        <div className="w-full max-w-3xl">
+        <div className="w-full max-w-3xl h-full flex flex-col items-center justify-center">
           {/* Large 2D scatter plot with SVG */}
           <motion.svg
-            viewBox="0 0 600 380"
-            className="w-full"
+            viewBox="0 0 600 360"
+            className="w-full flex-1 min-h-0"
             animate={{ opacity: s === 8 ? 1 : 0 }}
             transition={{ ...spring, delay: 0.1 }}
           >
@@ -851,13 +854,13 @@ export default function LLMPipelineAnim() {
             <line x1="50" y1="20" x2="50" y2="350" stroke="rgba(255,255,255,0.1)" strokeWidth={1} />
 
             {/* Cluster regions — pulsing halos */}
-            <motion.circle
+            <motion.circle initial={false}
               cx="430" cy="90" r="75"
               fill="none" stroke="#4a9eff" strokeWidth={1.5} strokeDasharray="6 4"
               animate={s === 8 ? { opacity: [0.15, 0.35, 0.15] } : { opacity: 0 }}
               transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
             />
-            <motion.text
+            <motion.text initial={false}
               x="430" y="25" textAnchor="middle" fill="#4a9eff" fontSize="12" fontWeight="bold"
               animate={{ opacity: s === 8 ? 0.6 : 0 }}
               transition={{ ...spring, delay: 0.4 }}
@@ -865,13 +868,13 @@ export default function LLMPipelineAnim() {
               ROYALTY
             </motion.text>
 
-            <motion.circle
+            <motion.circle initial={false}
               cx="160" cy="210" r="70"
               fill="none" stroke="#fbbf24" strokeWidth={1.5} strokeDasharray="6 4"
               animate={s === 8 ? { opacity: [0.15, 0.35, 0.15] } : { opacity: 0 }}
               transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
             />
-            <motion.text
+            <motion.text initial={false}
               x="160" y="155" textAnchor="middle" fill="#fbbf24" fontSize="12" fontWeight="bold"
               animate={{ opacity: s === 8 ? 0.6 : 0 }}
               transition={{ ...spring, delay: 0.5 }}
@@ -880,14 +883,14 @@ export default function LLMPipelineAnim() {
             </motion.text>
 
             {/* Dashed line showing distance: king↔banana */}
-            <motion.line
+            <motion.line initial={false}
               x1="410" y1="80" x2="380" y2="310"
               stroke="#ef4444" strokeWidth={1} strokeDasharray="4 4"
               animate={{ opacity: s === 8 ? 0.4 : 0 }}
               transition={{ ...spring, delay: 1.2 }}
             />
-            <motion.text
-              x="420" y="200" fill="#ef4444" fontSize="11" fontWeight="bold"
+            <motion.text initial={false}
+              x="420" y="200" fill="#ef4444" fontSize="13" fontWeight="bold"
               animate={{ opacity: s === 8 ? 0.7 : 0 }}
               transition={{ ...spring, delay: 1.4 }}
             >
@@ -895,14 +898,14 @@ export default function LLMPipelineAnim() {
             </motion.text>
 
             {/* Dashed line showing distance: king↔queen */}
-            <motion.line
+            <motion.line initial={false}
               x1="410" y1="80" x2="460" y2="95"
               stroke="#4ade80" strokeWidth={1.5} strokeDasharray="4 4"
               animate={{ opacity: s === 8 ? 0.5 : 0 }}
               transition={{ ...spring, delay: 0.9 }}
             />
-            <motion.text
-              x="445" y="68" fill="#4ade80" fontSize="10" fontWeight="bold"
+            <motion.text initial={false}
+              x="474" y="118" fill="#4ade80" fontSize="13" fontWeight="bold"
               animate={{ opacity: s === 8 ? 0.8 : 0 }}
               transition={{ ...spring, delay: 1.1 }}
             >
@@ -917,7 +920,7 @@ export default function LLMPipelineAnim() {
               { word: 'throne', cx: 450, cy: 60, color: '#4a9eff', delay: 0.5 },
             ].map((pt) => (
               <motion.g key={pt.word}>
-                <motion.circle
+                <motion.circle initial={false}
                   cx={pt.cx} cy={pt.cy} r="6"
                   fill={pt.color}
                   animate={{
@@ -926,13 +929,13 @@ export default function LLMPipelineAnim() {
                   }}
                   transition={{ ...spring, delay: pt.delay }}
                 />
-                <motion.circle
+                <motion.circle initial={false}
                   cx={pt.cx} cy={pt.cy} r="12"
                   fill={pt.color} opacity={0.15}
                   animate={{ opacity: s === 8 ? 0.15 : 0 }}
                   transition={{ ...spring, delay: pt.delay }}
                 />
-                <motion.text
+                <motion.text initial={false}
                   x={pt.cx + 12} y={pt.cy + 4}
                   fill={pt.color} fontSize="13" fontWeight="bold"
                   animate={{ opacity: s === 8 ? 1 : 0 }}
@@ -951,19 +954,19 @@ export default function LLMPipelineAnim() {
               { word: 'kitten', cx: 190, cy: 195, color: '#fbbf24', delay: 0.65 },
             ].map((pt) => (
               <motion.g key={pt.word}>
-                <motion.circle
+                <motion.circle initial={false}
                   cx={pt.cx} cy={pt.cy} r="6"
                   fill={pt.color}
                   animate={{ opacity: s === 8 ? 1 : 0, r: s === 8 ? 6 : 0 }}
                   transition={{ ...spring, delay: pt.delay }}
                 />
-                <motion.circle
+                <motion.circle initial={false}
                   cx={pt.cx} cy={pt.cy} r="12"
                   fill={pt.color} opacity={0.15}
                   animate={{ opacity: s === 8 ? 0.15 : 0 }}
                   transition={{ ...spring, delay: pt.delay }}
                 />
-                <motion.text
+                <motion.text initial={false}
                   x={pt.cx + 12} y={pt.cy + 4}
                   fill={pt.color} fontSize="13" fontWeight="bold"
                   animate={{ opacity: s === 8 ? 1 : 0 }}
@@ -976,19 +979,19 @@ export default function LLMPipelineAnim() {
 
             {/* Outlier — banana */}
             <motion.g>
-              <motion.circle
+              <motion.circle initial={false}
                 cx={380} cy={310} r="6"
                 fill="#ef4444"
                 animate={{ opacity: s === 8 ? 1 : 0, r: s === 8 ? 6 : 0 }}
                 transition={{ ...spring, delay: 0.8 }}
               />
-              <motion.circle
+              <motion.circle initial={false}
                 cx={380} cy={310} r="12"
                 fill="#ef4444" opacity={0.15}
                 animate={{ opacity: s === 8 ? 0.15 : 0 }}
                 transition={{ ...spring, delay: 0.8 }}
               />
-              <motion.text
+              <motion.text initial={false}
                 x={392} y={315}
                 fill="#ef4444" fontSize="13" fontWeight="bold"
                 animate={{ opacity: s === 8 ? 1 : 0 }}
@@ -996,10 +999,10 @@ export default function LLMPipelineAnim() {
               >
                 banana
               </motion.text>
-              <motion.text
+              <motion.text initial={false}
                 x={392} y={332}
-                fill="#ef4444" fontSize="10" opacity={0.5}
-                animate={{ opacity: s === 8 ? 0.5 : 0 }}
+                fill="#ef4444" fontSize="12" opacity={0.6}
+                animate={{ opacity: s === 8 ? 0.6 : 0 }}
                 transition={{ ...spring, delay: 1 }}
               >
                 (far from everything)
@@ -1009,19 +1012,19 @@ export default function LLMPipelineAnim() {
 
           {/* Bottom legend */}
           <motion.div
-            className="flex items-center justify-center gap-8 mt-2"
+            className="flex items-center justify-center gap-6 mt-2 shrink-0"
             animate={{ opacity: s === 8 ? 1 : 0 }}
             transition={{ ...spring, delay: 1.5 }}
           >
-            <span className="text-xs text-accent-green">
+            <span className="text-sm text-accent-green">
               king ↔ queen = <strong>0.12</strong> (very close!)
             </span>
-            <span className="text-xs text-white/20">|</span>
-            <span className="text-xs text-red-400">
+            <span className="text-sm text-white/20">|</span>
+            <span className="text-sm text-red-400">
               king ↔ banana = <strong>4.7</strong> (very far)
             </span>
-            <span className="text-xs text-white/20">|</span>
-            <span className="text-xs text-white/40">
+            <span className="text-sm text-white/20">|</span>
+            <span className="text-sm text-white/40">
               Close in space = close in meaning
             </span>
           </motion.div>
@@ -1035,7 +1038,7 @@ export default function LLMPipelineAnim() {
         transition={smooth}
       >
         {/* Equation building — large and dramatic */}
-        <div className="flex items-center gap-4 text-2xl font-bold mb-10">
+        <div className="flex items-center gap-4 text-2xl font-bold mb-6">
           <motion.span
             className="px-5 py-3 rounded-xl bg-accent-blue/10 border-2 border-accent-blue/40 text-accent-blue text-4xl"
             animate={{ opacity: s === 9 ? 1 : 0, y: s === 9 ? 0 : 30 }}
@@ -1096,123 +1099,88 @@ export default function LLMPipelineAnim() {
           </motion.span>
         </div>
 
-        {/* Large vector diagram */}
+        {/* Word-math picture: the arrow from "man" to "woman" is the same arrow as "king" to "queen" */}
         <motion.svg
-          viewBox="0 0 500 220"
+          viewBox="0 0 520 230"
           className="w-full max-w-xl"
           fill="none"
+          initial={false}
           animate={{ opacity: s === 9 ? 1 : 0 }}
-          transition={{ ...spring, delay: 2 }}
+          transition={{ duration: 0.4, delay: s === 9 ? 0.6 : 0 }}
         >
-          {/* Origin dot */}
-          <circle cx="60" cy="190" r="4" fill="rgba(255,255,255,0.3)" />
-          <text x="45" y="210" fill="rgba(255,255,255,0.3)" fontSize="11">origin</text>
+          {/* faint "royal" direction: man → king and woman → queen */}
+          <line x1="120" y1="185" x2="120" y2="60" stroke="rgba(255,255,255,0.12)" strokeWidth={1.5} strokeDasharray="3 5" />
+          <line x1="330" y1="185" x2="330" y2="60" stroke="rgba(255,255,255,0.12)" strokeWidth={1.5} strokeDasharray="3 5" />
 
-          {/* King vector — blue arrow */}
+          {/* man → woman arrow */}
           <motion.line
-            x1="60" y1="190" x2="220" y2="55"
-            stroke="#4a9eff" strokeWidth={2.5}
+            initial={false}
+            x1="132" y1="185" x2="312" y2="185"
+            stroke="#f472b6" strokeWidth={3}
             animate={{ pathLength: s === 9 ? 1 : 0 }}
-            transition={{ duration: 0.6, delay: 2.1 }}
+            transition={{ duration: 0.6, delay: s === 9 ? 1.0 : 0 }}
           />
           <motion.polygon
-            points="220,55 210,62 215,67"
-            fill="#4a9eff"
+            initial={false}
+            points="318,185 306,178 306,192" fill="#f472b6"
             animate={{ opacity: s === 9 ? 1 : 0 }}
-            transition={{ ...spring, delay: 2.3 }}
+            transition={{ duration: 0.2, delay: s === 9 ? 1.5 : 0 }}
           />
           <motion.text
-            x="130" y="105" fill="#4a9eff" fontSize="14" fontWeight="bold"
+            initial={false}
+            x="225" y="210" textAnchor="middle" fill="#f472b6" fontSize="15" fontWeight="bold"
             animate={{ opacity: s === 9 ? 1 : 0 }}
-            transition={{ ...spring, delay: 2.3 }}
+            transition={{ duration: 0.3, delay: s === 9 ? 1.2 : 0 }}
           >
-            King
+            woman − man
           </motion.text>
 
-          {/* Man vector — red arrow (short, same direction-ish) */}
+          {/* the SAME arrow, starting at king */}
           <motion.line
-            x1="60" y1="190" x2="150" y2="130"
-            stroke="#ef4444" strokeWidth={2} strokeDasharray="6 4"
+            initial={false}
+            x1="132" y1="60" x2="312" y2="60"
+            stroke="#f472b6" strokeWidth={3} strokeDasharray="8 6"
             animate={{ pathLength: s === 9 ? 1 : 0 }}
-            transition={{ duration: 0.5, delay: 2.4 }}
-          />
-          <motion.text
-            x="80" y="150" fill="#ef4444" fontSize="13" fontWeight="bold"
-            animate={{ opacity: s === 9 ? 1 : 0 }}
-            transition={{ ...spring, delay: 2.5 }}
-          >
-            Man
-          </motion.text>
-
-          {/* Gender difference arrow — pink dashed from King to Queen */}
-          <motion.line
-            x1="220" y1="55" x2="400" y2="50"
-            stroke="#f472b6" strokeWidth={2} strokeDasharray="6 4"
-            animate={{ pathLength: s === 9 ? 1 : 0 }}
-            transition={{ duration: 0.5, delay: 2.6 }}
+            transition={{ duration: 0.6, delay: s === 9 ? 1.9 : 0 }}
           />
           <motion.polygon
-            points="400,50 390,44 390,56"
-            fill="#f472b6"
+            initial={false}
+            points="318,60 306,53 306,67" fill="#f472b6"
             animate={{ opacity: s === 9 ? 1 : 0 }}
-            transition={{ ...spring, delay: 2.8 }}
+            transition={{ duration: 0.2, delay: s === 9 ? 2.4 : 0 }}
           />
           <motion.text
-            x="290" y="38" fill="#f472b6" fontSize="12" fontWeight="bold"
+            initial={false}
+            x="225" y="45" textAnchor="middle" fill="#f472b6" fontSize="15" fontWeight="bold"
             animate={{ opacity: s === 9 ? 1 : 0 }}
-            transition={{ ...spring, delay: 2.8 }}
+            transition={{ duration: 0.3, delay: s === 9 ? 2.1 : 0 }}
           >
-            + Woman − Man
+            + (woman − man)
           </motion.text>
 
-          {/* Queen vector — green arrow (result) */}
-          <motion.line
-            x1="60" y1="190" x2="400" y2="50"
-            stroke="#4ade80" strokeWidth={3}
-            animate={{ pathLength: s === 9 ? 1 : 0 }}
-            transition={{ duration: 0.8, delay: 2.9 }}
-          />
-          <motion.polygon
-            points="400,50 390,58 393,62"
-            fill="#4ade80"
-            animate={{ opacity: s === 9 ? 1 : 0 }}
-            transition={{ ...spring, delay: 3.2 }}
-          />
+          {/* word dots */}
+          {[
+            { word: 'king', x: 120, y: 60, color: '#4a9eff', right: false },
+            { word: 'man', x: 120, y: 185, color: '#f87171', right: false },
+            { word: 'woman', x: 330, y: 185, color: '#e879f9', right: true },
+          ].map((w) => (
+            <g key={w.word}>
+              <circle cx={w.x} cy={w.y} r="8" fill={w.color} />
+              <text x={w.right ? w.x + 16 : w.x - 16} y={w.y + 6} textAnchor={w.right ? 'start' : 'end'} fill={w.color} fontSize="17" fontWeight="bold">{w.word}</text>
+            </g>
+          ))}
 
-          {/* Queen label with glow */}
+          {/* queen: where the arrow lands */}
           <motion.g
+            initial={false}
             animate={{ opacity: s === 9 ? 1 : 0 }}
-            transition={{ ...spring, delay: 3.2 }}
+            transition={{ duration: 0.4, delay: s === 9 ? 2.6 : 0 }}
           >
-            <circle cx="400" cy="50" r="22" fill="#4ade8010" stroke="#4ade80" strokeWidth={2} />
-            <text x="400" y="55" textAnchor="middle" fill="#4ade80" fontSize="14" fontWeight="bold">
-              Queen
-            </text>
+            <circle cx="330" cy="60" r="18" fill="#4ade8018" stroke="#4ade80" strokeWidth={2} />
+            <circle cx="330" cy="60" r="8" fill="#4ade80" />
+            <text x="358" y="66" fill="#4ade80" fontSize="18" fontWeight="bold">queen</text>
           </motion.g>
-
-          {/* Woman vector — fuchsia arrow */}
-          <motion.line
-            x1="60" y1="190" x2="180" y2="120"
-            stroke="#d946ef" strokeWidth={2} strokeDasharray="6 4"
-            animate={{ pathLength: s === 9 ? 1 : 0 }}
-            transition={{ duration: 0.5, delay: 2.5 }}
-          />
-          <motion.text
-            x="100" y="170" fill="#d946ef" fontSize="13" fontWeight="bold"
-            animate={{ opacity: s === 9 ? 1 : 0 }}
-            transition={{ ...spring, delay: 2.6 }}
-          >
-            Woman
-          </motion.text>
         </motion.svg>
-
-        <motion.p
-          className="text-white/30 text-sm font-medium mt-6"
-          animate={{ opacity: s === 9 ? 1 : 0 }}
-          transition={{ ...spring, delay: 3.5 }}
-        >
-          The model learned this from data alone — <span className="text-accent-green font-bold">no one programmed it</span>
-        </motion.p>
       </motion.div>
 
       {/* ===== STEP 10: "Paying Attention" ===== */}
@@ -1221,18 +1189,15 @@ export default function LLMPipelineAnim() {
         animate={{ opacity: s === 10 ? 1 : 0 }}
         transition={smooth}
       >
-        <p className="text-white/40 text-base font-medium mb-2">
+        <p className="text-white/40 text-base font-medium mb-16">
           <span className="text-accent-blue font-bold">Attention:</span>{' '}
           each token looks at every other token to understand context
-        </p>
-        <p className="text-white/20 text-xs mb-8">
-          &quot;France&quot; and &quot;capital&quot; attend strongly to each other
         </p>
 
         <div className="relative w-full max-w-lg">
           {/* Attention arcs */}
           <svg className="absolute -top-16 left-0 w-full h-16" viewBox="0 0 500 60" fill="none" preserveAspectRatio="xMidYMid meet">
-            <motion.path
+            <motion.path initial={false}
               d="M 350 55 C 350 15, 150 15, 150 55"
               stroke="#4a9eff"
               strokeWidth={3}
@@ -1240,7 +1205,7 @@ export default function LLMPipelineAnim() {
               animate={s === 10 ? { strokeOpacity: [0.3, 0.9, 0.3] } : { strokeOpacity: 0 }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             />
-            <motion.path
+            <motion.path initial={false}
               d="M 350 55 C 350 30, 450 30, 450 55"
               stroke="#4a9eff"
               strokeWidth={1.5}
@@ -1248,7 +1213,7 @@ export default function LLMPipelineAnim() {
               animate={s === 10 ? { strokeOpacity: [0.1, 0.4, 0.1] } : { strokeOpacity: 0 }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
             />
-            <motion.path
+            <motion.path initial={false}
               d="M 50 55 C 50 25, 150 25, 150 55"
               stroke="#4a9eff"
               strokeWidth={1}
@@ -1256,7 +1221,7 @@ export default function LLMPipelineAnim() {
               animate={s === 10 ? { strokeOpacity: [0.05, 0.15, 0.05] } : { strokeOpacity: 0 }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
             />
-            <motion.path
+            <motion.path initial={false}
               d="M 150 55 C 150 5, 350 5, 350 55"
               stroke="#a78bfa"
               strokeWidth={2.5}
@@ -1264,7 +1229,7 @@ export default function LLMPipelineAnim() {
               animate={s === 10 ? { strokeOpacity: [0.2, 0.7, 0.2] } : { strokeOpacity: 0 }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
             />
-            <motion.path
+            <motion.path initial={false}
               d="M 250 55 C 250 20, 350 20, 350 55"
               stroke="#4ade80"
               strokeWidth={1.5}
@@ -1580,7 +1545,7 @@ export default function LLMPipelineAnim() {
                   style={{ backgroundColor: `${p.color}30` }}
                   initial={{ width: '0%' }}
                   animate={{ width: s === 12 ? `${Math.max(p.pct, 1)}%` : '0%' }}
-                  transition={{ ...spring, delay: s === 12 ? 0.3 + i * 0.08 : 0 }}
+                  transition={{ duration: 0.6, ease: 'easeOut', delay: s === 12 ? 0.3 + i * 0.08 : 0 }}
                 >
                   <span className="text-xs font-bold whitespace-nowrap" style={{ color: p.color }}>
                     {p.pct}%
@@ -1842,20 +1807,17 @@ export default function LLMPipelineAnim() {
         animate={{ opacity: s === 15 ? 1 : 0 }}
         transition={smooth}
       >
-        <p className="text-white/40 text-base font-medium mb-2">
+        <p className="text-white/40 text-base font-medium mb-4">
           <span className="text-accent-blue font-bold">Training:</span>{' '}
           reading the internet to learn patterns
         </p>
-        <p className="text-white/20 text-xs mb-8">
-          Learning to predict the next token, over and over, on massive data
-        </p>
 
         <div className="relative flex items-center gap-8">
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             {trainingSources.map((src, i) => (
               <motion.div
                 key={src.label}
-                className="flex items-center gap-3 px-4 py-2 rounded-lg border border-white/10 bg-white/[0.03]"
+                className="flex items-center gap-3 px-4 py-1.5 rounded-lg border border-white/10 bg-white/[0.03]"
                 animate={{
                   opacity: s === 15 ? 1 : 0,
                   x: s === 15 ? 0 : -40,
@@ -1863,7 +1825,7 @@ export default function LLMPipelineAnim() {
                 transition={{ ...spring, delay: s === 15 ? i * 0.15 : 0 }}
               >
                 <span className="text-xl">{src.icon}</span>
-                <span className="text-xs text-white/60">{src.label}</span>
+                <span className="text-sm text-white/65">{src.label}</span>
               </motion.div>
             ))}
           </div>
@@ -1900,7 +1862,7 @@ export default function LLMPipelineAnim() {
         </div>
 
         <motion.div
-          className="mt-6 px-5 py-3 rounded-xl border border-white/10 bg-white/[0.03]"
+          className="mt-4 px-5 py-2.5 rounded-xl border border-white/10 bg-white/[0.03]"
           animate={{ opacity: s === 15 ? 1 : 0, y: s === 15 ? 0 : 15 }}
           transition={{ ...spring, delay: 0.9 }}
         >
@@ -1911,7 +1873,7 @@ export default function LLMPipelineAnim() {
 
         {/* Scale comparisons */}
         <motion.div
-          className="mt-4 w-full max-w-lg space-y-2"
+          className="mt-3 w-full max-w-xl space-y-2"
           animate={{ opacity: s === 15 ? 1 : 0, y: s === 15 ? 0 : 10 }}
           transition={{ ...spring, delay: 1.1 }}
         >
@@ -1919,13 +1881,13 @@ export default function LLMPipelineAnim() {
             <div className="flex-1 px-4 py-2.5 rounded-lg border border-[#fbbf24]/20 bg-[#fbbf24]/[0.03]">
               <p className="text-sm text-[#fbbf24]/70 font-bold mb-0.5">Human Scale</p>
               <p className="text-sm text-white/40">
-                Even reading a book every day, a person would need <span className="text-[#fbbf24] font-bold">thousands of lifetimes</span> to read that much
+                A book a day would still take <span className="text-[#fbbf24] font-bold">thousands of lifetimes</span>
               </p>
             </div>
             <div className="flex-1 px-4 py-2.5 rounded-lg border border-[#f472b6]/20 bg-[#f472b6]/[0.03]">
               <p className="text-sm text-[#f472b6]/70 font-bold mb-0.5">Training Cost</p>
               <p className="text-sm text-white/40">
-                <span className="text-[#f472b6] font-bold">Thousands of powerful chips</span> running for weeks or months, which costs a lot of money and electricity
+                <span className="text-[#f472b6] font-bold">Thousands of chips</span> for weeks: lots of money and electricity
               </p>
             </div>
           </div>
@@ -2001,47 +1963,48 @@ export default function LLMPipelineAnim() {
         <p className="text-white/40 text-base font-medium mb-2">
           The model has a fixed-size <span className="text-accent-blue font-bold">context window</span>
         </p>
-        <p className="text-white/20 text-xs mb-8">
+        <p className="text-white/35 text-sm mb-6">
           It can only see a limited number of tokens at once
         </p>
 
-        <div className="relative w-full max-w-2xl h-20 mb-6">
-          <div className="absolute inset-0 flex items-center overflow-hidden">
-            {Array.from({ length: 30 }).map((_, i) => {
-              const inWindow = i >= windowOffset + 5 && i < windowOffset + 15;
+        {/* The desk: only the last CW_SIZE tokens fit; older ones slide off to the left */}
+        <div className="relative mb-12 max-w-full" style={{ width: (CW_OFF + CW_SIZE) * CW_STEP }}>
+          <div className="flex text-[13px] font-semibold mb-2">
+            <span className="text-white/35" style={{ width: CW_OFF * CW_STEP }}>fell off the desk</span>
+            <span className="text-accent-blue">context window: {CW_SIZE} tokens</span>
+          </div>
+          <div className="relative h-12">
+            <div
+              className="absolute top-0 bottom-0 rounded-xl border-2 border-accent-blue/60 bg-accent-blue/[0.06]"
+              style={{ left: CW_OFF * CW_STEP - 5, width: CW_SIZE * CW_STEP + 4 }}
+            />
+            {CW_TOKENS.map((tok, i) => {
+              const x = (i - cwStart + CW_OFF) * CW_STEP;
+              const inWindow = i >= cwStart && i < cwShown;
+              const isName = tok === 'Alex.';
               return (
                 <motion.div
                   key={i}
-                  className="flex-shrink-0 w-[3.33%] h-10 mx-[1px] rounded flex items-center justify-center text-xs font-mono"
-                  animate={{
-                    backgroundColor: inWindow ? 'rgba(74,158,255,0.2)' : 'rgba(255,255,255,0.03)',
-                    borderColor: inWindow ? 'rgba(74,158,255,0.4)' : 'rgba(255,255,255,0.08)',
-                    opacity: s === 17 ? (inWindow ? 1 : 0.3) : 0,
-                  }}
-                  style={{ border: '1px solid' }}
-                  transition={{ duration: 0.3 }}
+                  className={`absolute top-1.5 h-9 rounded-lg border flex items-center justify-center text-[14px] font-mono ${
+                    inWindow ? 'border-accent-blue/40 bg-accent-blue/15 text-blue-100' : 'border-white/10 bg-white/[0.03] text-white/50'
+                  } ${isName ? 'font-bold' : ''}`}
+                  style={{ width: CW_STEP - 6, color: isName ? '#fbbf24' : undefined }}
+                  initial={false}
+                  animate={{ x, opacity: s !== 17 || i >= cwShown || x < 0 ? 0 : inWindow ? 1 : 0.45 }}
+                  transition={{ duration: 0.35 }}
                 >
-                  <span className={inWindow ? 'text-accent-blue/70' : 'text-white/15'}>
-                    tok
-                  </span>
+                  {tok}
                 </motion.div>
               );
             })}
           </div>
-
-          <motion.div
-            className="absolute top-0 h-full border-2 border-accent-blue/50 rounded-lg pointer-events-none"
-            animate={{
-              left: s === 17 ? `${(windowOffset + 5) * 3.33 + windowOffset * 0.1}%` : '16.65%',
-              width: '33.3%',
-              opacity: s === 17 ? 1 : 0,
-            }}
+          <motion.p
+            className="absolute left-0 right-0 -bottom-7 text-center text-[14px] text-red-300"
+            animate={{ opacity: s === 17 && cwShown === CW_TOKENS.length ? 1 : 0 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="absolute -top-5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded bg-accent-blue/20 border border-accent-blue/30">
-              <span className="text-xs font-bold text-accent-blue">CONTEXT WINDOW</span>
-            </div>
-          </motion.div>
+            &quot;Alex&quot; fell off the desk, so the model can&apos;t answer &quot;What is my name?&quot;
+          </motion.p>
         </div>
 
         <motion.div
@@ -2338,24 +2301,22 @@ export default function LLMPipelineAnim() {
         animate={{ opacity: s === 24 ? 1 : 0 }}
         transition={smooth}
       >
-        <div className="text-center max-w-xl w-full px-6">
+        <div className="text-center max-w-2xl w-full px-6">
           <motion.h2
-            className="text-5xl font-bold text-white mb-8"
+            className="text-4xl font-bold text-white mb-6"
             animate={{ opacity: s === 24 ? 1 : 0, y: s === 24 ? 0 : 15 }}
             transition={spring}
           >
             Key Takeaways
           </motion.h2>
           {[
-            { icon: '🔮', text: 'LLMs predict the next token, one at a time', color: '#4a9eff' },
-            { icon: '✂️', text: 'Tokens are the unit of input, output, and cost', color: '#a78bfa' },
-            { icon: '📐', text: 'Embeddings capture meaning as numbers in space', color: '#4ade80' },
-            { icon: '🔗', text: 'Attention connects related words across the context', color: '#fbbf24' },
-            { icon: '🌡️', text: 'Temperature controls creativity vs. predictability', color: '#f472b6' },
+            { icon: '🔮', text: 'An LLM predicts the next token, one at a time', color: '#4a9eff' },
+            { icon: '✂️', text: 'Text becomes tokens, then numbers that carry meaning', color: '#a78bfa' },
+            { icon: '🌡️', text: 'Temperature controls how adventurous each pick is', color: '#f472b6' },
           ].map((item, i) => (
             <motion.div
               key={i}
-              className="flex items-center gap-4 mb-4 px-6 py-4 rounded-xl bg-white/5 border text-left"
+              className="flex items-center gap-4 mb-3 px-6 py-4 rounded-xl bg-white/5 border text-left"
               style={{ borderColor: `${item.color}20` }}
               animate={{
                 opacity: s === 24 ? 1 : 0,
@@ -2364,11 +2325,11 @@ export default function LLMPipelineAnim() {
               transition={{ ...spring, delay: s === 24 ? i * 0.15 : 0 }}
             >
               <span className="text-2xl">{item.icon}</span>
-              <span className="text-white/80 text-base font-medium">{item.text}</span>
+              <span className="text-white/85 text-lg font-medium">{item.text}</span>
             </motion.div>
           ))}
           <motion.p
-            className="text-white/30 text-xs mt-6"
+            className="text-white/40 text-sm mt-5"
             animate={{ opacity: s === 24 ? 1 : 0 }}
             transition={{ ...spring, delay: 1 }}
           >

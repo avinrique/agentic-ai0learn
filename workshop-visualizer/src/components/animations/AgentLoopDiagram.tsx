@@ -38,6 +38,10 @@ export interface AgentCall {
   result?: string;
   decideStep: number;
   selectStep: number;
+  /** step where our code took this request out of the list (tool_call = …) */
+  slipStep: number;
+  /** step where function_name / tool_name was read */
+  nameStep: number;
   argsStep: number;
   execStep: number;
   resultStep: number;
@@ -65,6 +69,12 @@ export interface AgentModel {
   info: StepInfo[];
   question: string;
   allIds: string[];
+  /** the lesson's code passes tool_choice="auto" (its steps talk about it) */
+  toolChoice: boolean;
+  /** first step where the available_functions dictionary exists (NEVER if the code has none) */
+  mapStep: number;
+  /** the trace has a `client` variable somewhere (some traces skip it) */
+  clientVar: boolean;
 }
 
 export type ConvMsg =
@@ -321,6 +331,8 @@ export function buildAgentModel(steps: TraceStep[], toolNames: string[]): AgentM
               args: [],
               decideStep: i,
               selectStep: NEVER,
+              slipStep: NEVER,
+              nameStep: NEVER,
               argsStep: NEVER,
               execStep: NEVER,
               resultStep: NEVER,
@@ -344,6 +356,7 @@ export function buildAgentModel(steps: TraceStep[], toolNames: string[]): AgentM
         const idm = vars.tool_call.match(/id[:=]\s*"([^"]+)"/);
         if (idm) calls[ptr].id = idm[1];
         calls[ptr].selectStep = Math.min(calls[ptr].selectStep, i);
+        calls[ptr].slipStep = Math.min(calls[ptr].slipStep, i);
       }
       if ((changed('function_name') || changed('tool_name')) && nameVar) {
         const nm = unquote(nameVar);
@@ -353,6 +366,7 @@ export function buildAgentModel(steps: TraceStep[], toolNames: string[]): AgentM
           if (j >= 0) ptr = j;
         }
         calls[ptr].selectStep = Math.min(calls[ptr].selectStep, i);
+        calls[ptr].nameStep = Math.min(calls[ptr].nameStep, i);
       }
       if (t.startsWith('toolSelect-') && ptr < 0) {
         const j = calls.findIndex((c) => c.name === t.slice('toolSelect-'.length));
@@ -404,6 +418,9 @@ export function buildAgentModel(steps: TraceStep[], toolNames: string[]): AgentM
     } else if (fresh.has('client')) focus = 'client';
     else if (t === 'defineTools') focus = 'tools' in vars ? 'menu' : 'functions';
     else if (step.output) focus = 'console';
+    // A step that continues the previous setup item (e.g. the 2nd and 3rd line of the system
+    // prompt) keeps showing that item instead of falling back to the intro picture.
+    if (focus === 'intro' && i > 0 && cur < 0 && info[i - 1]?.focus === 'system') focus = 'system';
 
     info.push({ phase, turn: cur, call: ptr, focus });
     prev = vars;
@@ -416,7 +433,10 @@ export function buildAgentModel(steps: TraceStep[], toolNames: string[]): AgentM
     }),
   );
   const allIds = turns.flatMap((tt) => tt.calls.map((c) => c.id));
-  return { turns, info, question, allIds };
+  const toolChoice = steps.some((st) => /tool_choice/.test(st.explanation ?? ''));
+  const mapAt = steps.findIndex((st) => st.variables.some((x) => x.name === 'available_functions'));
+  const clientVar = steps.some((st) => st.variables.some((x) => x.name === 'client'));
+  return { turns, info, question, allIds, toolChoice, mapStep: mapAt < 0 ? NEVER : mapAt, clientVar };
 }
 
 // ---------------------------------------------------------------------------

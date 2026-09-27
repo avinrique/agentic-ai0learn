@@ -334,7 +334,7 @@ function BuildScene({ stage }: { stage: number }) {
                     key={id}
                     animate={{ scale: id === newest ? [1, 1.15, 1] : 1 }}
                     transition={{ duration: 0.6, delay: 0.1 }}
-                    className="px-2 py-0.5 rounded-full text-[13px] font-semibold border"
+                    className="px-1.5 py-0.5 rounded-full text-[13px] font-semibold border whitespace-nowrap"
                     style={
                       on
                         ? { backgroundColor: ing.color, borderColor: ing.color, color: '#0f172a' }

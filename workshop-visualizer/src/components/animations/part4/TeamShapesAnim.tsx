@@ -168,8 +168,7 @@ function IntroScene() {
         ))}
       </div>
       <Callout delay={1.2}>
-        Under the hood it’s always the same: <b>every agent is one LLM call with its own system prompt</b>. Our code carries the
-        notes from one agent to the next. No magic.
+        Under the hood: <b>every agent is one LLM call with its own system prompt</b>, and our code carries the notes.
       </Callout>
     </Scene>
   );
@@ -243,10 +242,6 @@ function LineIdeaScene() {
           </motion.div>
         </Stage>
       </div>
-      <Callout>
-        Each station does <b>one job</b> and passes the work on, like a relay race baton 🏃. The order is always the same:
-        the line itself <i>is</i> the plan.
-      </Callout>
     </Scene>
   );
 }
@@ -363,10 +358,6 @@ function BossIdeaScene() {
       <div className="w-full max-w-3xl">
         <Stage height={300} bots={bossBots({ boss: 'thinking', bossActive: true })} arrows={bossArrows()} />
       </div>
-      <Callout>
-        Max 👑 doesn’t do the work himself. He <b>reads the request</b>, <b>decides who to ask</b>, collects their answers, and
-        writes the final reply.
-      </Callout>
     </Scene>
   );
 }
@@ -442,9 +433,6 @@ function BossCollectScene() {
           ]}
         />
       </div>
-      <Callout delay={1.8}>
-        Rita and Cora are asleep 💤: <b>this</b> request didn’t need them. Max only calls the helpers he picked.
-      </Callout>
     </Scene>
   );
 }
@@ -522,10 +510,6 @@ function RouterIdeaScene() {
           ]}
         />
       </div>
-      <Callout>
-        Rosa 🛎️ doesn’t answer the question. She reads it and sends it to <b>exactly ONE</b> specialist: Milo for math, Rita
-        for facts, Wally for stories.
-      </Callout>
     </Scene>
   );
 }
@@ -664,9 +648,6 @@ function CriticIdeaScene() {
           </motion.div>
         </Stage>
       </div>
-      <Callout color={C.cora}>
-        Wally writes, Cora reviews it with a red pen, Wally fixes it… and round they go until Cora says <b>“APPROVED”</b>.
-      </Callout>
     </Scene>
   );
 }
@@ -779,7 +760,7 @@ function CriticLimitScene() {
             <span className="text-[12px] px-1.5 py-0.5 rounded bg-green-400/20 text-green-200">→ stop</span>
           </div>
           <div className="text-[14px] text-white/85 text-center">
-            At most <b>6 calls</b>. We keep Wally’s latest draft, which is still better than draft 1.
+            At most <b>7 calls</b> (first draft + 3 rounds). We keep Wally’s latest draft.
           </div>
         </div>
       </div>

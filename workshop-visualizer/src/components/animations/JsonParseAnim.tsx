@@ -69,7 +69,13 @@ function JsonText({ text, keyColor, glowKeys }: { text: string; keyColor: (k: st
         }
         if (isString) return <span key={i} className="text-white/85">{p}</span>;
         if (/^-?\d/.test(p)) return <span key={i} className="text-accent-cyan">{p}</span>;
-        return <span key={i} className="text-white/40">{p}</span>;
+        // Punctuation: allow a line break right after it, so long JSON wraps between items, not mid-word.
+        return (
+          <span key={i} className="text-white/40">
+            {p}
+            <wbr />
+          </span>
+        );
       })}
     </>
   );
@@ -179,6 +185,7 @@ export default function JsonParseAnim() {
     });
   };
 
+  const parsesJson = steps.some((s) => s.animationTrigger === 'jsonParse');
   const arrived = reached >= JSON_RANK.apiCallComplete;
   const printed = reached >= JSON_RANK.extractContent;
   const phase =
@@ -190,11 +197,32 @@ export default function JsonParseAnim() {
           ? 'packing'
           : reached < JSON_RANK.apiCall
             ? 'compare'
-            : reached < JSON_RANK.jsonParse
+            : reached < JSON_RANK.jsonParse || !parsesJson
               ? 'reply'
               : reached === JSON_RANK.jsonParse
                 ? 'dict'
                 : 'cards';
+
+  // What print() has written so far (for the small terminal on the two early print steps).
+  const printsSoFar = steps
+    .slice(0, currentStep + 1)
+    .map((s, i) => ({ text: s.output ?? '', hot: i === currentStep }))
+    .filter((o) => o.text);
+  const terminal = (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={spring}
+      className="shrink-0 self-center w-full max-w-[520px] rounded-xl bg-black/60 px-4 py-2.5 font-mono text-[15px] leading-relaxed"
+    >
+      <div className="font-sans text-[13px] text-white/40 mb-1">Terminal</div>
+      {printsSoFar.map((o, i) => (
+        <div key={i} className={`whitespace-pre-wrap ${o.hot ? 'text-white' : 'text-white/40'}`}>
+          {o.text}
+        </div>
+      ))}
+    </motion.div>
+  );
 
   const keyChips = (big: boolean) =>
     askedKeys.map((k, i) => (
@@ -213,7 +241,7 @@ export default function JsonParseAnim() {
   // The JSON reply box (typed out while the model writes).
   const jsonBox = (big: boolean) => (
     <div
-      className={`rounded-xl bg-black/40 px-4 py-3 font-mono leading-relaxed break-all overflow-hidden ${
+      className={`rounded-xl bg-black/40 px-4 py-3 font-mono leading-relaxed break-words overflow-hidden ${
         big ? 'text-[16px] max-h-full' : 'flex-1 min-h-0 text-[14px]'
       }`}
     >
@@ -226,6 +254,21 @@ export default function JsonParseAnim() {
             <span className="inline-block w-2 h-4 bg-accent-gold/80 ml-0.5 animate-pulse align-middle" />
           )}
         </>
+      ) : askedKeys.length > 0 ? (
+        // Not written yet: the shape the reply will have (asked-for keys in their colours).
+        <span className="text-white/35 whitespace-pre-wrap">
+          {'{\n  '}
+          <span className="text-accent-purple/70">&quot;{listKey}&quot;</span>
+          {': [\n    {'}
+          {askedKeys.map((k, i) => (
+            <span key={k}>
+              <span style={{ color: keyColor(k) }}>&quot;{k}&quot;</span>
+              {': …'}
+              {i < askedKeys.length - 1 ? ', ' : ''}
+            </span>
+          ))}
+          {'},\n    …\n  ]\n}'}
+        </span>
       ) : (
         <span className="text-white/30">
           {'{ '}
@@ -239,9 +282,10 @@ export default function JsonParseAnim() {
   return (
     <div className="h-full flex flex-col gap-3 px-5 py-4 overflow-hidden text-white">
       {/* What is JSON? (before the prompts exist) */}
-      {phase === 'intro' && (
+      {phase === 'intro' && at('printStart') && <div className="flex-1 min-h-0 flex flex-col justify-center">{terminal}</div>}
+      {phase === 'intro' && !at('printStart') && (
         <motion.div
-          animate={{ opacity: reached >= JSON_RANK.jsonIntro ? 1 : 0.6 }}
+          animate={{ opacity: at('jsonIntro') ? 1 : 0.5 }}
           className="flex-1 min-h-0 flex flex-col items-center justify-center gap-4"
         >
           <div className="text-[15px] font-semibold text-white/70">What is JSON?</div>
@@ -349,7 +393,14 @@ export default function JsonParseAnim() {
               </Card>
             )}
           </div>
-          {jsonBox(true)}
+          {at('printHeading') ? (
+            <>
+              <div className="min-h-0 flex flex-col opacity-50">{jsonBox(false)}</div>
+              {terminal}
+            </>
+          ) : (
+            jsonBox(true)
+          )}
         </div>
       )}
 

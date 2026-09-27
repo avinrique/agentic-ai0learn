@@ -295,7 +295,7 @@ export default function LLMTokenPlayground() {
                       >
                         {showPiece(p)}
                       </span>
-                      <span className="text-[11px] font-mono text-white/35 mt-0.5">{pieceId(p)}</span>
+                      <span className="text-[12px] font-mono text-white/45 mt-0.5">{pieceId(p)}</span>
                     </motion.div>
                   );
                 })}

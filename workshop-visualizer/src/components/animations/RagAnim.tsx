@@ -109,12 +109,22 @@ const pipelineStages = [
   { label: 'Answer', icon: '✅', color: '#4ade80' },
 ];
 
+// Step 5: a toy 2D meaning map for vector search (illustrative positions).
+const VEC_Q = { x: 300, y: 115 };
+const VEC_DOTS = [
+  { x: 215, y: 80, label: 'Q3 Report', near: true },
+  { x: 395, y: 135, label: 'Sales Data', near: true },
+  { x: 250, y: 175, label: 'Revenue', near: true },
+  { x: 75, y: 45, label: 'HR Policy', near: false },
+  { x: 520, y: 45, label: 'Product', near: false },
+  { x: 530, y: 200, label: 'Design', near: false },
+  { x: 80, y: 200, label: 'Meeting', near: false },
+];
+
 const takeaways = [
-  { text: 'LLMs have a knowledge cutoff — they cannot see your private data', color: '#ef4444' },
-  { text: 'RAG = Retrieve relevant docs, Augment the prompt, Generate a grounded answer', color: '#4a9eff' },
-  { text: 'Chunking and vector search are the backbone of retrieval', color: '#a78bfa' },
-  { text: 'Watch your token budget — too many docs starve the response', color: '#fbbf24' },
-  { text: 'When you need actions (not just answers), you need Agents', color: '#4ade80' },
+  { text: 'RAG = find documents, add them to the prompt, then answer', color: '#4a9eff' },
+  { text: 'Documents are cut into chunks and searched by meaning', color: '#a78bfa' },
+  { text: 'Real data in the prompt means less guessing', color: '#4ade80' },
 ];
 
 export default function RagAnim() {
@@ -196,86 +206,55 @@ export default function RagAnim() {
         animate={{ opacity: s === 0 ? 1 : 0 }}
         transition={spring}
       >
-        <div className="max-w-xl w-full">
+        <div className="max-w-2xl w-full">
           <motion.p
-            className="text-xs text-white/30 uppercase tracking-wider text-center mb-6"
+            className="text-sm text-white/40 uppercase tracking-wider text-center mb-12"
             animate={{ opacity: s === 0 ? 1 : 0 }}
             transition={spring}
           >
             The Knowledge Cutoff
           </motion.p>
 
-          {/* Timeline */}
-          <div className="relative flex items-center h-24">
-            {/* Base line */}
-            <div className="absolute w-full h-0.5 bg-white/10 top-1/2" />
-
-            {/* Green left section (training data) */}
+          {/* Timeline: what the model learned | the cutoff | what it never saw */}
+          <div className="relative grid grid-cols-2">
             <motion.div
-              className="absolute h-1 rounded-full top-1/2 -translate-y-1/2"
-              style={{ left: '0%', backgroundColor: '#4ade80' }}
-              animate={{ width: s === 0 ? '50%' : '0%', opacity: s === 0 ? 0.4 : 0 }}
-              transition={{ ...smooth, delay: 0.3 }}
-            />
-
-            {/* Red right section (after cutoff) */}
-            <motion.div
-              className="absolute h-1 rounded-full top-1/2 -translate-y-1/2"
-              style={{ left: '52%', backgroundColor: '#ef4444' }}
-              animate={{ width: s === 0 ? '48%' : '0%', opacity: s === 0 ? 0.15 : 0 }}
-              transition={{ ...smooth, delay: 0.5 }}
-            />
-
-            {/* Training data icons (left) */}
-            <motion.div
-              className="absolute flex flex-col items-start gap-1"
-              style={{ left: '3%', top: '0%' }}
-              animate={{ opacity: s === 0 ? 1 : 0 }}
+              className="flex flex-col items-start gap-2 pr-6"
+              animate={{ opacity: s === 0 ? 1 : 0, x: s === 0 ? 0 : -15 }}
               transition={{ ...spring, delay: 0.2 }}
             >
-              <div className="flex gap-2 mb-1">
-                {['📚', '🌐', '💻'].map((icon, i) => (
-                  <motion.span
-                    key={i}
-                    className="text-2xl"
-                    animate={{ opacity: s === 0 ? 1 : 0, y: s === 0 ? 0 : 10 }}
-                    transition={{ ...spring, delay: 0.3 + i * 0.1 }}
-                  >
-                    {icon}
-                  </motion.span>
-                ))}
+              <div className="flex gap-2 text-3xl">
+                <span>📚</span><span>🌐</span><span>💻</span>
               </div>
-              <span className="text-xs text-[#4ade80]/70 font-bold">Training Data (up to 2023)</span>
+              <motion.div
+                className="h-2 rounded-full bg-[#4ade80]/60 self-stretch origin-left"
+                animate={{ scaleX: s === 0 ? 1 : 0 }}
+                transition={{ ...smooth, delay: 0.3 }}
+              />
+              <span className="text-[15px] text-[#4ade80] font-bold">Learned in training</span>
             </motion.div>
-
-            {/* Cutoff line */}
             <motion.div
-              className="absolute flex flex-col items-center"
-              style={{ left: '50%', top: '-5%' }}
+              className="flex flex-col items-end gap-2 pl-6"
+              animate={{ opacity: s === 0 ? 1 : 0, x: s === 0 ? 0 : 15 }}
+              transition={{ ...spring, delay: 0.7 }}
+            >
+              <div className="flex gap-2 text-3xl grayscale opacity-40">
+                <span>📰</span><span>📁</span><span>📊</span>
+              </div>
+              <motion.div
+                className="h-2 rounded-full bg-[#ef4444]/25 self-stretch origin-left"
+                animate={{ scaleX: s === 0 ? 1 : 0 }}
+                transition={{ ...smooth, delay: 0.8 }}
+              />
+              <span className="text-[15px] text-[#f87171]/80 font-bold">Newer: never seen</span>
+            </motion.div>
+            {/* Cutoff marker */}
+            <motion.div
+              className="absolute left-1/2 -top-8 bottom-0 -translate-x-1/2 flex flex-col items-center"
               animate={{ opacity: s === 0 ? 1 : 0 }}
               transition={{ ...spring, delay: 0.6 }}
             >
-              <div className="h-28 w-0.5 border-l-2 border-dashed border-[#ef4444]/60" />
-              <span className="text-sm text-[#ef4444] font-bold mt-1">
-                TRAINING CUTOFF
-              </span>
-            </motion.div>
-
-            {/* Unknown (right) */}
-            <motion.div
-              className="absolute flex flex-col items-end"
-              style={{ right: '3%', top: '0%' }}
-              animate={{ opacity: s === 0 ? 0.4 : 0 }}
-              transition={{ ...spring, delay: 0.8 }}
-            >
-              <div className="flex gap-2 mb-1">
-                {['📰', '📁', '📊'].map((icon, i) => (
-                  <span key={i} className="text-2xl grayscale opacity-50">
-                    {icon}
-                  </span>
-                ))}
-              </div>
-              <span className="text-xs text-[#ef4444]/50 font-bold">After Cutoff (unknown)</span>
+              <span className="text-[13px] text-[#ef4444] font-bold whitespace-nowrap mb-1">TRAINING CUTOFF</span>
+              <div className="flex-1 w-0 border-l-2 border-dashed border-[#ef4444]/70" />
             </motion.div>
           </div>
 
@@ -286,7 +265,7 @@ export default function RagAnim() {
             transition={{ ...spring, delay: 1 }}
           >
             <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border-2 border-[#ef4444]/30 bg-[#ef4444]/5">
-              <span className="text-sm text-white/60">&quot;What happened at CES 2025?&quot;</span>
+              <span className="text-[15px] text-white/75">&quot;What was in yesterday&apos;s news?&quot;</span>
               <motion.span
                 className="text-xl text-[#ef4444] font-bold"
                 animate={{ scale: s === 0 ? [1, 1.2, 1] : 1 }}
@@ -542,12 +521,12 @@ export default function RagAnim() {
                   <div
                     key={line}
                     className="h-1.5 rounded-full bg-white/10"
-                    style={{ width: `${60 + Math.random() * 40}%` }}
+                    style={{ width: `${[92, 78, 96, 70, 88, 64, 94, 80][line - 1]}%` }}
                   />
                 ))}
               </div>
               <p className="text-xs text-[#4a9eff]/60 text-center mt-2">Full Document</p>
-              <p className="text-xs text-white/20 text-center">~4000 tokens</p>
+              <p className="text-xs text-white/45 text-center">~2,500 tokens</p>
             </div>
           </motion.div>
 
@@ -597,7 +576,7 @@ export default function RagAnim() {
                 <span className="text-xs font-mono" style={{ color: chunk.color }}>
                   {chunk.label}
                 </span>
-                <span className="text-xs text-white/20">~500 tokens</span>
+                <span className="text-xs text-white/45">~500 tokens</span>
               </motion.div>
             ))}
           </motion.div>
@@ -630,137 +609,66 @@ export default function RagAnim() {
         animate={{ opacity: s === 5 ? 1 : 0 }}
         transition={spring}
       >
-        <div className="max-w-lg w-full">
+        <div className="max-w-2xl w-full flex flex-col items-center">
           <motion.p
-            className="text-xs text-white/30 uppercase tracking-wider text-center mb-2"
+            className="text-sm text-white/40 uppercase tracking-wider text-center mb-3"
             animate={{ opacity: s === 5 ? 1 : 0 }}
             transition={spring}
           >
             Vector Search
           </motion.p>
-          <motion.p
-            className="text-sm text-white/20 text-center mb-5"
-            animate={{ opacity: s === 5 ? 1 : 0 }}
-            transition={{ ...spring, delay: 0.1 }}
-          >
-            Convert question to a vector, find nearest document chunks
-          </motion.p>
 
-          {/* Question at top */}
+          {/* Question */}
           <motion.div
-            className="flex justify-center mb-4"
+            className="px-4 py-2 rounded-lg border border-[#4a9eff]/40 bg-[#4a9eff]/10 mb-3"
             animate={{ opacity: s === 5 ? 1 : 0 }}
             transition={{ ...spring, delay: 0.2 }}
           >
-            <div className="px-3 py-1.5 rounded-lg border border-[#4a9eff]/30 bg-[#4a9eff]/5">
-              <span className="text-xs text-[#4a9eff]">&quot;What were Q3 sales?&quot;</span>
-            </div>
+            <span className="text-[15px] text-[#8cc4ff]">&quot;What were Q3 sales?&quot;</span>
           </motion.div>
 
-          {/* Arrow to vector */}
-          <motion.div
-            className="flex justify-center mb-3"
+          {/* A meaning map: the question and every chunk get a spot; the closest chunks win */}
+          <motion.svg
+            viewBox="0 0 600 250"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.02]"
+            initial={false}
             animate={{ opacity: s === 5 ? 1 : 0 }}
             transition={{ ...spring, delay: 0.3 }}
           >
-            <span className="text-white/20 text-sm">↓ embed →</span>
-          </motion.div>
-
-          {/* 2D vector space */}
-          <motion.div
-            className="relative w-full h-52 rounded-xl border border-white/10 bg-white/3"
-            animate={{ opacity: s === 5 ? 1 : 0 }}
-            transition={{ ...spring, delay: 0.3 }}
-          >
-            {/* Axes labels */}
-            <span className="absolute bottom-1 right-2 text-xs text-white/15">dim 1</span>
-            <span className="absolute top-1 left-2 text-xs text-white/15">dim 2</span>
-
-            {/* Query dot (center-ish) */}
-            <motion.div
-              className="absolute w-4 h-4 rounded-full flex items-center justify-center"
-              style={{ left: '45%', top: '40%', backgroundColor: '#4a9eff' }}
-              animate={{
-                scale: s === 5 ? [1, 1.3, 1] : 1,
-                boxShadow: s === 5 ? '0 0 12px rgba(74,158,255,0.6)' : 'none',
-              }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            >
-              <span className="text-[7px] font-bold text-white">Q</span>
-            </motion.div>
-            <span
-              className="absolute text-xs text-[#4a9eff] font-bold"
-              style={{ left: '51%', top: '38%' }}
-            >
-              query
-            </span>
-
-            {/* Document chunk dots */}
-            {[
-              { x: '35%', y: '35%', label: 'Q3 Report', near: true },
-              { x: '52%', y: '48%', label: 'Sales Data', near: true },
-              { x: '40%', y: '52%', label: 'Revenue', near: true },
-              { x: '15%', y: '20%', label: 'HR Policy', near: false },
-              { x: '75%', y: '25%', label: 'Product', near: false },
-              { x: '80%', y: '70%', label: 'Design', near: false },
-              { x: '20%', y: '75%', label: 'Meeting', near: false },
-            ].map((dot, i) => (
-              <motion.div key={i}>
-                {/* Connection line for near dots */}
-                {dot.near && (
-                  <motion.div
-                    className="absolute h-px origin-left"
-                    style={{
-                      left: '47%',
-                      top: '48%',
-                      width: '0px',
-                      backgroundColor: '#4ade80',
-                    }}
-                    animate={{
-                      opacity: s === 5 && vecPhase >= 1 ? 0.5 : 0,
-                      width: s === 5 && vecPhase >= 1 ? '40px' : '0px',
-                      rotate: `${(i * 45) - 20}deg`,
-                    }}
-                    transition={{ ...smooth, delay: 0.8 + i * 0.1 }}
-                  />
-                )}
-                {/* Dot */}
-                <motion.div
-                  className="absolute w-3 h-3 rounded-full"
-                  style={{
-                    left: dot.x,
-                    top: dot.y,
-                    backgroundColor: dot.near ? '#4ade80' : 'rgba(255,255,255,0.15)',
-                  }}
-                  animate={{
-                    scale: s === 5 && dot.near && vecPhase >= 2 ? 1.4 : 1,
-                    boxShadow:
-                      s === 5 && dot.near && vecPhase >= 2
-                        ? '0 0 10px rgba(74,222,128,0.5)'
-                        : 'none',
-                  }}
-                  transition={{ ...spring, delay: 0.5 + i * 0.05 }}
-                />
-                <span
-                  className="absolute text-[7px]"
-                  style={{
-                    left: dot.x,
-                    top: `calc(${dot.y} + 14px)`,
-                    color: dot.near ? '#4ade80' : 'rgba(255,255,255,0.2)',
-                  }}
-                >
-                  {dot.label}
-                </span>
-              </motion.div>
+            {VEC_DOTS.filter((d) => d.near).map((d, i) => (
+              <motion.line
+                key={`l-${d.label}`}
+                x1={VEC_Q.x} y1={VEC_Q.y} x2={d.x} y2={d.y}
+                stroke="#4ade80" strokeWidth={2} strokeDasharray="5 4"
+                initial={false}
+                animate={{ pathLength: s === 5 && vecPhase >= 1 ? 1 : 0, opacity: s === 5 && vecPhase >= 1 ? 0.8 : 0 }}
+                transition={{ duration: 0.5, delay: i * 0.12 }}
+              />
             ))}
-          </motion.div>
+            {VEC_DOTS.map((d) => {
+              const lit = d.near && s === 5 && vecPhase >= 2;
+              return (
+                <g key={d.label}>
+                  <circle cx={d.x} cy={d.y} r={lit ? 9 : 7} fill={d.near ? '#4ade80' : 'rgba(255,255,255,0.3)'} />
+                  <text
+                    x={d.x} y={d.y + 26} textAnchor="middle" fontSize="15" fontWeight={d.near ? 700 : 400}
+                    fill={d.near ? '#4ade80' : 'rgba(255,255,255,0.45)'}
+                  >
+                    {d.label}
+                  </text>
+                </g>
+              );
+            })}
+            <circle cx={VEC_Q.x} cy={VEC_Q.y} r="11" fill="#4a9eff" />
+            <text x={VEC_Q.x + 16} y={VEC_Q.y - 12} textAnchor="start" fontSize="15" fontWeight="700" fill="#8cc4ff">your question</text>
+          </motion.svg>
 
           <motion.p
-            className="text-sm text-[#4ade80] text-center mt-3"
+            className="text-[15px] text-[#4ade80] text-center mt-3"
             animate={{ opacity: s === 5 && vecPhase >= 2 ? 1 : 0 }}
             transition={smooth}
           >
-            Nearest chunks are the most relevant matches
+            The 3 closest chunks are picked
           </motion.p>
         </div>
       </motion.div>
@@ -1356,9 +1264,9 @@ export default function RagAnim() {
         animate={{ opacity: isTakeaways ? 1 : 0 }}
         transition={spring}
       >
-        <div className="text-center max-w-xl w-full px-6">
+        <div className="text-center max-w-2xl w-full px-6">
           <motion.h2
-            className="text-5xl font-bold text-white mb-6"
+            className="text-4xl font-bold text-white mb-6"
             animate={{ opacity: isTakeaways ? 1 : 0, y: isTakeaways ? 0 : 20 }}
             transition={spring}
           >
@@ -1367,7 +1275,7 @@ export default function RagAnim() {
           {takeaways.map((item, i) => (
             <motion.div
               key={i}
-              className="flex items-center gap-4 mb-3 px-5 py-3 rounded-xl bg-white/5 border text-left"
+              className="flex items-center gap-4 mb-3 px-6 py-4 rounded-xl bg-white/5 border text-left"
               style={{ borderColor: `${item.color}30` }}
               animate={{ opacity: isTakeaways ? 1 : 0, y: isTakeaways ? 0 : 20 }}
               transition={{ ...spring, delay: i * 0.12 }}
@@ -1382,7 +1290,7 @@ export default function RagAnim() {
               >
                 {i + 1}
               </span>
-              <span className="text-white/80 text-base font-medium">{item.text}</span>
+              <span className="text-white/85 text-lg font-medium">{item.text}</span>
             </motion.div>
           ))}
         </div>

@@ -61,11 +61,11 @@ function Stopwatch({ from, to, runKey, glow }: { from: number; to: number; runKe
   return (
     <motion.div
       animate={{ scale: glow ? 1.12 : 1, boxShadow: glow ? `0 0 18px ${GOLD}88` : '0 0 0px transparent' }}
-      className="flex items-center gap-2 rounded-xl px-3 py-1 font-mono"
+      className="flex items-center gap-2 rounded-xl px-3 py-1 font-mono origin-right"
       style={{ background: '#1c1a0e', border: `1.5px solid ${GOLD}`, color: GOLD }}
     >
       <span className="text-[18px]">⏱️</span>
-      <span className="text-[22px] font-bold tabular-nums w-[74px] text-right">{sec(val)} s</span>
+      <span className="text-[22px] font-bold tabular-nums min-w-[74px] whitespace-nowrap text-right">{sec(val)} s</span>
     </motion.div>
   );
 }
@@ -497,8 +497,10 @@ export default function ParallelAgentsAnim() {
         )}
 
         {phase === 'setup' && (
-          <motion.div key="setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl bg-white/5 px-6 py-4 text-[18px] text-white/90">
-            📞 client ➜ OpenAI
+          <motion.div key="setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-4 rounded-2xl bg-white/5 px-8 py-5 text-[20px] text-white/90">
+            <span className="font-mono">📞 client</span>
+            <motion.span className="text-white/50" animate={{ x: [0, 6, 0] }} transition={{ repeat: Infinity, duration: 1.2 }}>➜</motion.span>
+            <span className="font-semibold">☁️ OpenAI</span>
           </motion.div>
         )}
 
@@ -556,6 +558,18 @@ export default function ParallelAgentsAnim() {
                   />
                   waiting for OpenAI
                 </span>
+                {phase === 'par-start' && (
+                  <motion.span
+                    key={`cost-${stepKey}`}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-[14px] font-semibold px-2.5 py-0.5 rounded-full"
+                    style={{ background: `${RED}1a`, color: RED }}
+                  >
+                    💰 research cost ×2
+                  </motion.span>
+                )}
                 <div className="ml-auto">
                   <Stopwatch
                     from={watch.from}

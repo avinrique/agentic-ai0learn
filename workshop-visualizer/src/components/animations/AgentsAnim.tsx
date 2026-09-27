@@ -52,9 +52,9 @@ const multiExamples = [
     steps: [
       { num: 1, action: 'search_flights("Paris, Mar")', result: '$340 round-trip, Air France', icon: '✈️', color: '#4a9eff' },
       { num: 2, action: 'search_hotels("Paris, 4★+")', result: 'Hotel Le Marais, $120/night', icon: '🏨', color: '#a78bfa' },
-      { num: 3, action: 'get_weather("Paris, March")', result: '15°C avg, light rain expected', icon: '🌤️', color: '#4ade80' },
+      { num: 3, action: 'get_weather("Paris, March")', result: 'about 12°C, light rain', icon: '🌤️', color: '#4ade80' },
     ],
-    final: 'I found a $340 round-trip on Air France, Hotel Le Marais for $120/night. March weather averages 15°C with light rain -- pack a jacket!',
+    final: 'I found a $340 round-trip on Air France, Hotel Le Marais for $120/night. March is about 12°C with light rain, so pack a jacket!',
   },
   {
     chip: 'Prep my meeting',
@@ -486,9 +486,9 @@ export default function AgentsAnim() {
           {/* Circular loop nodes */}
           {[
             { label: 'Think', icon: '🧠', color: '#a78bfa', angle: 270 },
-            { label: 'Decide', icon: '🧭', color: '#4a9eff', angle: 0 },
-            { label: 'Execute', icon: '⚙️', color: '#4ade80', angle: 90 },
-            { label: 'Observe', icon: '👁', color: '#fbbf24', angle: 180 },
+            { label: 'Pick a tool', icon: '🧭', color: '#4a9eff', angle: 0 },
+            { label: 'Run it', icon: '⚙️', color: '#4ade80', angle: 90 },
+            { label: 'Read result', icon: '👁', color: '#fbbf24', angle: 180 },
           ].map((node, i) => {
             const rad = (node.angle * Math.PI) / 180;
             const cx = 160 + Math.cos(rad) * 110;
@@ -498,8 +498,9 @@ export default function AgentsAnim() {
                 key={node.label}
                 className="absolute flex flex-col items-center"
                 style={{
-                  left: cx - 28,
+                  left: cx - 50,
                   top: cy - 28,
+                  width: 100,
                 }}
                 animate={{
                   opacity: s === 3 ? 1 : 0,
@@ -518,7 +519,7 @@ export default function AgentsAnim() {
                   <span className="text-xl">{node.icon}</span>
                 </motion.div>
                 <span
-                  className="text-[11px] font-bold mt-1"
+                  className="text-[14px] font-bold mt-1 whitespace-nowrap"
                   style={{ color: node.color }}
                 >
                   {node.label}
@@ -555,6 +556,7 @@ export default function AgentsAnim() {
             <motion.circle
               r="6"
               fill="#fbbf24"
+              initial={{ cx: 160, cy: 50, opacity: 0 }}
               animate={{
                 cx: [160, 270, 160, 50, 160],
                 cy: [50, 160, 270, 160, 50],
@@ -573,6 +575,7 @@ export default function AgentsAnim() {
               stroke="#fbbf24"
               strokeWidth={1}
               opacity={0.3}
+              initial={{ cx: 160, cy: 50 }}
               animate={{
                 cx: [160, 270, 160, 50, 160],
                 cy: [50, 160, 270, 160, 50],
@@ -591,21 +594,21 @@ export default function AgentsAnim() {
             transition={{ ...spring, delay: 0.6 }}
           >
             <div className="text-center">
-              <p className="text-xs text-white/20 font-bold uppercase tracking-wider">Agent</p>
-              <p className="text-xs text-white/20">Loop</p>
+              <p className="text-sm text-white/35 font-bold uppercase tracking-wider">Agent</p>
+              <p className="text-sm text-white/35">Loop</p>
             </div>
           </motion.div>
 
           {/* Exit arrow */}
           <motion.div
             className="absolute flex items-center gap-2"
-            style={{ right: -80, top: '50%', transform: 'translateY(-50%)' }}
+            style={{ left: 200, top: 30 }}
             animate={{ opacity: s === 3 ? 1 : 0 }}
             transition={{ ...spring, delay: 0.8 }}
           >
-            <span className="text-white/30 text-lg">&rarr;</span>
-            <div className="px-3 py-1.5 rounded-lg border border-[#4ade80]/30 bg-[#4ade80]/5">
-              <span className="text-xs text-[#4ade80] font-bold">Done!</span>
+            <span className="text-white/40 text-lg">&rarr;</span>
+            <div className="px-3 py-1.5 rounded-lg border border-[#4ade80]/30 bg-[#4ade80]/5 whitespace-nowrap">
+              <span className="text-sm text-[#4ade80] font-bold">Enough? Final answer</span>
             </div>
           </motion.div>
         </div>
@@ -688,18 +691,18 @@ export default function AgentsAnim() {
         animate={{ opacity: s === 5 ? 1 : 0 }}
         transition={spring}
       >
-        <div className="max-w-lg w-full">
+        <div className="max-w-2xl w-full">
           <motion.div
-            className="text-center px-4 py-2 rounded-lg border border-[#4a9eff]/30 bg-[#4a9eff]/5 mb-5 inline-block mx-auto"
+            className="text-center px-4 py-2 rounded-lg border border-[#4a9eff]/30 bg-[#4a9eff]/5 mb-3 inline-block mx-auto"
             style={{ display: 'block' }}
             animate={{ opacity: s === 5 ? 1 : 0 }}
             transition={spring}
           >
-            <span className="text-sm text-[#4a9eff]">&quot;{multiExamples[multiIdx].request}&quot;</span>
+            <span className="text-[15px] text-[#8cc4ff]">&quot;{multiExamples[multiIdx].request}&quot;</span>
           </motion.div>
 
           {/* Loop iterations */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             {multiExamples[multiIdx].steps.map((step, i) => (
               <motion.div
                 key={`${multiIdx}-${i}`}
@@ -723,8 +726,8 @@ export default function AgentsAnim() {
                   {step.num}
                 </motion.div>
                 <span className="text-lg shrink-0">{step.icon}</span>
-                <div className="flex-1 px-3 py-2 rounded-lg border border-white/10 bg-white/5">
-                  <span className="text-sm text-white/60 font-mono">{step.action}</span>
+                <div className="flex-[1.3] min-w-0 px-3 py-2 rounded-lg border border-white/10 bg-white/5">
+                  <span className="text-sm text-white/70 font-mono whitespace-nowrap">{step.action}</span>
                 </div>
                 <motion.span
                   className="text-white/20 shrink-0"
@@ -752,7 +755,7 @@ export default function AgentsAnim() {
 
           {/* Growing response */}
           <motion.div
-            className="mt-4 px-4 py-3 rounded-xl border-2 border-[#fbbf24]/25 bg-[#fbbf24]/5"
+            className="mt-3 px-4 py-2.5 rounded-xl border-2 border-[#fbbf24]/25 bg-[#fbbf24]/5"
             animate={{
               opacity: s === 5 && multiPhase >= 2 ? 1 : 0,
               y: s === 5 && multiPhase >= 2 ? 0 : 10,
@@ -760,18 +763,10 @@ export default function AgentsAnim() {
             transition={smooth}
           >
             <p className="text-sm text-[#fbbf24] font-bold uppercase tracking-wider mb-1">Final Response</p>
-            <p className="text-xs text-white/50">
+            <p className="text-sm text-white/70">
               &quot;{multiExamples[multiIdx].final}&quot;
             </p>
           </motion.div>
-
-          <motion.p
-            className="text-sm text-white/30 text-center mt-3"
-            animate={{ opacity: s === 5 ? 1 : 0 }}
-            transition={{ ...spring, delay: 0.8 }}
-          >
-            3 loop iterations, each adding to the response
-          </motion.p>
 
           <motion.div className="mt-3" animate={{ opacity: s === 5 ? 1 : 0 }} transition={{ ...spring, delay: 0.3 }}>
             <Chips active={s === 5} labels={multiExamples.map((e) => e.chip)} idx={multiIdx} onPick={setMultiIdx} prefix="Try another task:" />
@@ -1276,9 +1271,9 @@ export default function AgentsAnim() {
         animate={{ opacity: s === 11 ? 1 : 0 }}
         transition={spring}
       >
-        <div className="max-w-xl w-full">
+        <div className="max-w-5xl w-full">
           <motion.h2
-            className="text-2xl font-bold text-white text-center mb-5"
+            className="text-3xl font-bold text-white text-center mb-5"
             animate={{
               opacity: s === 11 ? 1 : 0,
               y: s === 11 ? 0 : 20,
@@ -1288,34 +1283,35 @@ export default function AgentsAnim() {
             What You&apos;ll Build
           </motion.h2>
 
+          <div className="grid grid-cols-2 gap-5 items-center">
           {/* Roadmap cards */}
-          <div className="space-y-3 mb-5">
+          <div className="space-y-2.5">
             {[
               {
                 part: 'Part 2',
-                title: 'Simple Calculator Agent',
-                desc: 'Your first agent with add, multiply tools',
+                title: 'Simple Agent: Calculator',
+                desc: 'Your first agent, with one add tool',
                 color: '#4a9eff',
                 complexity: 1,
               },
               {
                 part: 'Part 2',
-                title: 'Math Tutor with 4 Tools',
-                desc: 'Calculator + explainer + hint generator + quiz',
+                title: 'Math Tutor',
+                desc: 'Four tools: add, subtract, multiply, divide',
                 color: '#fbbf24',
                 complexity: 2,
               },
               {
                 part: 'Part 3',
-                title: 'Study Buddy + Knowledge',
-                desc: 'Agent with RAG-powered document lookup',
+                title: 'Study Buddy',
+                desc: 'A calculator plus a knowledge lookup tool',
                 color: '#a78bfa',
                 complexity: 3,
               },
               {
                 part: 'Part 3',
                 title: 'Terminal Assistant',
-                desc: 'Real file operations, system commands',
+                desc: 'Runs commands, reads and writes real files',
                 color: '#4ade80',
                 complexity: 4,
               },
@@ -1344,8 +1340,8 @@ export default function AgentsAnim() {
                   {item.part}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-white/70">{item.title}</p>
-                  <p className="text-sm text-white/35">{item.desc}</p>
+                  <p className="text-[15px] font-bold text-white/85">{item.title}</p>
+                  <p className="text-[13px] text-white/50">{item.desc}</p>
                 </div>
                 {/* Complexity dots */}
                 <div className="flex gap-1 shrink-0">
@@ -1365,7 +1361,7 @@ export default function AgentsAnim() {
 
           {/* Terminal preview */}
           <motion.div
-            className="mx-auto max-w-sm rounded-xl border border-white/10 bg-black/40 p-3 overflow-hidden"
+            className="w-full rounded-xl border border-white/10 bg-black/40 p-4 overflow-hidden"
             animate={{
               opacity: s === 11 ? 1 : 0,
               y: s === 11 ? 0 : 15,
@@ -1376,7 +1372,7 @@ export default function AgentsAnim() {
               <div className="w-2.5 h-2.5 rounded-full bg-[#ef4444]/60" />
               <div className="w-2.5 h-2.5 rounded-full bg-[#fbbf24]/60" />
               <div className="w-2.5 h-2.5 rounded-full bg-[#4ade80]/60" />
-              <span className="text-xs text-white/20 ml-2">Terminal Assistant Preview</span>
+              <span className="text-[13px] text-white/40 ml-2">Terminal Assistant preview</span>
             </div>
             <div className="font-mono text-sm space-y-1">
               <p><span className="text-[#4ade80]">$</span> <span className="text-white/50">List all Python files in /src</span></p>
@@ -1393,6 +1389,7 @@ export default function AgentsAnim() {
               <p className="text-[#fbbf24]">api.py (2.4KB, 89 lines) - REST API endpoints</p>
             </div>
           </motion.div>
+          </div>
         </div>
       </motion.div>
 
@@ -1418,9 +1415,9 @@ export default function AgentsAnim() {
         animate={{ opacity: isTakeaways ? 1 : 0 }}
         transition={spring}
       >
-        <div className="max-w-md w-full">
+        <div className="max-w-xl w-full">
           <motion.h2
-            className="text-2xl font-bold text-white text-center mb-5"
+            className="text-4xl font-bold text-white text-center mb-6"
             animate={{
               opacity: isTakeaways ? 1 : 0,
               y: isTakeaways ? 0 : 15,
@@ -1432,15 +1429,13 @@ export default function AgentsAnim() {
 
           <div className="space-y-2.5">
             {[
-              { num: 1, text: 'Agent = LLM + Tools + Loop', color: '#a78bfa' },
-              { num: 2, text: 'The LLM thinks, your code acts', color: '#4a9eff' },
-              { num: 3, text: 'Clear tool names and descriptions matter', color: '#4ade80' },
-              { num: 4, text: 'Handle errors gracefully -- retry, fallback, or tell user', color: '#ef4444' },
-              { num: 5, text: 'Don\'t use agents when a simple API call would work', color: '#fbbf24' },
+              { num: 1, text: 'Agent = LLM + tools + a loop', color: '#a78bfa' },
+              { num: 2, text: 'The LLM decides; your code does the work', color: '#4a9eff' },
+              { num: 3, text: 'Use an agent only when one API call is not enough', color: '#fbbf24' },
             ].map((item, i) => (
               <motion.div
                 key={i}
-                className="flex items-center gap-4 px-5 py-3 rounded-xl border bg-white/[0.02]"
+                className="flex items-center gap-4 px-6 py-4 rounded-xl border bg-white/[0.02]"
                 style={{
                   borderColor: `${item.color}25`,
                 }}
@@ -1451,7 +1446,7 @@ export default function AgentsAnim() {
                 transition={{ ...spring, delay: i * 0.12 }}
               >
                 <span
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 border"
                   style={{
                     color: item.color,
                     borderColor: `${item.color}40`,
@@ -1460,7 +1455,7 @@ export default function AgentsAnim() {
                 >
                   {item.num}
                 </span>
-                <span className="text-sm text-white/70">{item.text}</span>
+                <span className="text-lg text-white/85">{item.text}</span>
               </motion.div>
             ))}
           </div>

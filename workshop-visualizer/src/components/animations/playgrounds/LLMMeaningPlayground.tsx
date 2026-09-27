@@ -148,21 +148,11 @@ export default function LLMMeaningPlayground() {
                     initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
                     transition={{ duration: 0.5, delay: i * 0.12 }}
                   />
-                  <motion.text
-                    x={(sel.x + n.w.x) / 2} y={(sel.y + n.w.y) / 2 - 5}
-                    fill="#4ade80" fontSize="12" fontWeight="bold" textAnchor="middle"
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 + i * 0.12 }}
-                  >
-                    {fmt(n.d)}
-                  </motion.text>
                 </motion.g>
               ))}
               {mode === 'neighbours' && farthest && (
                 <motion.g key={`far-${selected}`} initial={{ opacity: 0 }} animate={{ opacity: 0.6 }} exit={{ opacity: 0 }} transition={{ delay: 0.6 }}>
                   <line x1={sel.x} y1={sel.y} x2={farthest.w.x} y2={farthest.w.y} stroke="#f87171" strokeWidth={1} strokeDasharray="3 6" />
-                  <text x={(sel.x + farthest.w.x) / 2 + 6} y={(sel.y + farthest.w.y) / 2} fill="#f87171" fontSize="12">
-                    far: {fmt(farthest.d)}
-                  </text>
                 </motion.g>
               )}
             </AnimatePresence>
@@ -216,12 +206,14 @@ export default function LLMMeaningPlayground() {
                   <motion.circle
                     cx={w.x} cy={w.y}
                     fill={c}
+                    initial={false}
                     animate={{ r: isSel ? 9 : lit ? 7 : 5, opacity: lit ? 1 : 0.55 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 18 }}
                   />
                   {isSel && (
                     <motion.circle
                       cx={w.x} cy={w.y} r={14} fill="none" stroke={c} strokeWidth={1.5}
+                      initial={{ r: 12, opacity: 0.8 }}
                       animate={{ r: [12, 20, 12], opacity: [0.8, 0.1, 0.8] }}
                       transition={{ duration: 1.8, repeat: Infinity }}
                     />
@@ -229,6 +221,8 @@ export default function LLMMeaningPlayground() {
                   <motion.text
                     x={w.x + 11} y={w.y + 4}
                     fill={c} fontSize="13" fontWeight="bold"
+                    stroke="#0a0e1a" strokeWidth={4} paintOrder="stroke" strokeLinejoin="round"
+                    initial={false}
                     animate={{ opacity: lit ? 1 : 0.55 }}
                   >
                     {w.w}

@@ -2,6 +2,7 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import AgentBot, { TEAM } from '@/components/animations/characters/AgentBot';
+import RoleBot from './WhyTeamsBot';
 
 const CYAN = '#22d3ee';
 const spring = { type: 'spring' as const, stiffness: 260, damping: 24 };
@@ -253,7 +254,7 @@ export default function WhyTeamsPlayground() {
                     </div>
                   )}
                   <div className="flex-1 min-w-0 flex flex-col items-center gap-1.5">
-                    <AgentBot color={st.who.color} badge={st.who.badge} name={st.who.name} role={st.label} size={58} mood={isActive ? 'working' : isDone ? 'happy' : 'sleeping'} active={isActive} dimmed={!isActive && !isDone} />
+                    <RoleBot color={st.who.color} badge={st.who.badge} name={st.who.name} role={st.label} size={58} mood={isActive ? 'working' : isDone ? 'happy' : 'sleeping'} active={isActive} dimmed={!isActive && !isDone} />
                     {isDone && (
                       <motion.div
                         initial={{ opacity: 0, y: 8, rotate: -2 }}

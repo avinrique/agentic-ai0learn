@@ -184,7 +184,7 @@ export default function TemperaturePlayground() {
           <div className="space-y-2">
             {ex.tokens.map((tok, i) => {
               const v = probs[i];
-              const cut = !kept[i];
+              const cut = !kept[i] && afterTemp[i] > 0; // at T = 0 the others are already 0%, not "cut"
               return (
                 <div key={`${ex.id}-${tok.label}`} className="flex items-center gap-3">
                   <span

@@ -409,7 +409,7 @@ export default function TeamShapesPlayground() {
             )}
           </div>
           <div ref={logRef} className="flex-1 min-h-0 overflow-y-auto rounded-lg border border-white/10 bg-black/30 p-2 flex flex-col gap-1.5">
-            <div className="text-[11px] uppercase tracking-wide text-white/40">Message log</div>
+            <div className="text-[12px] uppercase tracking-wide text-white/45">Message log</div>
             {events.slice(0, idx + 1).map((e, i) => {
               const latest = i === idx;
               return (

@@ -1,12 +1,13 @@
 'use client';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useTracerStore, TraceStep } from '@/stores/tracerStore';
 import { useMemo } from 'react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Conversation Loop: "the AI has no memory, WE re-send the whole list".
 //   Top:    a thin while-True strip (where in the loop we are)
-//   Left:   the messages pile (always visible: this IS the memory)
+//   Left:   the messages list (always visible: this IS the memory), in list
+//           order: messages[0] on top, append() adds at the bottom
 //   Right:  ONE panel that depends on the phase:
 //             chat window (typing / printing) or the AI (reading / wiped)
 // Token sizes only appear while a call is being made.
@@ -161,7 +162,7 @@ export default function ConversationLoopAnim() {
           </div>
 
           <motion.div
-            className="flex-1 min-h-0 flex flex-col-reverse justify-end gap-2 overflow-hidden"
+            className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden"
             animate={s.isCalling ? { x: [0, 6, 0] } : { x: 0 }}
             transition={s.isCalling ? { duration: 1.2, repeat: Infinity } : undefined}
           >
@@ -172,7 +173,7 @@ export default function ConversationLoopAnim() {
               return (
                 <motion.div
                   key={`${i}-${m.role}-${m.content.slice(0, 16)}`}
-                  initial={{ opacity: 0, y: -30 }}
+                  initial={{ opacity: 0, y: 24 }}
                   animate={{
                     opacity: 1,
                     y: 0,
@@ -184,6 +185,7 @@ export default function ConversationLoopAnim() {
                 >
                   <div className="text-[13px] font-semibold" style={{ color: st.color }}>
                     {st.label}
+                    <span className="ml-1.5 font-mono font-normal text-white/35">[{i}]</span>
                   </div>
                   <div className="text-[14px] text-white/80 truncate">{m.content}</div>
                 </motion.div>
@@ -196,57 +198,53 @@ export default function ConversationLoopAnim() {
 
         {/* ── Right: chat window OR the AI, depending on the phase ── */}
         <div className="flex-1 min-w-0 flex flex-col">
-          <AnimatePresence mode="wait">
-            {s.aiPhase ? (
-              <motion.div
-                key="ai"
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 16 }}
-                transition={{ duration: 0.25 }}
-                className="flex-1 min-h-0 flex flex-col"
-              >
-                <AiPanel phase={s.aiPhase} count={s.messages.length} reply={line === 21 ? s.reply : ''} />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="chat"
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 16 }}
-                transition={{ duration: 0.25 }}
-                className="flex-1 min-h-0 flex flex-col rounded-2xl border border-white/10 bg-white/[0.025] overflow-hidden"
-              >
-                <div className="px-4 py-2.5 text-[14px] text-white/60 border-b border-white/[0.06]">Chat window</div>
-                <div className="flex-1 min-h-0 overflow-hidden flex flex-col justify-end gap-2.5 p-4">
-                  {s.chat.map((c, i) =>
-                    c.who === 'info' ? (
-                      <div key={`info-${i}`} className="text-[13px] text-white/35 text-center">
-                        {c.text}
+          {s.aiPhase ? (
+            <motion.div
+              key="ai"
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.25 }}
+              className="flex-1 min-h-0 flex flex-col"
+            >
+              <AiPanel phase={s.aiPhase} count={s.messages.length} reply={line === 21 ? s.reply : ''} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="chat"
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.25 }}
+              className="flex-1 min-h-0 flex flex-col rounded-2xl border border-white/10 bg-white/[0.025] overflow-hidden"
+            >
+              <div className="px-4 py-2.5 text-[14px] text-white/60 border-b border-white/[0.06]">Chat window</div>
+              <div className="flex-1 min-h-0 overflow-hidden flex flex-col justify-end gap-2.5 p-4">
+                {s.chat.map((c, i) =>
+                  c.who === 'info' ? (
+                    <div key={`info-${i}`} className="text-[13px] text-white/35 text-center">
+                      {c.text}
+                    </div>
+                  ) : (
+                    <motion.div
+                      key={`${c.who}-${i}`}
+                      initial={{ opacity: 0, y: 12, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={spring}
+                      className={`max-w-[88%] rounded-2xl px-3.5 py-2 text-[15px] leading-snug ${
+                        c.who === 'you'
+                          ? 'self-end bg-accent-blue/20 rounded-br-sm'
+                          : 'self-start bg-accent-green/15 rounded-bl-sm'
+                      }`}
+                    >
+                      <div className="text-[13px] mb-0.5" style={{ color: c.who === 'you' ? '#4a9eff' : '#4ade80' }}>
+                        {c.who === 'you' ? 'You' : 'AI'}
                       </div>
-                    ) : (
-                      <motion.div
-                        key={`${c.who}-${i}`}
-                        initial={{ opacity: 0, y: 12, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={spring}
-                        className={`max-w-[88%] rounded-2xl px-3.5 py-2 text-[15px] leading-snug ${
-                          c.who === 'you'
-                            ? 'self-end bg-accent-blue/20 rounded-br-sm'
-                            : 'self-start bg-accent-green/15 rounded-bl-sm'
-                        }`}
-                      >
-                        <div className="text-[13px] mb-0.5" style={{ color: c.who === 'you' ? '#4a9eff' : '#4ade80' }}>
-                          {c.who === 'you' ? 'You' : 'AI'}
-                        </div>
-                        <span className="text-white/90">{c.text}</span>
-                      </motion.div>
-                    ),
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                      <span className="text-white/90">{c.text}</span>
+                    </motion.div>
+                  ),
+                )}
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
     </div>

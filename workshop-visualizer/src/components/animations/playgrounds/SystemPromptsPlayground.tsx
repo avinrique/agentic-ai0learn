@@ -481,7 +481,7 @@ export default function SystemPromptsPlayground() {
                   transition={spring}
                 >
                   <span
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5 w-[58px] text-center"
+                    className="text-[12px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5 w-[72px] text-center"
                     style={{ color: l.color, backgroundColor: `${l.color}20` }}
                   >
                     {l.label}
@@ -536,7 +536,7 @@ export default function SystemPromptsPlayground() {
               exit={{ opacity: 0, x: 30 }}
               transition={spring}
             >
-              <span className="text-[10px] font-bold uppercase text-white/40 block">user</span>
+              <span className="text-[12px] font-bold uppercase text-white/40 block">user</span>
               {q.text}
             </motion.div>
           </AnimatePresence>
@@ -551,10 +551,10 @@ export default function SystemPromptsPlayground() {
               transition={{ duration: 0.25 }}
             >
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-bold uppercase text-[#4ade80]/70">assistant</span>
+                <span className="text-[12px] font-bold uppercase text-[#4ade80]/70">assistant</span>
                 {badge && (
                   <motion.span
-                    className="text-[11px] font-bold px-2 py-0.5 rounded-full border"
+                    className="text-[12px] font-bold px-2 py-0.5 rounded-full border"
                     style={{ color: badge.color, borderColor: `${badge.color}66`, backgroundColor: `${badge.color}18` }}
                     initial={{ scale: 0, rotate: -8 }}
                     animate={{ scale: 1, rotate: 0 }}

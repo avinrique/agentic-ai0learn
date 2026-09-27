@@ -8,7 +8,7 @@ type ToolName = 'weather' | 'converter' | 'search_flights' | 'calculator' | 'ema
 
 const TOOLS: { name: ToolName; icon: string; desc: string; color: string }[] = [
   { name: 'weather', icon: '🌤️', desc: 'Current weather for a city (°C)', color: '#4a9eff' },
-  { name: 'converter', icon: '🔁', desc: 'Convert units (°C→°F, km→mi…)', color: '#a78bfa' },
+  { name: 'converter', icon: '🔁', desc: 'Convert units (°C→°F, km→mi)', color: '#a78bfa' },
   { name: 'search_flights', icon: '✈️', desc: 'Find flights and prices', color: '#fbbf24' },
   { name: 'calculator', icon: '🧮', desc: 'Exact arithmetic', color: '#4ade80' },
   { name: 'email_reader', icon: '📧', desc: 'Read your inbox', color: '#f472b6' },
@@ -284,7 +284,7 @@ export default function AgentsPlayground() {
       {/* Main */}
       <div className="flex-1 min-h-0 flex gap-4">
         {/* Tool belt */}
-        <div className="w-56 shrink-0 flex flex-col gap-1.5">
+        <div className="w-56 shrink-0 flex flex-col gap-1">
           <p className="text-xs text-white/45 font-bold uppercase tracking-wider">Tool belt</p>
           {TOOLS.map((tool) => {
             const isActive = activeTool === tool.name;
@@ -293,7 +293,7 @@ export default function AgentsPlayground() {
             return (
               <motion.div
                 key={tool.name}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-lg border-2"
+                className="flex items-center gap-2 px-2 py-1 rounded-lg border-2"
                 animate={{
                   x: isActive ? 6 : 0,
                   borderColor: isErr ? '#ef4444' : isActive ? tool.color : used ? `${tool.color}55` : 'rgba(255,255,255,0.08)',
@@ -313,12 +313,12 @@ export default function AgentsPlayground() {
                   <p className="text-xs font-mono font-bold" style={{ color: tool.color }}>
                     {tool.name}
                   </p>
-                  <p className="text-[11px] text-white/45 truncate">{tool.desc}</p>
+                  <p className="text-[12px] text-white/45 truncate">{tool.desc}</p>
                 </div>
               </motion.div>
             );
           })}
-          <p className="text-[11px] text-white/35 mt-1 leading-snug">
+          <p className="text-[12px] text-white/35 mt-1 leading-snug">
             The agent can only do what its tools allow. There is no booking tool here.
           </p>
         </div>

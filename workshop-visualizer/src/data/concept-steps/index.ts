@@ -10,7 +10,7 @@ export const whatIsLLMSteps: ConceptStep[] = [
   },
   // Step 1: "Meet the Family"
   {
-    explanation: 'Ask six different AI chatbots the same question and you get six different answers. Each has its own style, but underneath they all work the same way.',
+    explanation: 'Ask different AI chatbots the same question and each gives a different answer. Each has its own style, but underneath they all work the same way.',
     animationTrigger: 'family',
     subtitle: 'Different names, same basic idea.',
   },
@@ -609,7 +609,7 @@ export const agentsSteps: ConceptStep[] = [
   },
   // Step 5: "Real Example: Multi-Step"
   {
-    explanation: 'Bigger jobs need several tools in a row. For "plan a trip to Paris", the agent searches flights, then hotels, then checks the calendar, deciding each next step.',
+    explanation: 'Bigger jobs need several tools in a row. For "plan a trip to Paris", the agent searches flights, then hotels, then checks the weather, deciding each next step.',
     animationTrigger: 'multiStepAgents',
     subtitle: 'Many tools, many steps, one goal.',
   },

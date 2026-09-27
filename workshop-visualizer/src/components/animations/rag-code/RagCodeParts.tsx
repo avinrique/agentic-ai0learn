@@ -131,17 +131,20 @@ export function MeaningMap({ story }: { story: RagStory }) {
 
       {/* "Nothing close" ring for a question that matches nothing */}
       {!story.found && (
-        <motion.div
-          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-dashed"
-          style={{ left: `${px * 100}%`, top: `${py * 100}%`, width: 220, height: 220, borderColor: `${GOLD}88` }}
-          initial={{ scale: 0.3, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 1.3, duration: 0.5 }}
-        >
-          <span className="absolute left-1/2 -translate-x-1/2 bottom-3 text-[13px] font-semibold whitespace-nowrap" style={{ color: GOLD }}>
-            nothing close
-          </span>
-        </motion.div>
+        // The outer div centres the ring on the pin; the inner one animates (its scale would override a translate).
+        <div className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${px * 100}%`, top: `${py * 100}%`, width: 220, height: 220 }}>
+          <motion.div
+            className="relative w-full h-full rounded-full border-2 border-dashed"
+            style={{ borderColor: `${GOLD}88` }}
+            initial={{ scale: 0.3, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 1.3, duration: 0.5 }}
+          >
+            <span className="absolute left-1/2 -translate-x-1/2 bottom-4 text-[14px] font-semibold whitespace-nowrap" style={{ color: GOLD }}>
+              nothing close
+            </span>
+          </motion.div>
+        </div>
       )}
 
       {/* The question pin */}

@@ -99,7 +99,7 @@ function BigCard({ who, text, color, highlight }: { who: string; text?: string; 
 }
 
 export default function WriterCriticAnim() {
-  const { steps, index, trig, v } = useTracerScene();
+  const { steps, index, trig, v, printed } = useTracerScene();
   if (steps.length === 0) return null;
 
   const draft = v('draft');
@@ -151,13 +151,22 @@ export default function WriterCriticAnim() {
   const showBubble = hasFeedbackThisRound && !!feedback && trig !== 'rewrite-note' && !endedApproved;
 
   // What the middle of the table shows (one thing at a time).
-  const middle: 'flow' | 'card' | 'paper' | 'recap' | null =
+  const middle: 'flow' | 'setup' | 'card' | 'paper' | 'recap' | null =
     trig === 'intro' ? 'flow'
+    : trig === 'setup' ? 'setup'
     : trig === 'wally-card' || trig === 'cora-card' ? 'card'
     : trig === 'recap' ? 'recap'
     : draft || writing || (task && trig === 'task') ? 'paper'
     : null;
   const showHistory = history.length > 0 && !['recap', 'intro'].includes(trig);
+  // A step that prints: one quiet console line (what it printed, on one line) under the table.
+  const printLine = printed ? printed.replace(/\s*\n+\s*/g, ' ') : '';
+  // The setup steps: the one new line of code, big, in the middle of the table.
+  const setupLine = v('run_agent')
+    ? { code: 'run_agent(system_prompt, task)', note: '📋 job card + 📝 task ➜ 💬 reply' }
+    : v('client')
+      ? { code: 'client = OpenAI()', note: '📞 our phone line to the AI' }
+      : { code: 'from openai import OpenAI', note: '📦 the OpenAI library' };
 
   return (
     <div className="h-full flex flex-col gap-3 p-4 overflow-hidden text-white">
@@ -189,6 +198,21 @@ export default function WriterCriticAnim() {
               <span className="text-white/40">⬇</span>
               <span style={{ color: GREEN }}>✅ APPROVED</span>
             </div>
+          )}
+
+          {middle === 'setup' && (
+            <motion.div
+              key={setupLine.code}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mx-auto rounded-xl border-2 px-5 py-4 flex flex-col items-center gap-2"
+              style={{ borderColor: `${ACCENT}88`, background: '#0b1b2b' }}
+            >
+              <span className="font-mono text-[18px] font-semibold" style={{ color: ACCENT }}>
+                {setupLine.code}
+              </span>
+              <span className="text-[15px] text-white/70">{setupLine.note}</span>
+            </motion.div>
           )}
 
           {middle === 'card' &&
@@ -323,6 +347,18 @@ export default function WriterCriticAnim() {
           <CardChip set={!!v('critic_prompt')} color={TEAM.critic.color} glow={trig === 'cora-card'} />
         </div>
       </div>
+
+      {printLine && (
+        <motion.div
+          key={`print-${index}`}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex-shrink-0 rounded-xl bg-black/50 border border-white/10 px-4 py-2 font-mono text-[14px] text-white/80 truncate"
+        >
+          <span className="text-white/40">🖨 </span>
+          {printLine}
+        </motion.div>
+      )}
 
       {/* Past rounds: a compact chip row */}
       {showHistory && (

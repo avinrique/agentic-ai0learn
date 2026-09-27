@@ -1,4 +1,5 @@
 'use client';
+import { useEffect, useState } from 'react';
 import { useTracerStore, TraceStep } from '@/stores/tracerStore';
 
 /** Read a variable's value from a trace step. String values (stored JSON-quoted) come back as plain text. */
@@ -27,5 +28,20 @@ export function useTracerScene() {
     step,
     trig: step?.animationTrigger ?? '',
     v: (name: string) => readVar(step, name),
+    /** What this step's print() wrote ('' if it prints nothing), without the leading blank line. */
+    printed: (step?.output ?? '').replace(/^\n+/, ''),
   };
+}
+
+/** True on short screens (≤ 800px tall, e.g. a 1280×720 laptop), so a scene can pack itself tighter. */
+export function useShortScreen() {
+  const [short, setShort] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-height: 800px)');
+    const update = () => setShort(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  return short;
 }

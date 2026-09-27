@@ -129,39 +129,30 @@ const badPractices = [
   { text: 'API keys in system prompt', detail: 'sk-abc123... exposed to prompt injection' },
   { text: 'Entire user manuals (2000+ tokens)', detail: 'Wastes context window and money' },
   { text: 'Contradicting instructions', detail: '"Be concise" vs "Explain thoroughly"' },
-  { text: '"You are the best AI ever"', detail: 'Flattery has no effect on the model' },
+  { text: '"You are the best AI ever"', detail: 'Flattery adds tokens, not quality' },
 ];
 
 const apiComparisons = [
   {
     provider: 'OpenAI',
     color: '#4ade80',
-    method: 'role: "system" in messages array',
-    code: 'messages: [{ role: "system", content: "..." }]',
+    method: 'role "system" inside the messages list',
+    code: 'messages: [\n  { role: "system", content: "..." },\n  { role: "user", content: "..." },\n]',
     logo: '/logos/openai.svg',
   },
   {
     provider: 'Anthropic',
     color: '#a78bfa',
-    method: 'system parameter (separate)',
-    code: 'system: "...",\nmessages: [{ role: "user", ... }]',
+    method: 'a separate "system" setting',
+    code: 'system: "...",\nmessages: [\n  { role: "user", content: "..." },\n]',
     logo: '/logos/anthropic.svg',
-  },
-  {
-    provider: 'Some Models',
-    color: '#fbbf24',
-    method: 'May ignore system prompts',
-    code: '// No guaranteed support — test first!',
-    logo: '',
   },
 ];
 
 const takeaways = [
-  { text: 'System prompt = messages[0]', color: '#a78bfa' },
-  { text: 'Structure: Persona + Format + Rules + Safety', color: '#4a9eff' },
-  { text: 'Keep it concise — tokens cost money', color: '#fbbf24' },
-  { text: 'Iterate and test like code', color: '#4ade80' },
-  { text: 'Never rely on system prompts for security', color: '#ef4444' },
+  { text: 'The system prompt is the first message and sets the rules', color: '#a78bfa' },
+  { text: 'Keep it short and clear, and test it', color: '#4ade80' },
+  { text: 'Never rely on it for security', color: '#ef4444' },
 ];
 
 export default function SystemPromptsAnim() {
@@ -741,7 +732,7 @@ export default function SystemPromptsAnim() {
           {apiComparisons.map((api, i) => (
             <motion.div
               key={api.provider}
-              className="flex-1 rounded-xl border-2 p-5"
+              className="flex-1 min-w-0 rounded-xl border-2 p-5"
               style={{
                 borderColor: `${api.color}30`,
                 backgroundColor: `${api.color}05`,
@@ -758,9 +749,9 @@ export default function SystemPromptsAnim() {
                   {api.provider}
                 </p>
               </div>
-              <p className="text-xs text-white/50 mb-3">{api.method}</p>
+              <p className="text-sm text-white/60 mb-3">{api.method}</p>
               <div className="bg-black/30 rounded-lg p-3 border border-white/5">
-                <pre className="text-sm font-mono leading-relaxed" style={{ color: `${api.color}99` }}>
+                <pre className="text-[13px] font-mono leading-relaxed whitespace-pre overflow-hidden" style={{ color: `${api.color}cc` }}>
                   {api.code}
                 </pre>
               </div>
@@ -877,9 +868,9 @@ export default function SystemPromptsAnim() {
         animate={{ opacity: s === 9 ? 1 : 0 }}
         transition={spring}
       >
-        <div className="text-center max-w-xl w-full px-6">
+        <div className="text-center max-w-2xl w-full px-6">
           <motion.h2
-            className="text-5xl font-bold text-white mb-6"
+            className="text-4xl font-bold text-white mb-6"
             animate={{ opacity: s === 9 ? 1 : 0, y: s === 9 ? 0 : 20 }}
             transition={spring}
           >
@@ -888,7 +879,7 @@ export default function SystemPromptsAnim() {
           {takeaways.map((item, i) => (
             <motion.div
               key={i}
-              className="flex items-center gap-4 mb-3 px-5 py-3 rounded-xl bg-white/5 border text-left"
+              className="flex items-center gap-4 mb-3 px-6 py-4 rounded-xl bg-white/5 border text-left"
               style={{ borderColor: `${item.color}30` }}
               animate={{ opacity: s === 9 ? 1 : 0, y: s === 9 ? 0 : 20 }}
               transition={{ ...spring, delay: i * 0.12 }}
@@ -903,7 +894,7 @@ export default function SystemPromptsAnim() {
               >
                 {i + 1}
               </span>
-              <span className="text-white/80 text-base font-medium">{item.text}</span>
+              <span className="text-white/85 text-lg font-medium">{item.text}</span>
             </motion.div>
           ))}
         </div>

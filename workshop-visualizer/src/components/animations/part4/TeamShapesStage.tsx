@@ -76,7 +76,7 @@ export function YouBadge({ size = 72, active, dimmed }: { size?: number; active?
         🧑
       </div>
       <div className="text-[13px] font-semibold text-white leading-tight mt-1">You</div>
-      <div className="text-[11px] text-white/50 leading-tight">the user</div>
+      <div className="text-[12px] text-white/50 leading-tight">the user</div>
     </motion.div>
   );
 }
@@ -92,17 +92,30 @@ export function Bot({ who, size = 72, mood, active, dimmed, role, hideRole }: {
 }) {
   if (who === 'you') return <YouBadge size={size} active={active} dimmed={dimmed} />;
   const t = TEAM[who];
+  const caption = hideRole ? undefined : role ?? t.role;
+  // AgentBot's own caption is small, so the job caption is drawn here at a readable size.
   return (
-    <AgentBot
-      color={t.color}
-      badge={t.badge}
-      name={`${t.name} ${t.badge}`}
-      role={hideRole ? undefined : role ?? t.role}
-      mood={mood ?? (active ? 'working' : 'happy')}
-      size={size}
-      active={active}
-      dimmed={dimmed}
-    />
+    <div className="flex flex-col items-center">
+      <AgentBot
+        color={t.color}
+        badge={t.badge}
+        name={`${t.name} ${t.badge}`}
+        mood={mood ?? (active ? 'working' : 'happy')}
+        size={size}
+        active={active}
+        dimmed={dimmed}
+      />
+      {caption && (
+        <motion.div
+          className="text-[13px] text-white/55 leading-tight text-center whitespace-nowrap"
+          initial={false}
+          animate={{ opacity: dimmed ? 0.35 : 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          {caption}
+        </motion.div>
+      )}
+    </div>
   );
 }
 
@@ -129,7 +142,7 @@ export function FlyingNote({ note }: { note: StageNote }) {
         style={{ background: tone.bg, borderLeft: `5px solid ${note.color}` }}
       >
         {note.title && (
-          <div className="text-[11px] font-bold leading-tight mb-0.5" style={{ color: tone.title }}>
+          <div className="text-[12px] font-bold leading-tight mb-1" style={{ color: tone.title }}>
             {note.title}
           </div>
         )}

@@ -72,7 +72,7 @@ export function Barrier({ state, scale = 1 }: { state: BarrierState; scale?: num
           background: `repeating-linear-gradient(90deg, ${state === 'open' ? GREEN : RED} 0 ${18 * scale}px, #f8fafc ${18 * scale}px ${36 * scale}px)`,
         }}
         initial={false}
-        animate={{ rotate: state === 'open' ? 78 : 0, x: state === 'blocked' ? [0, -4, 4, -3, 0] : 0 }}
+        animate={{ rotate: state === 'open' ? 90 : 0, x: state === 'blocked' ? [0, -4, 4, -3, 0] : 0 }}
         transition={{ rotate: { type: 'spring', stiffness: 110, damping: 14 }, x: { duration: 0.5 } }}
       />
     </div>
@@ -246,6 +246,22 @@ export function JobCard({ who, text, color, highlight }: { who: string; text: st
   );
 }
 
+/** A rubber stamp (PRETEND, RISKY, NOT SENT) that thumps down onto a card. */
+export function Stamp({ text, color, className = '' }: { text: string; color: string; className?: string }) {
+  return (
+    <motion.div
+      key={text}
+      initial={{ scale: 2.2, opacity: 0, rotate: -25 }}
+      animate={{ scale: 1, opacity: 1, rotate: -12 }}
+      transition={{ type: 'spring', damping: 12, stiffness: 180 }}
+      className={`pointer-events-none px-2.5 py-0.5 rounded-lg text-[20px] font-black tracking-widest whitespace-nowrap ${className}`}
+      style={{ color, border: `4px solid ${color}`, background: 'rgba(255,255,255,0.92)' }}
+    >
+      {text}
+    </motion.div>
+  );
+}
+
 /** The email Max drafted, as a big envelope. */
 export function Envelope({
   to,
@@ -277,18 +293,7 @@ export function Envelope({
           <div className="text-[19px] leading-snug mt-1.5 font-medium">&ldquo;{message}&rdquo;</div>
         </div>
       </div>
-      {stamp && (
-        <motion.div
-          key={stamp.text}
-          initial={{ scale: 2.2, opacity: 0, rotate: -25 }}
-          animate={{ scale: 1, opacity: 1, rotate: -12 }}
-          transition={{ type: 'spring', damping: 12, stiffness: 180 }}
-          className="absolute -top-4 -right-4 pointer-events-none px-2.5 py-0.5 rounded-lg text-[20px] font-black tracking-widest"
-          style={{ color: stamp.color, border: `4px solid ${stamp.color}`, background: 'rgba(255,255,255,0.9)' }}
-        >
-          {stamp.text}
-        </motion.div>
-      )}
+      {stamp && <Stamp text={stamp.text} color={stamp.color} className="absolute -top-4 -right-4" />}
     </div>
   );
 }

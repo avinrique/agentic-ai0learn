@@ -458,11 +458,13 @@ export default function RagCodeAnim() {
               >
                 {story.answer}
               </motion.div>
-              {story.found ? (
-                <Tag color={GREEN}>✓ from the handbook: {RAG_DOCS[ranked[0]].icon} {RAG_DOCS[ranked[0]].short}</Tag>
-              ) : (
-                <Tag color={GOLD}>🛑 not in the context → no guessing</Tag>
-              )}
+              <div>
+                {story.found ? (
+                  <Tag color={GREEN}>✓ from the handbook: {RAG_DOCS[ranked[0]].icon} {RAG_DOCS[ranked[0]].short}</Tag>
+                ) : (
+                  <Tag color={GOLD}>🛑 not in the context → no guessing</Tag>
+                )}
+              </div>
             </div>
           </div>
         ) : (

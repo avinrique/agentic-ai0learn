@@ -130,6 +130,16 @@ function DoneChip({ children, color = 'rgba(255,255,255,0.6)' }: { children: Rea
   );
 }
 
+/** What a print() on this step wrote to the console. */
+function ConsoleLine({ text }: { text: string }) {
+  return (
+    <div className="w-full max-w-[640px] flex-shrink-0 rounded-xl bg-black/50 border border-white/10 px-4 py-3 font-mono text-[16px] text-white/90 whitespace-pre-wrap break-words">
+      <span className="text-white/40">🖨 </span>
+      {text}
+    </div>
+  );
+}
+
 function Hl({ on, children }: { on: boolean; children: ReactNode }) {
   return (
     <div className={`rounded-lg px-2 py-1 -mx-2 ${on ? 'bg-yellow-300/15 ring-2 ring-yellow-300/60' : ''}`}>
@@ -316,7 +326,7 @@ function SetupTrail({ scene, tools }: { scene: AgentScene; tools: ToolCard[] }) 
   const hasSystem = !!v.system_prompt || /^\[\s*system/.test(v.messages ?? '');
   const items: [boolean, string][] = [
     [scene.importDone && f !== 'import', 'imports'],
-    ['client' in v && f !== 'client', 'client'],
+    ['client' in v && f !== 'client' && !scene.newVars.has('client'), 'client'],
     [defined.length > 0 && f !== 'functions', `${defined.length} function${defined.length === 1 ? '' : 's'}`],
     ['tools' in v && !f.startsWith('menu'), 'tool menu'],
     ['available_functions' in v && f !== 'map', 'name → function'],
@@ -332,6 +342,29 @@ function SetupTrail({ scene, tools }: { scene: AgentScene; tools: ToolCard[] }) 
         <DoneChip key={label}>✓ {label}</DoneChip>
       ))}
     </div>
+  );
+}
+
+/** The name → function dictionary; `hot` lights up one entry. */
+function MapCard({ tools, hot }: { tools: ToolCard[]; hot?: string }) {
+  // One entry per row while an entry is lit (so the lit one is never cut off).
+  const twoCols = tools.length > 3 && !hot;
+  return (
+    <Card color="#22d3ee" label="🗂️ available_functions" className={twoCols ? 'max-w-[640px]' : 'max-w-[520px]'}>
+      <div className={`grid gap-x-6 gap-y-1.5 font-mono text-[16px] ${twoCols ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        {tools.map((t) => (
+          <div
+            key={t.name}
+            className={`truncate rounded-md px-1.5 -mx-1.5 ${t.name === hot ? 'bg-yellow-300/15 ring-2 ring-yellow-300/60' : ''}`}
+            style={{ opacity: hot && t.name !== hot ? 0.55 : 1 }}
+          >
+            <span className="text-[#ce9178]">&quot;{t.name}&quot;</span>
+            <span className="text-white/40"> → </span>
+            <span style={{ color: t.color }}>{t.name}</span>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 
@@ -359,6 +392,9 @@ function SetupFocal({
           <div className="space-y-2">
             <CodeLine code="import json" tag="reads the AI's arguments" />
             {shell && <CodeLine code="import subprocess" tag="runs terminal commands" />}
+            {(scene.newVars.has('client') || !scene.model.clientVar) && (
+              <CodeLine code="client = OpenAI()" tag="our line to the AI" />
+            )}
           </div>
         </Card>
       );
@@ -368,11 +404,13 @@ function SetupFocal({
           <CodeLine code="client = OpenAI()" tag="our line to the AI" />
         </Card>
       );
-    case 'functions':
+    case 'functions': {
+      // Lines inside a function body set nothing new: keep the function being written lit.
+      const anyNew = defined.some((t) => scene.newVars.has(t.name));
       return (
         <div className={`w-full grid gap-2.5 ${many ? 'grid-cols-2 max-w-[720px]' : 'grid-cols-1 max-w-[480px]'}`}>
-          {defined.map((t) => {
-            const isNew = scene.newVars.has(t.name);
+          {defined.map((t, i) => {
+            const isNew = scene.newVars.has(t.name) || (!anyNew && i === defined.length - 1);
             return (
               <motion.div
                 key={t.name}
@@ -394,6 +432,7 @@ function SetupFocal({
           })}
         </div>
       );
+    }
     case 'menu':
     case 'menu-name':
     case 'menu-desc':
@@ -415,19 +454,7 @@ function SetupFocal({
       );
     }
     case 'map':
-      return (
-        <Card color="#22d3ee" label="🗂️ available_functions" className="max-w-[640px]">
-          <div className={`grid gap-x-6 gap-y-1.5 font-mono text-[16px] ${many ? 'grid-cols-2' : 'grid-cols-1'}`}>
-            {tools.map((t) => (
-              <div key={t.name} className="truncate">
-                <span className="text-[#ce9178]">&quot;{t.name}&quot;</span>
-                <span className="text-white/40"> → </span>
-                <span style={{ color: t.color }}>{t.name}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      );
+      return <MapCard tools={tools} />;
     case 'system':
       return (
         <Card color="#a78bfa" label="⚙️ system" className="max-w-[640px]">
@@ -440,21 +467,37 @@ function SetupFocal({
           <div className="text-[20px] leading-snug text-white">&quot;{scene.question}&quot;</div>
         </Card>
       ) : null;
-    case 'loop':
+    case 'loop': {
+      // The chat loop's exit check, right after the user typed something.
+      const typed = unquote(v.user_input);
+      if (scene.trigger === 'chatLoop' && 'user_input' in v && !scene.newVars.has('user_input') && typed !== 'exit') {
+        return (
+          <div className="flex flex-col items-center gap-4">
+            <Card color="#f472b6" className="max-w-[560px]">
+              <CodeLine
+                code={
+                  <>
+                    <span className="text-[#ce9178]">&quot;{truncate(typed.trim().toLowerCase(), 30)}&quot;</span>
+                    <span className="text-white/60"> == </span>
+                    <span className="text-[#ce9178]">&quot;exit&quot;</span>
+                  </>
+                }
+              />
+            </Card>
+            <Badge ok text="NO → keep going" />
+          </div>
+        );
+      }
       return (
         <Card color="#f472b6" className="max-w-[520px]">
           <CodeLine code="while True:" tag="repeat until a break" color="#f9a8d4" />
         </Card>
       );
+    }
     case 'envelope':
       return <EnvelopeFocal scene={scene} tools={tools} loop={loop} />;
     case 'console':
-      return (
-        <div className="w-full max-w-[640px] rounded-xl bg-black/50 border border-white/10 px-4 py-3 font-mono text-[16px] text-white/90 whitespace-pre-wrap break-words">
-          <span className="text-white/40">🖨 </span>
-          {scene.output.trim() || '…'}
-        </div>
-      );
+      return <ConsoleLine text={scene.output.trim() || '…'} />;
     default:
       return (
         <div className="flex flex-col items-center gap-3 text-center">
@@ -510,7 +553,7 @@ function EnvelopeFocal({ scene, tools, loop }: { scene: AgentScene; tools: ToolC
               ))
             ))}
         </div>
-        {scene.phase === 'setup' && (
+        {scene.model.toolChoice && (scene.phase === 'setup' || withTools) && (
           <div className="flex items-center gap-2">
             <span className="font-mono text-white/55 w-[104px]">tool_choice</span>
             <span className="font-mono text-[#ce9178]">&quot;auto&quot;</span>
@@ -586,48 +629,101 @@ function OtherCalls({ scene, turn }: { scene: AgentScene; turn: AgentTurn }) {
   );
 }
 
-function SelectFocal({ scene, call }: { scene: AgentScene; call: AgentCall }) {
+function SelectFocal({ scene, call, tools }: { scene: AgentScene; call: AgentCall; tools: ToolCard[] }) {
   const s = scene.step;
-  const lookup = scene.newVars.has('available_functions') || scene.newVars.has('function_to_call');
-  const nameNow = call.selectStep === s && !lookup;
+  const vars = scene.vars;
+  // After the slip is read, a step that sets nothing new is our code picking the function:
+  // with a name → function dictionary (available_functions[...]) or with an if / elif chain.
+  const picking = call.argsStep < s && scene.newVars.size === 0 && !scene.output.trim();
+  // The dictionary is being built / explained while this request is read: show the dictionary itself.
+  const showMap =
+    scene.newVars.has('available_functions') ||
+    (picking &&
+      Number.isFinite(scene.model.mapStep) &&
+      scene.model.mapStep >= Math.min(call.slipStep, call.nameStep) &&
+      !('function_to_call' in vars));
+  const lookup = !showMap && (scene.newVars.has('function_to_call') || (picking && 'available_functions' in vars));
+  const branchIdx = picking && !('available_functions' in vars) ? s - call.argsStep - 1 : -1;
+  const chosenAt = tools.findIndex((t) => t.name === call.name);
+  const branches = branchIdx >= 0 ? tools.slice(0, Math.min(branchIdx, Math.max(chosenAt, 0)) + 1) : [];
+  // Each line of the slip-reading code appears on the step that runs it, lit up on that step.
+  const slipShown = call.slipStep <= s;
+  const nameShown = call.nameStep <= s || call.argsStep <= s;
+  const argsShown = call.argsStep <= s;
+  const slipNow = call.slipStep === s && call.nameStep !== s && !lookup;
+  const nameNow = call.nameStep === s && !lookup;
   const argsNow = call.argsStep === s && !lookup;
+  const nameVar = 'tool_name' in vars && !('function_name' in vars) ? 'tool_name' : 'function_name';
+  const argsVar = 'args' in vars && !('arguments' in vars) ? 'args' : 'arguments';
+  const anyRow = slipShown || nameShown || lookup;
+  if (showMap) {
+    return (
+      <div className="w-full max-w-[640px] flex flex-col items-center gap-3">
+        <SlipLine scene={scene} call={call} />
+        <MapCard tools={tools} hot={call.name} />
+      </div>
+    );
+  }
   return (
     <div className="w-full max-w-[640px] flex flex-col gap-3">
-      <SlipLine scene={scene} call={call} />
-      <Card color="#60a5fa" label="🔎 your code reads the slip">
-        <div className="font-mono text-[18px] space-y-1.5 break-words">
-          <Hl on={nameNow}>
-            <span className="text-[#9cdcfe]">function_name</span> ={' '}
-            <span className="text-[#ce9178]">&quot;{call.name}&quot;</span>
-          </Hl>
-          {call.argsStep <= s && (
-            <Hl on={argsNow}>
-              <span className="text-[#9cdcfe]">arguments</span> = {'{'}
-              {call.args.map(([k, v], i) => (
-                <span key={k}>
-                  {i > 0 && ', '}
-                  <span className="text-[#ce9178]">&apos;{k}&apos;</span>: {truncate(v, 28)}
+      <SlipLine scene={scene} call={call} pulse={slipNow} />
+      {anyRow && (
+        <Card color="#60a5fa" label="🔎 your code reads the slip">
+          <div className="font-mono text-[18px] space-y-1.5 break-words">
+            {slipShown && (
+              <Hl on={slipNow}>
+                <span className="text-[#9cdcfe]">tool_call</span> ={' '}
+                <IdChip id={call.id} color={idColor(scene.model, call.id)} />
+              </Hl>
+            )}
+            {nameShown && (
+              <Hl on={nameNow}>
+                <span className="text-[#9cdcfe]">{nameVar}</span> ={' '}
+                <span className="text-[#ce9178]">&quot;{call.name}&quot;</span>
+              </Hl>
+            )}
+            {argsShown && (
+              <Hl on={argsNow}>
+                <span className="text-[#9cdcfe]">{argsVar}</span> = {'{'}
+                {call.args.map(([k, v], i) => (
+                  <span key={k}>
+                    {i > 0 && ', '}
+                    <span className="text-[#ce9178]">&apos;{k}&apos;</span>: {truncate(v, 28)}
+                  </span>
+                ))}
+                {'}'}
+                {argsNow && (
+                  <span className="ml-2 font-sans text-[14px] text-white/55 whitespace-nowrap">json.loads → dict</span>
+                )}
+              </Hl>
+            )}
+            {branches.map((t, i) => {
+              const hit = t.name === call.name;
+              return (
+                <Hl key={t.name} on={i === branches.length - 1}>
+                  <span className="text-[#c586c0]">{i === 0 ? 'if' : 'elif'}</span>{' '}
+                  <span className="text-[#9cdcfe]">{nameVar}</span> =={' '}
+                  <span className="text-[#ce9178]">&quot;{t.name}&quot;</span>
+                  <span className={`ml-3 font-sans text-[15px] font-semibold ${hit ? 'text-[#4ade80]' : 'text-[#f87171]'}`}>
+                    {hit ? `✓ True → run ${t.name}` : '✗ False → skip'}
+                  </span>
+                </Hl>
+              );
+            })}
+            {lookup && (
+              <Hl on>
+                <span className="whitespace-nowrap">
+                  <span className="text-[#9cdcfe]">available_functions</span>[
+                  <span className="text-[#ce9178]">&quot;{call.name}&quot;</span>]
+                </span>{' '}
+                <span className="whitespace-nowrap">
+                  → <span className="text-[#4ade80]">{call.name}</span>
                 </span>
-              ))}
-              {'}'}
-              {argsNow && (
-                <span className="ml-2 font-sans text-[14px] text-white/55 whitespace-nowrap">json.loads → dict</span>
-              )}
-            </Hl>
-          )}
-          {lookup && (
-            <Hl on>
-              <span className="whitespace-nowrap">
-                <span className="text-[#9cdcfe]">available_functions</span>[
-                <span className="text-[#ce9178]">&quot;{call.name}&quot;</span>]
-              </span>{' '}
-              <span className="whitespace-nowrap">
-                → <span className="text-[#4ade80]">{call.name}</span>
-              </span>
-            </Hl>
-          )}
-        </div>
-      </Card>
+              </Hl>
+            )}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
@@ -756,7 +852,9 @@ function AnswerFocal({
           </div>
         ) : exited ? (
           <div className="flex justify-center flex-shrink-0">
-            <DoneChip color="#f9a8d4">👋 exit → Goodbye!</DoneChip>
+            <DoneChip color="#f9a8d4">
+              {scene.outputsSoFar.some((o) => /goodbye/i.test(o.text)) ? '👋 exit → Goodbye!' : '👋 the user typed exit'}
+            </DoneChip>
           </div>
         ) : null}
         {!exited && <div className="flex-shrink-0">{card}</div>}
@@ -866,7 +964,7 @@ export default function AgentDataFlow({
       </div>
     );
   } else if (hasCalls && call && phase === 'select') {
-    focal = <SelectFocal scene={scene} call={call} />;
+    focal = <SelectFocal scene={scene} call={call} tools={tools} />;
     top = <OtherCalls scene={scene} turn={t} />;
   } else if (hasCalls && call && phase === 'execute') {
     focal = <ExecuteFocal scene={scene} call={call} showTerminal={showTerminal} />;
@@ -894,6 +992,18 @@ export default function AgentDataFlow({
     focal = <AnswerFocal scene={scene} turn={answerTurn} loop={loop} showTerminal={showTerminal} />;
   }
 
+  // A print() on this step (outside setup, which has its own console focal): show the console line,
+  // unless the focal already shows the terminal (terminal lessons, while running / answering).
+  const terminalShown = showTerminal && ['execute', 'answer', 'done'].includes(phase);
+  let printed = phase !== 'setup' && t && !terminalShown ? scene.output.trim() : '';
+  // Printing the answer that is already on screen: don't repeat it, point at it.
+  const shownAnswer = (phase === 'answer' || phase === 'done' || phase === 'check') && !showTerminal
+    ? ([...scene.model.turns].reverse().find((x) => x.answerStep <= scene.step)?.answer ?? '').trim()
+    : '';
+  if (printed && shownAnswer && printed.includes(shownAnswer)) {
+    printed = `${printed.replace(shownAnswer, '').trim()} ⬆ the answer`.trim();
+  }
+
   return (
     <div className="h-full flex flex-col gap-3 min-h-0">
       {strip}
@@ -903,9 +1013,10 @@ export default function AgentDataFlow({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden"
+        className="flex-1 min-h-0 flex flex-col items-center justify-center gap-3 overflow-hidden"
       >
         {focal}
+        {printed && <ConsoleLine text={truncate(printed, 160)} />}
       </motion.div>
     </div>
   );

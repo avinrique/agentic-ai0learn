@@ -3,6 +3,10 @@
  * ToolSelectionAnim — the "tool menu": one card per tool (name + description + parameters).
  * It is only drawn when the menu is the focal point (writing the menu, the AI picking a tool),
  * so the cards are big: 1 column for small menus, 2 columns for big ones (e.g. 7 tools).
+ * On short screens (≤ 800px tall, e.g. a 1280×720 laptop) the menu gets compact: one more
+ * column, and the lines the step is not about (descriptions, parameters, dimmed cards' details)
+ * are hidden, so the menu never runs out of the panel.
+ * (Tailwind needs the full class names written out, so the short-screen classes are literals.)
  * Purely props-driven; AgentDataFlow decides the mode from the current scene.
  */
 import { motion } from 'framer-motion';
@@ -38,7 +42,15 @@ export default function ToolSelectionAnim({
   const pickDelay = mode === 'scanning' ? tools.length * scanDelay : 0;
 
   return (
-    <div className={`w-full grid gap-2.5 ${many ? 'grid-cols-2 max-w-[720px]' : 'grid-cols-1 max-w-[480px]'}`}>
+    <div
+      className={`w-full grid gap-2.5 items-start ${
+        many
+          ? 'grid-cols-2 max-w-[720px] [@media(max-height:800px)]:grid-cols-3 [@media(max-height:800px)]:max-w-[780px] [@media(max-height:800px)]:gap-2'
+          : `grid-cols-1 max-w-[480px] ${
+              tools.length > 2 ? '[@media(max-height:800px)]:grid-cols-2 [@media(max-height:800px)]:max-w-[720px]' : ''
+            }`
+      }`}
+    >
       {tools.map((tool, i) => {
         const isChosen = chosen.includes(tool.name) && (mode === 'chosen' || mode === 'scanning');
         const wasUsed = usedBefore.includes(tool.name);
@@ -46,6 +58,10 @@ export default function ToolSelectionAnim({
         const dim = mode === 'unused' || (somePicked && !isChosen);
         const args = filledArgs[tool.name];
         const showParams = !many || highlightField === 'params' || isChosen;
+        // On short screens: a dimmed card shows only its name; with many tools the descriptions
+        // only show on the step about descriptions (and on the picked card).
+        const shortHideDesc = dim || (many && highlightField !== 'desc' && !isChosen);
+        const shortHideParams = dim || (mode === 'idle' && highlightField !== 'params' && tools.length > 2);
         const hl = (f: 'name' | 'desc' | 'params') =>
           highlightField === f ? 'ring-2 ring-yellow-300/80 bg-yellow-300/10 text-white' : '';
         return (
@@ -112,13 +128,19 @@ export default function ToolSelectionAnim({
             </div>
             {tool.description && (
               <div
-                className={`mt-1 ${many ? 'text-[13px]' : 'text-[15px]'} leading-snug text-white/70 rounded px-1 line-clamp-2 ${hl('desc')}`}
+                className={`mt-1 ${many ? 'text-[13px]' : 'text-[15px]'} leading-snug text-white/70 rounded px-1 line-clamp-2 ${hl('desc')} ${
+                  shortHideDesc ? '[@media(max-height:800px)]:hidden' : ''
+                }`}
               >
                 {tool.description}
               </div>
             )}
             {showParams && tool.params && tool.params.length > 0 && (
-              <div className={`flex flex-wrap gap-1.5 mt-1.5 rounded p-0.5 ${hl('params')}`}>
+              <div
+                className={`flex flex-wrap gap-1.5 mt-1.5 rounded p-0.5 ${hl('params')} ${
+                  shortHideParams ? '[@media(max-height:800px)]:hidden' : ''
+                }`}
+              >
                 {tool.params.map((p, k) => {
                   const val = isChosen ? args?.find(([name]) => name === p)?.[1] : undefined;
                   return (

@@ -220,9 +220,9 @@ export default function TemperatureAnim() {
                 opacity={0.4}
               />
               {/* Labels */}
-              <text x="20" y="170" fill="#4a9eff" fontSize="12" fontFamily="monospace">0</text>
-              <text x="93" y="55" fill="#fbbf24" fontSize="12" fontFamily="monospace">1.0</text>
-              <text x="165" y="170" fill="#ef4444" fontSize="12" fontFamily="monospace">2.0</text>
+              <text x="30" y="174" textAnchor="middle" fill="#4a9eff" fontSize="15" fontFamily="monospace">0</text>
+              <text x="100" y="54" textAnchor="middle" fill="#fbbf24" fontSize="15" fontFamily="monospace">1.0</text>
+              <text x="170" y="174" textAnchor="middle" fill="#ef4444" fontSize="15" fontFamily="monospace">2.0</text>
             </svg>
 
             {/* Animated needle */}
@@ -1114,30 +1114,26 @@ export default function TemperatureAnim() {
       >
         <div className="text-center max-w-xl w-full px-6">
           <motion.h2
-            className="text-5xl font-bold text-white mb-6"
+            className="text-4xl font-bold text-white mb-6"
             animate={{ opacity: isTakeaways ? 1 : 0, y: isTakeaways ? 0 : 20 }}
             transition={spring}
           >
             Key Takeaways
           </motion.h2>
           {[
-            { icon: '🎛️', text: 'Temperature controls randomness in token selection (0 to 2)', color: '#4a9eff' },
-            { icon: '🤖', text: 'Temp 0 = deterministic — always the same output', color: '#4a9eff' },
-            { icon: '⚖️', text: 'Temp ~0.7 = balanced — creative but controlled', color: '#fbbf24' },
-            { icon: '🎲', text: 'Temp 1.5 = creative chaos — surprising & unpredictable', color: '#ef4444' },
-            { icon: '🔢', text: 'Softmax divides logits by T — lower T sharpens, higher T flattens', color: '#a78bfa' },
-            { icon: '✂️', text: 'Top-P is an alternative — cuts off low-probability tokens', color: '#f472b6' },
-            { icon: '🎯', text: 'Match temperature to your task — code low, stories high', color: '#4ade80' },
+            { icon: '🎛️', text: 'Temperature controls how boldly the next word is picked', color: '#4a9eff' },
+            { icon: '⚖️', text: 'Low = consistent, high = creative', color: '#fbbf24' },
+            { icon: '🎯', text: 'A clear prompt matters more than the setting', color: '#4ade80' },
           ].map((item, i) => (
             <motion.div
               key={i}
-              className="flex items-center gap-4 mb-3 px-5 py-3 rounded-xl bg-white/5 border text-left"
+              className="flex items-center gap-4 mb-3 px-6 py-4 rounded-xl bg-white/5 border text-left"
               style={{ borderColor: `${item.color}30` }}
               animate={{ opacity: isTakeaways ? 1 : 0, y: isTakeaways ? 0 : 20 }}
               transition={{ ...spring, delay: i * 0.12 }}
             >
               <span className="text-2xl">{item.icon}</span>
-              <span className="text-white/80 text-base font-medium">{item.text}</span>
+              <span className="text-white/85 text-lg font-medium">{item.text}</span>
             </motion.div>
           ))}
         </div>

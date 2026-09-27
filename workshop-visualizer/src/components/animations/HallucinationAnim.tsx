@@ -185,7 +185,7 @@ export default function HallucinationAnim() {
                 className="font-bold px-1 rounded"
                 animate={{
                   color: revealState === 'wrong' ? '#ef4444' : '#4ade80',
-                  backgroundColor: revealState === 'wrong' ? '#ef444420' : 'transparent',
+                  backgroundColor: revealState === 'wrong' ? '#ef444420' : '#ef444400',
                 }}
                 transition={smooth}
               >
@@ -259,7 +259,7 @@ export default function HallucinationAnim() {
                   className="rounded-lg border p-2.5"
                   style={{
                     borderColor: patternIdx === i ? (item.isWrong ? '#ef444440' : '#4ade8040') : 'rgba(255,255,255,0.1)',
-                    backgroundColor: patternIdx === i ? (item.isWrong ? '#ef444408' : '#4ade8008') : 'transparent',
+                    backgroundColor: patternIdx === i ? (item.isWrong ? '#ef444408' : '#4ade8008') : '#ffffff00',
                   }}
                   animate={{
                     opacity: s === 1 ? 1 : 0,
@@ -383,18 +383,11 @@ export default function HallucinationAnim() {
       >
         <div className="max-w-lg w-full">
           <motion.p
-            className="text-sm text-white/40 mb-2 text-center"
+            className="text-sm text-white/50 mb-2 text-center"
             animate={{ opacity: s === 3 ? 1 : 0 }}
             transition={spring}
           >
-            &quot;{citationSets[citeSet].prompt}&quot;
-          </motion.p>
-          <motion.p
-            className="text-xs text-white/30 mb-4 text-center"
-            animate={{ opacity: s === 3 ? 1 : 0 }}
-            transition={{ ...spring, delay: 0.2 }}
-          >
-            The AI happily provides:
+            You: &quot;{citationSets[citeSet].prompt}&quot;
           </motion.p>
           <ExampleChips
             active={s === 3}
@@ -404,11 +397,11 @@ export default function HallucinationAnim() {
             color="#ef4444"
           />
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {fakeCitations.map((cite, i) => (
               <motion.div
                 key={`${citeSet}-${i}`}
-                className="rounded-xl border-2 p-4 relative overflow-hidden"
+                className="rounded-xl border-2 px-4 py-2.5 relative overflow-hidden"
                 initial={{ opacity: 0, x: -15 }}
                 style={{
                   borderColor: citationRevealed >= i ? '#ef444440' : 'rgba(255,255,255,0.1)',
@@ -420,8 +413,8 @@ export default function HallucinationAnim() {
                 }}
                 transition={{ ...spring, delay: 0.3 + i * 0.15 }}
               >
-                <p className="text-xs text-white/70 font-bold">{cite.author}</p>
-                <p className="text-xs text-accent-blue/80 italic mt-0.5">&quot;{cite.title}&quot;</p>
+                <p className="text-sm text-white/75 font-bold">{cite.author}</p>
+                <p className="text-sm text-accent-blue/85 italic mt-0.5">&quot;{cite.title}&quot;</p>
                 <p className="text-sm text-white/40 mt-0.5">{cite.journal}, {cite.year}</p>
 
                 {/* FAKE stamp */}
@@ -494,7 +487,7 @@ export default function HallucinationAnim() {
                   &quot;Migraines are triggered by the{' '}
                   <motion.span
                     className="px-0.5 rounded"
-                    animate={{ backgroundColor: s === 4 ? ['transparent', '#ef444430', 'transparent'] : 'transparent' }}
+                    animate={{ backgroundColor: s === 4 ? ['#ef444400', '#ef444430', '#ef444400'] : '#ef444400' }}
                     transition={{ duration: 2, repeat: Infinity, delay: 1 }}
                   >
                     cortical spreading depolarization
@@ -502,7 +495,7 @@ export default function HallucinationAnim() {
                   {' '}of the trigeminal nerve pathway, releasing{' '}
                   <motion.span
                     className="px-0.5 rounded"
-                    animate={{ backgroundColor: s === 4 ? ['transparent', '#ef444430', 'transparent'] : 'transparent' }}
+                    animate={{ backgroundColor: s === 4 ? ['#ef444400', '#ef444430', '#ef444400'] : '#ef444400' }}
                     transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}
                   >
                     CGRP neuropeptides at 4.7ng/mL
@@ -537,7 +530,7 @@ export default function HallucinationAnim() {
                   &quot;First install it:{' '}
                   <motion.span
                     className="px-0.5 rounded"
-                    animate={{ backgroundColor: s === 4 ? ['transparent', '#ef444430', 'transparent'] : 'transparent' }}
+                    animate={{ backgroundColor: s === 4 ? ['#ef444400', '#ef444430', '#ef444400'] : '#ef444400' }}
                     transition={{ duration: 2, repeat: Infinity, delay: 2 }}
                   >
                     npm install tablesprout
@@ -576,7 +569,7 @@ export default function HallucinationAnim() {
                   &quot;Oxygen molecules{' '}
                   <motion.span
                     className="px-0.5 rounded"
-                    animate={{ backgroundColor: s === 4 ? ['transparent', '#ef444430', 'transparent'] : 'transparent' }}
+                    animate={{ backgroundColor: s === 4 ? ['#ef444400', '#ef444430', '#ef444400'] : '#ef444400' }}
                     transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
                   >
                     absorb red light and re-emit it as blue
@@ -584,7 +577,7 @@ export default function HallucinationAnim() {
                   , a process called the{' '}
                   <motion.span
                     className="px-0.5 rounded"
-                    animate={{ backgroundColor: s === 4 ? ['transparent', '#ef444430', 'transparent'] : 'transparent' }}
+                    animate={{ backgroundColor: s === 4 ? ['#ef444400', '#ef444430', '#ef444400'] : '#ef444400' }}
                     transition={{ duration: 2, repeat: Infinity, delay: 1.1 }}
                   >
                     Harwick–Delune shift
@@ -622,7 +615,7 @@ export default function HallucinationAnim() {
                   <br />
                   <motion.span
                     className="px-0.5 rounded text-accent-green/80"
-                    animate={{ backgroundColor: s === 4 ? ['transparent', '#ef444430', 'transparent'] : 'transparent' }}
+                    animate={{ backgroundColor: s === 4 ? ['#ef444400', '#ef444430', '#ef444400'] : '#ef444400' }}
                     transition={{ duration: 2, repeat: Infinity, delay: 1.4 }}
                   >
                     my_list.shuffle()
@@ -662,25 +655,18 @@ export default function HallucinationAnim() {
       >
         <div className="max-w-lg w-full">
           <motion.p
-            className="text-sm text-white/40 mb-2 text-center"
+            className="text-[15px] text-white/55 mb-4 text-center"
             animate={{ opacity: s === 5 ? 1 : 0 }}
             transition={spring}
           >
             Can you tell which is right and which is wrong?
           </motion.p>
-          <motion.p
-            className="text-xs text-white/30 mb-5 text-center"
-            animate={{ opacity: s === 5 ? 1 : 0 }}
-            transition={{ ...spring, delay: 0.2 }}
-          >
-            Look at how confident the AI sounds (illustrative numbers):
-          </motion.p>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {confidenceExamples.map((ex, i) => (
               <motion.div
                 key={i}
-                className="rounded-xl border p-4"
+                className="rounded-xl border px-4 py-2.5"
                 style={{
                   borderColor: confIdx === i
                     ? (ex.isTrue ? '#4ade8040' : '#ef444440')
@@ -695,7 +681,7 @@ export default function HallucinationAnim() {
                 }}
                 transition={{ ...spring, delay: 0.3 + i * 0.1 }}
               >
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-1.5">
                   <span className="text-sm text-white/70">&quot;{ex.text}&quot;</span>
                   {confIdx === i && (
                     <motion.span
@@ -714,7 +700,7 @@ export default function HallucinationAnim() {
                 </div>
                 {/* Confidence bar — looks identical for true and false */}
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-white/30 w-16">Confidence:</span>
+                  <span className="text-sm text-white/45 w-24 shrink-0">Sounds sure:</span>
                   <div className="flex-1 h-4 bg-white/5 rounded-full overflow-hidden">
                     <motion.div
                       className="h-full rounded-full bg-accent-green/40"
@@ -729,12 +715,12 @@ export default function HallucinationAnim() {
           </div>
 
           <motion.div
-            className="mt-4 text-center px-4 py-2 rounded-lg bg-accent-gold/10 border border-accent-gold/20"
+            className="mt-3 text-center px-4 py-2 rounded-lg bg-accent-gold/10 border border-accent-gold/20"
             animate={{ opacity: s === 5 ? 1 : 0 }}
             transition={{ ...spring, delay: 1.5 }}
           >
-            <span className="text-xs text-accent-gold">
-              All bars look the same — confidence tells you NOTHING about truth
+            <span className="text-sm text-accent-gold">
+              How sure it sounds tells you nothing about truth (illustrative numbers)
             </span>
           </motion.div>
         </div>
@@ -1177,31 +1163,28 @@ export default function HallucinationAnim() {
         animate={{ opacity: s === 12 ? 1 : 0 }}
         transition={spring}
       >
-        <div className="text-center max-w-xl w-full px-6">
+        <div className="text-center max-w-2xl w-full px-6">
           <motion.h2
-            className="text-5xl font-bold text-white mb-6"
+            className="text-4xl font-bold text-white mb-6"
             animate={{ opacity: s === 12 ? 1 : 0, y: s === 12 ? 0 : 20 }}
             transition={spring}
           >
             Key Takeaways
           </motion.h2>
           {[
-            { text: 'LLMs hallucinate because they predict plausible text, not truth', color: '#ef4444' },
-            { text: 'Use RAG to ground responses in real data', color: '#4a9eff' },
-            { text: 'Lower temperature for factual tasks', color: '#fbbf24' },
-            { text: 'Add "say I don\'t know" to your system prompt', color: '#a78bfa' },
-            { text: 'Always verify AI citations \u2014 many are fabricated', color: '#f472b6' },
-            { text: 'Treat AI output as a draft, not gospel', color: '#4ade80' },
+            { text: 'LLMs can be confidently wrong: they predict likely text', color: '#ef4444' },
+            { text: 'Give them real data and allow "I don\'t know"', color: '#4a9eff' },
+            { text: 'Always verify important facts', color: '#4ade80' },
           ].map((item, i) => (
             <motion.div
               key={i}
-              className="flex items-center gap-4 mb-3 px-5 py-3 rounded-xl bg-white/5 border text-left"
+              className="flex items-center gap-4 mb-3 px-6 py-4 rounded-xl bg-white/5 border text-left"
               style={{ borderColor: `${item.color}30` }}
               animate={{ opacity: s === 12 ? 1 : 0, y: s === 12 ? 0 : 20 }}
               transition={{ ...spring, delay: i * 0.12 }}
             >
-              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-              <span className="text-white/80 text-base font-medium">{item.text}</span>
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+              <span className="text-white/85 text-lg font-medium">{item.text}</span>
             </motion.div>
           ))}
           <motion.p

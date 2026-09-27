@@ -160,7 +160,7 @@ function sharedMemorySteps(s: SharedMemoryStory): TraceStep[] {
       at: 'event = "',
       trig: 'event',
       set: { event: str(s.event) },
-      exp: `The event arrives, saved in event. Spot the two key details: ${s.countLabel} and a ${s.budget} budget. The team will need both.`,
+      exp: `The event arrives, saved in event. Spot the two key details: ${s.countLabel} and a ${s.budget} budget. The agents will need both.`,
     },
     {
       at: 'add_note("Teacher", event)',

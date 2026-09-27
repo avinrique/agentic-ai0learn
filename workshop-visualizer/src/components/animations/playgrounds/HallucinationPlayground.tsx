@@ -21,7 +21,7 @@ interface QuizItem {
 
 const quiz: QuizItem[] = [
   {
-    kind: 'Fact',
+    kind: 'Claim',
     text: 'Octopuses have three hearts: two pump blood through the gills and one pumps it to the rest of the body.',
     real: true,
     why: 'True. Two “branchial” hearts serve the gills and one “systemic” heart serves the body.',
@@ -33,13 +33,13 @@ const quiz: QuizItem[] = [
     why: 'Made up. There is no such author or journal (invented for this demo). A precise number plus a formal-sounding source is a classic hallucination pattern.',
   },
   {
-    kind: 'Fact',
+    kind: 'Claim',
     text: 'Botanically, bananas count as berries, but strawberries do not.',
     real: true,
     why: 'True, even though it sounds wrong. Botanists define berries by how the fruit forms from the flower, not by everyday usage.',
   },
   {
-    kind: 'Fact',
+    kind: 'Claim',
     text: 'The Python programming language is named after the python snake.',
     real: false,
     why: 'Wrong. Guido van Rossum named it after the comedy show “Monty Python’s Flying Circus”. The snake guess just sounds likely.',
@@ -51,19 +51,19 @@ const quiz: QuizItem[] = [
     why: 'Made up (names invented for this demo). In real US cases such as Thaler v. Perlmutter (2023), courts held that copyright needs a human author.',
   },
   {
-    kind: 'Fact',
+    kind: 'Claim',
     text: 'The Eiffel Tower was completed in 1889, in time for the World’s Fair in Paris.',
     real: true,
     why: 'True. It was finished in March 1889 for the Exposition Universelle (the 1889 World’s Fair).',
   },
   {
-    kind: 'Fact',
+    kind: 'Claim',
     text: 'The Great Wall of China is easy to see from the Moon with the naked eye.',
     real: false,
     why: 'A popular myth. The wall is long but very narrow; from the Moon it is far too small to see. Models repeat myths that appear often in their training text.',
   },
   {
-    kind: 'Fact',
+    kind: 'Claim',
     text: 'Light from the Sun takes about 8 minutes to reach Earth.',
     real: true,
     why: 'True. At about 150 million km away, sunlight takes roughly 8 minutes and 20 seconds.',
@@ -374,7 +374,7 @@ function FixIt() {
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <span className="text-[10px] font-bold uppercase text-white/40 block">question</span>
+            <span className="text-[12px] font-bold uppercase text-white/40 block">question</span>
             <span className="text-sm text-blue-100">{c.question}</span>
           </motion.div>
           <AnimatePresence mode="wait">
@@ -387,7 +387,7 @@ function FixIt() {
                 exit={{ opacity: 0, x: -60 }}
                 transition={spring}
               >
-                <span className="text-[10px] font-bold uppercase text-accent-green/80 block">
+                <span className="text-[12px] font-bold uppercase text-accent-green/80 block">
                   📄 retrieved source [1]
                 </span>
                 <span className="text-xs text-white/50 block mb-1">{c.sourceName}</span>

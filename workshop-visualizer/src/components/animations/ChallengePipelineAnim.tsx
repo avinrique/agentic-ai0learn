@@ -1,14 +1,15 @@
 'use client';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useTracerStore } from '@/stores/tracerStore';
 import { useMemo, type ReactNode } from 'react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Challenge pipeline: every Part 1 idea as one conveyor belt.
 //   system prompt → user prompt (+ JSON shape) → JSON mode lock → OpenAI
-//   → raw JSON string → json.loads → dict → one card per restaurant
+//   → raw JSON string → json.loads → dict → printed → (last step) one card per restaurant
 // The rail at the top shows past stages as small ✓ chips; the body shows ONLY
-// the current stage, big. Stage and data come from the current step only.
+// the current stage, big. On print() steps a small terminal shows what was printed.
+// Stage and data come from the current step only.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const spring = { type: 'spring' as const, damping: 20, stiffness: 120 };
@@ -21,7 +22,7 @@ const STAGES = [
   { id: 'api', label: 'OpenAI' },
   { id: 'raw', label: 'Raw text' },
   { id: 'loads', label: 'json.loads' },
-  { id: 'cards', label: 'Cards' },
+  { id: 'print', label: 'Print' },
 ] as const;
 
 const triggerStage: Record<string, number> = {
@@ -85,8 +86,17 @@ export default function ChallengePipelineAnim() {
     const sysMiddle = ruleAt > 0 ? rest.slice(0, ruleAt) : ruleAt === 0 ? '' : rest;
     const sysRule = ruleAt >= 0 ? rest.slice(ruleAt) : '';
 
+    // What print() has written so far: the current step's print (if any) and the one before it.
+    const printed: { text: string; hot: boolean }[] = [];
+    for (let i = 0; i <= currentStep; i++) {
+      const o = steps[i]?.output;
+      if (o) printed.push({ text: o.replace(/^\n/, ''), hot: i === currentStep });
+    }
+    const prints = step?.output ? printed.slice(-2) : [];
+
     return {
       trig,
+      prints,
       sysRole,
       sysMiddle,
       sysRule,
@@ -110,6 +120,7 @@ export default function ChallengePipelineAnim() {
     };
   }, [step, steps, currentStep]);
 
+  const isLast = currentStep === steps.length - 1;
   // Which big view fills the body right now.
   const view =
     s.stage === 0
@@ -126,32 +137,37 @@ export default function ChallengePipelineAnim() {
                 ? 'raw'
                 : s.stage === 6
                   ? 'loads'
-                  : 'cards';
+                  : isLast
+                    ? 'cards'
+                    : 'print';
 
   return (
     <div className="h-full flex flex-col px-5 py-4 gap-4 overflow-hidden text-white">
       <Rail stage={s.stage} />
 
-      <div className="flex-1 min-h-0 flex items-center justify-center">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={view}
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-            className="w-full max-w-[640px] max-h-full flex flex-col"
-          >
-            {view === 'setup' && <SetupView s={s} />}
-            {view === 'system' && <SystemView s={s} />}
-            {view === 'prompt' && <PromptView s={s} />}
-            {view === 'request' && <RequestView s={s} />}
-            {view === 'api' && <ApiView s={s} />}
-            {view === 'raw' && <RawView s={s} />}
-            {view === 'loads' && <LoadsView s={s} />}
-            {view === 'cards' && <CardsView s={s} />}
-          </motion.div>
-        </AnimatePresence>
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-4">
+        <motion.div
+          key={view}
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: s.prints.length > 0 && view !== 'print' ? 0.55 : 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="w-full max-w-[640px] min-h-0 flex flex-col"
+        >
+          {view === 'setup' && <SetupView s={s} />}
+          {view === 'system' && <SystemView s={s} />}
+          {view === 'prompt' && <PromptView s={s} />}
+          {view === 'request' && <RequestView s={s} />}
+          {view === 'api' && <ApiView s={s} />}
+          {view === 'raw' && <RawView s={s} />}
+          {view === 'loads' && <LoadsView s={s} />}
+          {view === 'print' && <Terminal lines={s.prints} maxLines={11} />}
+          {view === 'cards' && <CardsView s={s} />}
+        </motion.div>
+        {s.prints.length > 0 && view !== 'print' && (
+          <div className="w-full max-w-[640px] shrink-0">
+            <Terminal lines={s.prints} maxLines={3} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -159,6 +175,7 @@ export default function ChallengePipelineAnim() {
 
 type S = {
   trig: string;
+  prints: { text: string; hot: boolean }[];
   sysRole: string;
   sysMiddle: string;
   sysRule: string;
@@ -264,7 +281,7 @@ function SetupView({ s }: { s: S }) {
           </motion.div>
         ))}
       </div>
-      {s.city && (
+      {s.city && s.prints.length === 0 && (
         <motion.div
           initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -423,7 +440,9 @@ function RawView({ s }: { s: S }) {
         <span className="text-[13px] px-2 py-0.5 rounded bg-white/10 text-white/70">type: str</span>
         {s.line >= 28 && <span className="text-[13px] px-2 py-0.5 rounded bg-accent-green/15 text-accent-green">✓ printed</span>}
       </div>
-      <div className="font-mono text-[14px] leading-relaxed text-accent-gold/90 break-all line-clamp-6">&quot;{s.raw}&quot;</div>
+      <div className="font-mono text-[14px] leading-relaxed text-accent-gold/90 break-words line-clamp-6">
+        &quot;{softBreaks(s.raw)}&quot;
+      </div>
     </Card>
   );
 }
@@ -455,8 +474,8 @@ function LoadsView({ s }: { s: S }) {
       <div className="w-full">
         {s.line >= 33 && s.pretty ? (
           <Card label="pretty_json" color="#22d3ee" glow>
-            <pre className="font-mono text-[13px] leading-relaxed text-white/80 max-h-[260px] overflow-hidden whitespace-pre-wrap">
-              {s.pretty.split('\n').slice(0, 9).join('\n')}
+            <pre className="font-mono text-[13px] leading-relaxed text-white/80 max-h-[200px] overflow-hidden whitespace-pre-wrap">
+              {s.pretty.split('\n').slice(0, 7).join('\n')}
               {'\n  …'}
             </pre>
           </Card>
@@ -514,6 +533,52 @@ function CardsView({ s }: { s: S }) {
         </motion.div>
       ))}
     </div>
+  );
+}
+
+// A line break is allowed after JSON punctuation, so long JSON wraps between items, not mid-word.
+function softBreaks(text: string): ReactNode[] {
+  const bits = text.split(/([,:[{])/);
+  const out: ReactNode[] = [];
+  for (let i = 0; i < bits.length; i += 2) {
+    out.push(
+      <span key={i}>
+        {bits[i]}
+        {bits[i + 1] ?? ''}
+        <wbr />
+      </span>,
+    );
+  }
+  return out;
+}
+
+// What print() wrote. The current print is bright; a one-line JSON string stays on ONE line
+// (running off the edge), exactly like the real terminal.
+function Terminal({ lines, maxLines }: { lines: { text: string; hot: boolean }[]; maxLines: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={spring}
+      className="rounded-xl bg-black/60 px-4 py-3 font-mono text-[14px] leading-relaxed overflow-hidden"
+    >
+      <div className="font-sans text-[13px] text-white/40 mb-1">Terminal</div>
+      {lines.map((l, i) => {
+        const rows = l.text.split('\n');
+        const shown = rows.slice(0, maxLines);
+        return (
+          <div
+            key={i}
+            className={`${rows.length === 1 ? 'whitespace-nowrap overflow-hidden text-ellipsis' : 'whitespace-pre-wrap'} ${
+              l.hot ? 'text-white' : 'text-white/40'
+            }`}
+          >
+            {shown.join('\n')}
+            {rows.length > shown.length && '\n  …'}
+          </div>
+        );
+      })}
+    </motion.div>
   );
 }
 

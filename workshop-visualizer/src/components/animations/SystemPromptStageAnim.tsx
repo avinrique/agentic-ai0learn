@@ -78,7 +78,9 @@ export default function SystemPromptStageAnim({ noSystemReply }: Props) {
   const sys = msgs.find((m) => m.role === 'system');
   const user = msgs.find((m) => m.role === 'user');
 
-  const setupPhase = !sys;
+  const listOpen = lineReached(9);
+  // Setup chips until the messages list opens; from then on the stage shows its two slots.
+  const setupPhase = !sys && !listOpen;
   const handingCard = !!sys && currentStep > firstIdx('addSystemMsg');
   const costumeOn = handingCard;
   const persona = costumeOn ? personaFor(sys?.content) : PLAIN;
@@ -92,7 +94,12 @@ export default function SystemPromptStageAnim({ noSystemReply }: Props) {
   const compare = reached('compare');
   const isLast = compare && currentStep === steps.length - 1;
   const tripStarted = reached('apiCall');
-  const listOpen = lineReached(9);
+  // A print() before the reply is unpacked (the heading): show it in a small terminal.
+  const printsSoFar = steps
+    .slice(0, currentStep + 1)
+    .map((s, i) => ({ text: s.output ?? '', hot: i === currentStep }))
+    .filter((o) => o.text);
+  const headingPrint = arrived && !get('content') && !!step?.output;
 
   const typed = useTypewriter(reply ?? '', extracting);
 
@@ -187,9 +194,11 @@ export default function SystemPromptStageAnim({ noSystemReply }: Props) {
                   <div className="text-[13px] text-white/40 font-mono mb-1.5">
                     messages[0] <span className="text-accent-purple">system</span>
                   </div>
+                  {!sys && <div className="flex-1 rounded-2xl border-2 border-dashed border-white/10" />}
                   <AnimatePresence initial={false}>
+                    {sys && (
                     <motion.div
-                      key={'card-' + sys?.content}
+                      key={'card-' + sys.content}
                       initial={{ opacity: 0, y: -20, rotate: -4 }}
                       animate={{
                         opacity: 1,
@@ -205,8 +214,9 @@ export default function SystemPromptStageAnim({ noSystemReply }: Props) {
                         <span className="text-[14px] font-semibold text-accent-purple">🎬 Director&apos;s card</span>
                         {ordered && <span className="text-[13px] px-2 rounded bg-accent-purple/25 text-accent-purple font-bold">1st</span>}
                       </div>
-                      <div className="text-[16px] text-white/90 font-mono leading-snug">&quot;{sys?.content}&quot;</div>
+                      <div className="text-[16px] text-white/90 font-mono leading-snug">&quot;{sys.content}&quot;</div>
                     </motion.div>
+                    )}
                   </AnimatePresence>
                 </div>
 
@@ -346,7 +356,7 @@ export default function SystemPromptStageAnim({ noSystemReply }: Props) {
                     </div>
                   </div>
                 </motion.div>
-              ) : arrived ? (
+              ) : arrived && !headingPrint ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -356,6 +366,21 @@ export default function SystemPromptStageAnim({ noSystemReply }: Props) {
                     <div className="text-3xl">📦</div>
                     <div className="text-[18px] font-mono text-accent-green">response</div>
                   </div>
+                </motion.div>
+              ) : null}
+              {!reply && headingPrint ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={spring}
+                  className="mx-auto w-full max-w-[520px] rounded-xl bg-black/60 px-4 py-2.5 font-mono text-[15px] leading-relaxed"
+                >
+                  <div className="font-sans text-[13px] text-white/40 mb-1">Terminal</div>
+                  {printsSoFar.map((o, i) => (
+                    <div key={i} className={`whitespace-pre-wrap ${o.hot ? 'text-white' : 'text-white/40'}`}>
+                      {o.text}
+                    </div>
+                  ))}
                 </motion.div>
               ) : null}
             </div>

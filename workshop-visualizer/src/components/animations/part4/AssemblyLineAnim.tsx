@@ -6,10 +6,12 @@
  * right desk, and a conveyor belt between them. "Our code" is the mail carrier
  * that moves Rita's sticky note to Wally. Everything is derived from the
  * current tracer step (trigger + variables), so Prev/Next/jumps always look right.
+ * On short screens (e.g. 1280×720) the newsroom packs itself smaller so the focal
+ * panel under it still fits; while the run_agent machine is open it steps aside.
  */
 import { motion } from 'framer-motion';
 import AgentBot, { TEAM, BotMood } from '@/components/animations/characters/AgentBot';
-import { useTracerScene } from './useTracerScene';
+import { useShortScreen, useTracerScene } from './useTracerScene';
 
 const ACCENT = '#22d3ee';
 const HELPER_OPEN = ['helper-open', 'helper-system', 'helper-task', 'helper-return'];
@@ -43,10 +45,13 @@ function Desk({ color }: { color: string }) {
 }
 
 /** The run_agent "machine" — closed (a box) or opened (the Part 1 API call inside). */
-function Machine({ trig, open }: { trig: string; open: boolean }) {
+function Machine({ trig, open, compact }: { trig: string; open: boolean; compact: boolean }) {
   const hi = (t: string) => (trig === t ? 'bg-cyan-400/20 ring-1 ring-cyan-300 text-white' : 'text-white/45');
   return (
-    <div className="rounded-xl border-2 p-4 flex flex-col gap-3" style={{ borderColor: ACCENT, background: '#0b1b2b' }}>
+    <div
+      className={`rounded-xl border-2 flex flex-col ${compact ? 'p-3 gap-2' : 'p-4 gap-3'}`}
+      style={{ borderColor: ACCENT, background: '#0b1b2b' }}
+    >
       <div className="flex items-center gap-2 text-[15px] font-mono font-semibold" style={{ color: ACCENT }}>
         ⚙️ run_agent(system_prompt, task)
         {open && <span className="ml-auto text-[13px] font-sans text-accent-gold">same call as Part 1</span>}
@@ -76,7 +81,8 @@ function Machine({ trig, open }: { trig: string; open: boolean }) {
 }
 
 export default function AssemblyLineAnim() {
-  const { steps, trig, v } = useTracerScene();
+  const { steps, trig, v, printed } = useTracerScene();
+  const short = useShortScreen();
   if (steps.length === 0) return null;
 
   const at = ORDER.indexOf(trig);
@@ -119,6 +125,14 @@ export default function AssemblyLineAnim() {
   else if (trig === 'article' && article) bottom = 'article';
   else if (call) bottom = 'call';
 
+  // Short screens: a smaller newsroom (just tall enough for the big sticky note on the note steps),
+  // and none at all while the run_agent machine is open (the machine is the whole story then).
+  const hideStage = short && bottom === 'open';
+  const stageH = !short ? 330 : noteBig ? 280 : 210;
+  const botSize = short ? 64 : 84;
+  // A step that prints: one quiet console line under the scene (the article/recap panels already show the text).
+  const printLine = printed && bottom !== 'article' && bottom !== 'recap' ? printed.replace(/\s*\n+\s*/g, ' ') : '';
+
   const card =
     trig === 'rita-card'
       ? { who: 'Rita', text: ritaCard, color: TEAM.researcher.color }
@@ -138,80 +152,89 @@ export default function AssemblyLineAnim() {
 
       <div className="flex-1 min-h-0 flex flex-col justify-center gap-4">
         {/* Stage: desks, belt, sticky note */}
-        <div className="relative flex-shrink-0 h-[330px]">
-          {/* Rita */}
-          <div className="absolute left-0 top-0 w-[34%] flex flex-col items-center">
-            <AgentBot {...TEAM.researcher} role={undefined} size={84} mood={ritaMood} active={ritaActive} dimmed={ritaDim} />
-            <Desk color={TEAM.researcher.color} />
-            <CardChip set={!!ritaCard} color={TEAM.researcher.color} glow={trig === 'rita-card'} />
-          </div>
-          {/* Wally */}
-          <div className="absolute right-0 top-0 w-[34%] flex flex-col items-center">
-            <AgentBot {...TEAM.writer} role={undefined} size={84} mood={wallyMood} active={wallyActive} dimmed={wallyDim} />
-            <Desk color={TEAM.writer.color} />
-            <CardChip set={!!wallyCard} color={TEAM.writer.color} glow={trig === 'wally-card'} />
-          </div>
+        {!hideStage && (
+          <div className="relative flex-shrink-0" style={{ height: stageH }}>
+            {/* Rita */}
+            <div className="absolute left-0 top-0 w-[34%] flex flex-col items-center">
+              <AgentBot {...TEAM.researcher} role={undefined} size={botSize} mood={ritaMood} active={ritaActive} dimmed={ritaDim} />
+              <Desk color={TEAM.researcher.color} />
+              <CardChip set={!!ritaCard} color={TEAM.researcher.color} glow={trig === 'rita-card'} />
+            </div>
+            {/* Wally */}
+            <div className="absolute right-0 top-0 w-[34%] flex flex-col items-center">
+              <AgentBot {...TEAM.writer} role={undefined} size={botSize} mood={wallyMood} active={wallyActive} dimmed={wallyDim} />
+              <Desk color={TEAM.writer.color} />
+              <CardChip set={!!wallyCard} color={TEAM.writer.color} glow={trig === 'wally-card'} />
+            </div>
 
-          {/* Mail carrier = our code */}
-          <div className="absolute left-[34%] right-[34%] top-8 flex justify-center">
-            <motion.div
-              className="rounded-xl px-3 py-1.5 text-[14px] font-semibold"
-              animate={{
-                scale: carrying ? 1.12 : 1,
-                boxShadow: carrying ? `0 0 18px ${ACCENT}88` : '0 0 0px transparent',
-              }}
-              style={{ background: '#0b1b2b', border: `1.5px solid ${ACCENT}`, color: ACCENT }}
+            {/* Mail carrier = our code */}
+            <div className="absolute left-[34%] right-[34%] top-8 flex justify-center">
+              <motion.div
+                className="rounded-xl px-3 py-1.5 text-[14px] font-semibold"
+                animate={{
+                  scale: carrying ? 1.12 : 1,
+                  boxShadow: carrying ? `0 0 18px ${ACCENT}88` : '0 0 0px transparent',
+                }}
+                style={{ background: '#0b1b2b', border: `1.5px solid ${ACCENT}`, color: ACCENT }}
+              >
+                🐍 our code
+              </motion.div>
+            </div>
+
+            {/* Conveyor belt */}
+            <div
+              className="absolute left-[26%] right-[26%] h-4 rounded-full overflow-hidden border border-white/15 bg-white/5"
+              style={{ bottom: short && !noteBig ? 52 : 70 }}
             >
-              🐍 our code
-            </motion.div>
+              <motion.div
+                className="h-full w-[200%]"
+                style={{
+                  backgroundImage: 'repeating-linear-gradient(90deg, rgba(34,211,238,0.35) 0 8px, transparent 8px 22px)',
+                }}
+                animate={carrying ? { x: ['-50%', '0%'] } : { x: '-25%' }}
+                transition={carrying ? { repeat: Infinity, duration: 1.2, ease: 'linear' } : { duration: 0.3 }}
+              />
+            </div>
+
+            {/* Topic slip on Rita's desk (before her facts exist) */}
+            {topic && !facts && (
+              <motion.div
+                key={`topic-${topic}`}
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1, scale: trig === 'topic' ? 1.08 : 1 }}
+                className="absolute left-[3%] w-[28%] bottom-[8px] rounded-md px-3 py-2 text-[15px] bg-white text-slate-800 shadow-lg"
+              >
+                📄 <b>Task:</b> &quot;Topic: {topic}&quot;
+              </motion.div>
+            )}
+
+            {/* Rita's sticky note: rides the belt to Wally at the handoff, then shrinks to a chip */}
+            {facts && (
+              <motion.div
+                key="note"
+                initial={{ scale: 0.4, opacity: 0, left: '1%' }}
+                animate={{
+                  scale: 1,
+                  opacity: 1,
+                  left: noteAtWally ? (noteBig ? '64%' : '72%') : '1%',
+                  rotate: noteBig ? (noteAtWally ? 1.5 : -1.5) : 0,
+                }}
+                transition={{ left: { duration: carrying ? 1.6 : 0.4, ease: 'easeInOut' }, default: { duration: 0.4 } }}
+                className={`absolute bottom-0 rounded-md shadow-xl ${noteBig ? 'w-[36%] p-3 text-[13.5px] leading-snug' : 'px-3 py-1.5 text-[13px]'}`}
+                style={{ background: '#fde68a', color: '#3b2f05', boxShadow: carrying ? `0 0 18px ${ACCENT}` : undefined }}
+              >
+                <div className="font-bold">
+                  📌 {noteBig ? (noteAtWally ? "Wally's task" : "Rita's facts") : '✓ facts'}
+                </div>
+                {noteBig && (
+                  <div className="whitespace-pre-line overflow-hidden mt-1" style={{ maxHeight: short ? 104 : 140 }}>
+                    {facts}
+                  </div>
+                )}
+              </motion.div>
+            )}
           </div>
-
-          {/* Conveyor belt */}
-          <div className="absolute left-[26%] right-[26%] bottom-[70px] h-4 rounded-full overflow-hidden border border-white/15 bg-white/5">
-            <motion.div
-              className="h-full w-[200%]"
-              style={{
-                backgroundImage: 'repeating-linear-gradient(90deg, rgba(34,211,238,0.35) 0 8px, transparent 8px 22px)',
-              }}
-              animate={carrying ? { x: ['-50%', '0%'] } : { x: '-25%' }}
-              transition={carrying ? { repeat: Infinity, duration: 1.2, ease: 'linear' } : { duration: 0.3 }}
-            />
-          </div>
-
-          {/* Topic slip on Rita's desk (before her facts exist) */}
-          {topic && !facts && (
-            <motion.div
-              key={`topic-${topic}`}
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1, scale: trig === 'topic' ? 1.08 : 1 }}
-              className="absolute left-[3%] w-[28%] bottom-[8px] rounded-md px-3 py-2 text-[15px] bg-white text-slate-800 shadow-lg"
-            >
-              📄 <b>Task:</b> &quot;Topic: {topic}&quot;
-            </motion.div>
-          )}
-
-          {/* Rita's sticky note: rides the belt to Wally at the handoff, then shrinks to a chip */}
-          {facts && (
-            <motion.div
-              key="note"
-              initial={{ scale: 0.4, opacity: 0, left: '1%' }}
-              animate={{
-                scale: 1,
-                opacity: 1,
-                left: noteAtWally ? (noteBig ? '64%' : '72%') : '1%',
-                rotate: noteBig ? (noteAtWally ? 1.5 : -1.5) : 0,
-              }}
-              transition={{ left: { duration: carrying ? 1.6 : 0.4, ease: 'easeInOut' }, default: { duration: 0.4 } }}
-              className={`absolute bottom-0 rounded-md shadow-xl ${noteBig ? 'w-[36%] p-3 text-[13.5px] leading-snug' : 'px-3 py-1.5 text-[13px]'}`}
-              style={{ background: '#fde68a', color: '#3b2f05', boxShadow: carrying ? `0 0 18px ${ACCENT}` : undefined }}
-            >
-              <div className="font-bold">
-                📌 {noteBig ? (noteAtWally ? "Wally's task" : "Rita's facts") : '✓ facts'}
-              </div>
-              {noteBig && <div className="whitespace-pre-line max-h-[140px] overflow-hidden mt-1">{facts}</div>}
-            </motion.div>
-          )}
-        </div>
+        )}
 
         {/* The one focal panel for this step */}
         {bottom && (
@@ -226,9 +249,19 @@ export default function AssemblyLineAnim() {
               </div>
             )}
             {bottom === 'phone' && (
-              <div className="rounded-xl bg-white/5 p-4 text-center text-[16px] text-white/85">📞 Phone line to the AI</div>
+              <div className="rounded-xl bg-white/5 p-4 text-center text-[16px] text-white/85">
+                {v('client') ? (
+                  <>
+                    📞 <span className="font-mono">client = OpenAI()</span>: our phone line to the AI
+                  </>
+                ) : (
+                  <>
+                    📦 <span className="font-mono">from openai import OpenAI</span>
+                  </>
+                )}
+              </div>
             )}
-            {(bottom === 'machine' || bottom === 'open') && <Machine trig={trig} open={bottom === 'open'} />}
+            {(bottom === 'machine' || bottom === 'open') && <Machine trig={trig} open={bottom === 'open'} compact={short} />}
             {bottom === 'card' && (
               <div className="rounded-xl p-4 border-2" style={{ borderColor: card.color, background: `${card.color}12` }}>
                 <div className="text-[14px] font-semibold mb-1.5" style={{ color: card.color }}>
@@ -259,6 +292,18 @@ export default function AssemblyLineAnim() {
               </div>
             )}
           </motion.div>
+        )}
+
+        {printLine && (
+          <motion.div
+            key={`print-${trig}-${printLine}`}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex-shrink-0 rounded-xl bg-black/50 border border-white/10 px-4 py-2 font-mono text-[14px] text-white/80 truncate"
+          >
+            <span className="text-white/40">🖨 </span>
+            {printLine}
+            </motion.div>
         )}
       </div>
     </div>

@@ -1,5 +1,5 @@
 // Lesson 33 – Code: Guardrails & Human Approval (course kit file part4/guardrails.py; keep identical)
-export const guardrailsCode = String.raw`# part4/guardrails.py - check what goes in, ask a human first, check what comes out
+export const guardrailsCode = `# part4/guardrails.py - check what goes in, ask a human first, check what comes out
 import json
 from openai import OpenAI
 client = OpenAI()

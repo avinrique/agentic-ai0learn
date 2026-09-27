@@ -33,6 +33,7 @@ import {
   OrderSlip,
   Person,
   Slip,
+  Stamp,
   type BarrierState,
   type ItemPos,
 } from './GuardrailsParts';
@@ -90,7 +91,7 @@ function RoadMap() {
         {arrow}
         {node(<Cora size={70} />, 'check in', '①')}
         {arrow}
-        {node(<Max size={70} />, 'Max acts')}
+        {node(<Max size={70} />, 'acts')}
         {arrow}
         {node(<Person size={70} label="" />, 'human OK', '②')}
         {arrow}
@@ -157,19 +158,10 @@ function ToolCard() {
   return (
     <div className="flex flex-col items-center gap-4">
       <CodeChip big>send_email(to, message)</CodeChip>
-      <div className="relative">
-        <div className="text-[110px] leading-none">📧</div>
-        <motion.div
-          initial={{ scale: 2.2, opacity: 0, rotate: -25 }}
-          animate={{ scale: 1, opacity: 1, rotate: -14 }}
-          transition={{ type: 'spring', damping: 12, stiffness: 180 }}
-          className="absolute top-8 -left-6 px-2.5 py-0.5 rounded-lg text-[22px] font-black tracking-widest"
-          style={{ color: AMBER, border: `4px solid ${AMBER}`, background: 'rgba(20,20,58,0.85)' }}
-        >
-          PRETEND
-        </motion.div>
+      <div className="relative pr-16 pb-2">
+        <div className="text-[120px] leading-none">📧</div>
+        <Stamp text="PRETEND" color={AMBER} className="absolute bottom-2 right-0" />
       </div>
-      <div className="text-[18px] text-white/85">🖨️ only prints · never sends</div>
     </div>
   );
 }
@@ -425,10 +417,7 @@ export default function GuardrailsAnim() {
           <Bubble size={20} border={GREEN}>
             🛡️ {"Sorry, I can't help with that. Let's keep things kind and safe."}
           </Bubble>
-          <div className="flex items-center gap-3">
-            <Person size={80} />
-            <span className="text-[15px] text-white/55">a kind no</span>
-          </div>
+          <Person size={80} />
         </div>
       );
       break;
@@ -556,19 +545,18 @@ export default function GuardrailsAnim() {
       break;
     case 'sent':
       focal = (
-        <div className="relative flex items-center gap-10">
-          <motion.div
-            initial={{ x: 0, scale: 1, opacity: 1 }}
-            animate={{ x: 150, scale: 0.55, opacity: 0.9 }}
-            transition={{ duration: 1.1, ease: 'easeInOut' }}
-          >
-            <Envelope to={email.to} message={email.message} width={380} stamp={{ text: 'PRETEND', color: AMBER }} />
-          </motion.div>
-          <div className="flex flex-col items-center gap-1">
-            <div className="text-[76px] leading-none">📬</div>
-            <div className="text-[15px] font-semibold text-white/80">{email.to}</div>
+        <motion.div
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="relative w-[580px] max-w-full rounded-xl px-5 py-4"
+          style={{ background: '#05070f', border: '2px solid rgba(255,255,255,0.18)' }}
+        >
+          <div className="text-[13px] font-semibold text-white/50 mb-2">🖨️ printed</div>
+          <div className="font-mono text-[18px] leading-relaxed" style={{ color: GREEN }}>
+            📧 (pretend) Email to {email.to}: {email.message}
           </div>
-        </div>
+          <Stamp text="PRETEND" color={AMBER} className="absolute -top-5 -right-5" />
+        </motion.div>
       );
       break;
     case 'if-denied':

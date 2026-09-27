@@ -178,7 +178,7 @@ function Figure({
   return (
     <motion.div
       className="relative flex flex-col items-center"
-      animate={{ y: up ? -14 : 0, opacity: dim ? 0.35 : 1 }}
+      animate={{ y: up ? -10 : 0, opacity: dim ? 0.35 : 1 }}
       transition={{ duration: 0.5 }}
     >
       {who === 'Teacher' ? (
@@ -486,7 +486,7 @@ function WrongOverlay({ s }: { s: SharedMemoryStory }) {
   return (
     <Card color={RED} className="w-full max-w-[600px] flex flex-col gap-2">
       <div className="text-[16px] font-bold" style={{ color: RED }}>
-        ⚠️ One typo spreads
+        ⚠️ What if one note is wrong?
       </div>
       <div className="rounded-lg bg-slate-100 p-3 flex flex-col gap-1.5">
         <NoteStrip who="Teacher" text={typo} size={16} marks={[{ phrase: s.wrong.count, bg: '#fecaca', fg: '#b91c1c' }]} />

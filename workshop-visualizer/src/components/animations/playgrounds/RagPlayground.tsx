@@ -233,7 +233,10 @@ export default function RagPlayground() {
             Handbook chunks, scored by <span className="text-[#fbbf24]">simple word-overlap</span>{' '}
             <span className="text-white/30">(real RAG uses embeddings)</span>
           </p>
-          <div className="flex-1 min-h-0 flex flex-col gap-[3px] overflow-hidden">
+          <div
+            className="flex-1 min-h-0 flex flex-col gap-[3px] overflow-hidden"
+            style={{ maskImage: 'linear-gradient(to bottom, black 85%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, black 85%, transparent)' }}
+          >
             {list.map((r, i) => {
               const inPrompt = phase >= 2 && injectedIds.has(r.chunk.id);
               const weak = r.score > 0 && r.score < MIN_SCORE;
@@ -270,7 +273,7 @@ export default function RagPlayground() {
                     <motion.span
                       initial={{ opacity: 0, scale: 0.5 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="text-[11px] font-bold text-[#4ade80]"
+                      className="text-[12px] font-bold text-[#4ade80]"
                     >
                       ✓ used
                     </motion.span>
@@ -293,10 +296,10 @@ export default function RagPlayground() {
               value={topK}
               onChange={(e) => setTopK(Number(e.target.value))}
               onKeyDown={(e) => e.stopPropagation()}
-              className="flex-1 accent-[#4ade80]"
+              className="flex-1 min-w-0 accent-[#4ade80]"
             />
-            <span className="text-xs text-white/45 whitespace-nowrap">
-              best {topK} chunk{topK > 1 ? 's' : ''} (score ≥ {Math.round(MIN_SCORE * 100)}%) go into the prompt
+            <span className="text-xs text-white/50 shrink-0">
+              best {topK} go in (score ≥ {Math.round(MIN_SCORE * 100)}%)
             </span>
           </div>
         </div>
@@ -318,8 +321,7 @@ export default function RagPlayground() {
               </p>
             </div>
             <div className="px-2 py-1 rounded border border-[#a78bfa]/25 bg-[#a78bfa]/5 text-xs text-white/60">
-              <span className="text-[#a78bfa] font-bold font-mono">system:</span> Answer using ONLY the context below. If the
-              answer is not there, say you couldn’t find it.
+              <span className="text-[#a78bfa] font-bold font-mono">system:</span> Use ONLY the context below. If it isn’t there, say so.
             </div>
             <div className="flex flex-col gap-1 min-h-0 overflow-y-auto">
               <AnimatePresence mode="popLayout">
@@ -331,7 +333,7 @@ export default function RagPlayground() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}
                       transition={{ ...spring, delay: i * 0.15 }}
-                      className="px-2 py-1 rounded border border-[#4ade80]/35 bg-[#4ade80]/8 text-xs text-white/75 leading-snug"
+                      className="px-2 py-1 rounded border border-[#4ade80]/35 bg-[#4ade80]/8 text-xs text-white/75 leading-snug line-clamp-2 shrink-0"
                       style={{ backgroundColor: 'rgba(74,222,128,0.07)' }}
                     >
                       <span className="text-[#4ade80] font-bold font-mono">context [{r.chunk.title}]:</span> {r.chunk.text}
@@ -378,13 +380,13 @@ export default function RagPlayground() {
               </p>
               <p className="text-xs text-white/85 leading-snug">{phase >= 3 ? ragAnswer : '…'}</p>
               {phase >= 3 && found && (
-                <p className="text-[11px] text-[#4a9eff] font-mono mt-1">
+                <p className="text-[12px] text-[#4a9eff] font-mono mt-1">
                   [Source: {injected.map((r) => r.chunk.title).join(', ')}]
                 </p>
               )}
             </motion.div>
           </div>
-          <p className="text-[11px] text-white/35 shrink-0">
+          <p className="text-[12px] text-white/35 shrink-0">
             {isCustom
               ? 'Simulated: for your own question, the “answer” just quotes the best chunk. A real model would write it in its own words.'
               : 'Prepared example answers. No real model is called here.'}

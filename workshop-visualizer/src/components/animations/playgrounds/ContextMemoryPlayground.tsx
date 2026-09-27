@@ -278,11 +278,11 @@ export default function ContextMemoryPlayground() {
         </div>
 
         {/* Right: meters, strategy, controls */}
-        <div className="w-[300px] shrink-0 flex flex-col gap-2.5">
+        <div className="w-[300px] shrink-0 flex flex-col gap-2">
           {/* Context window bar */}
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
             <div className="flex justify-between items-baseline mb-1.5">
-              <span className="text-xs text-white/60 font-bold">Context window</span>
+              <span className="text-xs text-white/60 font-bold">Context window <span className="font-normal text-white/35">(dashed = limit)</span></span>
               <span className="text-sm font-mono font-bold" style={{ color: meterColor }}>
                 {cur ? cur.tokens : 0} / {LIMIT}
               </span>
@@ -295,18 +295,34 @@ export default function ContextMemoryPlayground() {
               />
               <div className="absolute top-0 bottom-0 border-l-2 border-dashed border-white/60" style={{ left: `${100 / 1.3}%` }} />
             </div>
-            <p className="text-xs text-white/35 mt-1">Dashed line = the limit</p>
+            <div className="flex items-center gap-2 mt-2 min-w-0">
+              <span className="text-xs text-white/60 font-bold whitespace-nowrap shrink-0">Model sees:</span>
+              <motion.span
+                key={`${c.factLabel}-${cur ? cur.factVisible : 'none'}`}
+                className="text-xs font-mono font-bold px-1.5 py-0.5 rounded border whitespace-nowrap truncate min-w-0"
+                initial={{ scale: 0.7, opacity: 0 }}
+                animate={{ scale: 1, opacity: turn === 0 ? 0.4 : 1 }}
+                transition={spring}
+                style={
+                  !cur || cur.factVisible
+                    ? { color: '#4ade80', borderColor: '#4ade8050', backgroundColor: '#4ade8015' }
+                    : { color: '#ef4444', borderColor: '#ef444450', backgroundColor: '#ef444415', textDecoration: 'line-through' }
+                }
+              >
+                {c.factLabel} {turn === 0 ? '' : !cur || cur.factVisible ? '✓' : '✗'}
+              </motion.span>
+            </div>
           </div>
 
           {/* Tokens per call */}
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
             <p className="text-xs text-white/60 font-bold mb-1.5">Tokens sent per call</p>
-            <div className="flex items-end gap-2 h-16 relative">
+            <div className="flex items-end gap-2 h-12 relative">
               <div className="absolute left-0 right-0 border-t border-dashed border-white/30" style={{ bottom: `${(LIMIT / 150) * 100}%` }} />
               {Array.from({ length: lastTurn }).map((_, i) => {
                 const call = calls[i];
                 const h = call ? Math.min(call.tokens / 150, 1) * 100 : 0;
-                const col = !call ? 'transparent' : call.tokens > LIMIT ? '#ef4444' : call.status.some((x) => x !== 'sent') ? '#a78bfa' : '#4a9eff';
+                const col = !call ? 'rgba(0,0,0,0)' : call.tokens > LIMIT ? '#ef4444' : call.status.some((x) => x !== 'sent') ? '#a78bfa' : '#4a9eff';
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
                     <motion.div
@@ -326,26 +342,6 @@ export default function ContextMemoryPlayground() {
                 </span>
               ))}
             </div>
-            <p className="text-xs text-white/35 mt-1">You pay per token, so every turn costs more than the last.</p>
-          </div>
-
-          {/* What the model can see */}
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 flex items-center gap-2">
-            <span className="text-xs text-white/60 font-bold">Model can see:</span>
-            <motion.span
-              key={`${c.factLabel}-${cur ? cur.factVisible : 'none'}`}
-              className="text-xs font-mono font-bold px-2 py-0.5 rounded border"
-              initial={{ scale: 0.7, opacity: 0 }}
-              animate={{ scale: 1, opacity: turn === 0 ? 0.4 : 1 }}
-              transition={spring}
-              style={
-                !cur || cur.factVisible
-                  ? { color: '#4ade80', borderColor: '#4ade8050', backgroundColor: '#4ade8015' }
-                  : { color: '#ef4444', borderColor: '#ef444450', backgroundColor: '#ef444415', textDecoration: 'line-through' }
-              }
-            >
-              {c.factLabel} {!cur || cur.factVisible ? '✓' : '✗'}
-            </motion.span>
           </div>
 
           {/* Strategy */}
@@ -376,7 +372,7 @@ export default function ContextMemoryPlayground() {
                   style={{
                     color: strategy === st.id ? st.color : 'rgba(255,255,255,0.5)',
                     borderColor: strategy === st.id ? `${st.color}80` : 'rgba(255,255,255,0.1)',
-                    backgroundColor: strategy === st.id ? `${st.color}18` : 'transparent',
+                    backgroundColor: strategy === st.id ? `${st.color}18` : 'rgba(0,0,0,0)',
                   }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -394,7 +390,7 @@ export default function ContextMemoryPlayground() {
               className="flex-1 rounded-xl border-2 py-2 text-sm font-bold"
               style={{
                 borderColor: canNext ? '#4a9eff80' : 'rgba(255,255,255,0.1)',
-                backgroundColor: canNext ? 'rgba(74,158,255,0.12)' : 'transparent',
+                backgroundColor: canNext ? 'rgba(74,158,255,0.12)' : 'rgba(0,0,0,0)',
                 color: canNext ? '#93c5fd' : 'rgba(255,255,255,0.3)',
                 cursor: canNext ? 'pointer' : 'not-allowed',
               }}

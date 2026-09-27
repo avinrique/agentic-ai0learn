@@ -249,7 +249,7 @@ function guardrailsSteps(story: Story): TraceStep[] {
     {
       at: 'if message.tool_calls:',
       trig: 'ask-only',
-      exp: "The key idea: Max can only ASK for a tool. He can't press the button himself. Our code decides whether it really runs.",
+      exp: "The key idea: Max can only ASK for a tool; our code decides if it runs. The Terminal Assistant's prompt only asked the AI to confirm. Here our code enforces it.",
     },
     {
       at: 'args = json.loads',

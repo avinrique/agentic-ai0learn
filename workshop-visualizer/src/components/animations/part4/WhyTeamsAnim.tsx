@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ReactNode } from 'react';
 import { useConceptStore } from '@/stores/conceptStore';
 import AgentBot, { TEAM } from '@/components/animations/characters/AgentBot';
+import RoleBot from './WhyTeamsBot';
 import WhyTeamsPlayground from './WhyTeamsPlayground';
 
 const CYAN = '#22d3ee';
@@ -33,7 +34,7 @@ function StickyNote({ title, lines, color = '#fde68a', width = 260, delay = 0 }:
 function PromptCard({ owner, color, children, width = 250, compact = false }: { owner: string; color: string; children: ReactNode; width?: number; compact?: boolean }) {
   return (
     <div className="rounded-lg border-2 bg-[#f8fafc] text-[#1f2937] shadow-md" style={{ borderColor: color, width }}>
-      <div className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white rounded-t-[5px]" style={{ backgroundColor: color }}>
+      <div className="px-2.5 py-1 text-[12px] font-bold uppercase tracking-wide text-white rounded-t-[5px]" style={{ backgroundColor: color }}>
         📋 {owner}&apos;s system prompt
       </div>
       <div className={`px-2.5 ${compact ? 'py-1.5' : 'py-2'} text-[13px] leading-snug`}>{children}</div>
@@ -104,7 +105,7 @@ function IntroScene() {
         <div className="flex gap-3 items-end">
           {cast.map((c, i) => (
             <motion.div key={c.name} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.4 + i * 0.12 }}>
-              <AgentBot color={c.color} badge={c.badge} name={c.name} role={c.role} size={i === 0 ? 92 : 80} mood="happy" />
+              <RoleBot color={c.color} badge={c.badge} name={c.name} role={c.role} size={i === 0 ? 92 : 80} mood="happy" />
             </motion.div>
           ))}
         </div>
@@ -129,7 +130,7 @@ function HookScene() {
       </motion.div>
       <div className="relative w-[140px] h-[200px] flex flex-col items-center">
         <div className="mb-2"><Bubble delay={0.9}>I have to do ALL of this?!</Bubble></div>
-        <AgentBot color={TEAM.solo.color} badge={TEAM.solo.badge} name={TEAM.solo.name} role={TEAM.solo.role} size={110} mood="confused" active />
+        <RoleBot color={TEAM.solo.color} badge={TEAM.solo.badge} name={TEAM.solo.name} role={TEAM.solo.role} size={110} mood="confused" active />
         {jobs.map((j, i) => (
           <motion.div
             key={j.label}
@@ -170,7 +171,7 @@ function SoloScene({ showMistakes }: { showMistakes: boolean }) {
       <div className="flex items-center gap-6">
         <div className="flex flex-col items-center gap-2 w-[150px]">
           <Bubble delay={1.6}>{showMistakes ? 'Oops… did I check that?' : 'So… many… rules…'}</Bubble>
-          <AgentBot color={TEAM.solo.color} badge={TEAM.solo.badge} name={TEAM.solo.name} role="does everything" size={112} mood={showMistakes ? 'confused' : 'tired'} active={!showMistakes} />
+          <RoleBot color={TEAM.solo.color} badge={TEAM.solo.badge} name={TEAM.solo.name} role="does everything" size={112} mood={showMistakes ? 'confused' : 'tired'} active={!showMistakes} />
         </div>
         <motion.div animate={{ width: showMistakes ? 300 : 380 }} transition={spring}>
           <PromptCard owner="Solo Bot" color={TEAM.solo.color} width={showMistakes ? 300 : 380} compact>
@@ -195,9 +196,9 @@ function SoloScene({ showMistakes }: { showMistakes: boolean }) {
             <Paper title="Solo Bot's article" width={330} border="#f87171">
               <div className="font-bold text-[15px]">VOLCANOES!!! 🌋</div>
               <div>Volcanoes are mountains where hot melted rock called magma comes out.</div>
-              <div className="rounded px-1 bg-orange-200">Subduction-zone stratovolcanoes exhibit explosive eruptive behaviour.<span className="block text-[11px] font-bold text-orange-700">⚠ way too hard for kids</span></div>
-              <div className="rounded px-1 bg-red-200">Mount Everest is the tallest volcano on Earth!<span className="block text-[11px] font-bold text-red-700">✗ wrong: Everest is not a volcano</span></div>
-              <div className="rounded px-1 bg-orange-200">lava is really hot. like REALLY hot lol<span className="block text-[11px] font-bold text-orange-700">⚠ messy style, no number</span></div>
+              <div className="rounded px-1 bg-orange-200">Subduction-zone stratovolcanoes exhibit explosive eruptive behaviour.<span className="block text-[12px] font-bold text-orange-700">⚠ way too hard for kids</span></div>
+              <div className="rounded px-1 bg-red-200">Mount Everest is the tallest volcano on Earth!<span className="block text-[12px] font-bold text-red-700">✗ wrong: Everest is not a volcano</span></div>
+              <div className="rounded px-1 bg-orange-200">lava is really hot. like REALLY hot lol<span className="block text-[12px] font-bold text-orange-700">⚠ messy style, no number</span></div>
             </Paper>
           </motion.div>
         )}
@@ -237,7 +238,7 @@ function SplitScene() {
           <div className="flex gap-6">
             {SPECIALISTS.map((a, i) => (
               <motion.div key={a.name} initial={{ opacity: 0, x: -60, scale: 0.5 }} animate={{ opacity: 1, x: 0, scale: 1 }} transition={{ ...spring, delay: 0.9 + i * 0.2 }} className="flex flex-col items-center gap-2">
-                <AgentBot color={a.color} badge={a.badge} name={a.name} role={a.role} size={90} mood="happy" />
+                <RoleBot color={a.color} badge={a.badge} name={a.name} role={a.role} size={90} mood="happy" />
                 <div className="px-2.5 py-1 rounded-md text-[13px] text-white whitespace-nowrap" style={{ backgroundColor: `${a.color}30`, border: `1px solid ${a.color}70` }}>{a.job}</div>
               </motion.div>
             ))}
@@ -257,7 +258,7 @@ function MeetTeamScene() {
       <div className="flex gap-6 items-start">
         {SPECIALISTS.map((a, i) => (
           <motion.div key={a.name} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: i * 0.25 }} className="flex flex-col items-center gap-3">
-            <AgentBot color={a.color} badge={a.badge} name={a.name} role={a.role} size={96} mood="happy" active={false} />
+            <RoleBot color={a.color} badge={a.badge} name={a.name} role={a.role} size={96} mood="happy" active={false} />
             <PromptCard owner={a.name} color={a.color} width={260}>{a.prompt}</PromptCard>
             <div className="text-[13px] text-white/60">1 job · 2 lines</div>
           </motion.div>
@@ -282,9 +283,10 @@ function InsideAgentScene() {
       icon: '💬',
       title: 'Her own messages list',
       body: (
-        <div className="font-mono text-[11.5px] leading-tight">
+        <div className="font-mono text-[12.5px] leading-snug">
           [ {'{'}role: &quot;system&quot;, content: RITA_PROMPT{'}'},<br />
-          &nbsp;&nbsp;{'{'}role: &quot;user&quot;, content: &quot;Find facts about volcanoes&quot;{'}'} ]
+          &nbsp;&nbsp;{'{'}role: &quot;user&quot;,<br />
+          &nbsp;&nbsp;&nbsp;content: &quot;Find facts about volcanoes&quot;{'}'} ]
         </div>
       ),
     },
@@ -294,7 +296,7 @@ function InsideAgentScene() {
       <div className="flex items-center gap-6">
         <div className="flex flex-col items-center gap-2">
           <Bubble color="#dbeafe" delay={0.2}>Look inside me!</Bubble>
-          <AgentBot color={rita.color} badge={rita.badge} name={rita.name} role={rita.role} size={110} mood="proud" active />
+          <RoleBot color={rita.color} badge={rita.badge} name={rita.name} role={rita.role} size={110} mood="proud" active />
         </div>
         <motion.div initial={{ opacity: 0, scaleX: 0 }} animate={{ opacity: 1, scaleX: 1 }} transition={{ delay: 0.3 }} className="text-4xl" style={{ color: rita.color, originX: 0 }}>➜</motion.div>
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...spring, delay: 0.4 }} className="rounded-2xl border-2 p-4 w-[560px]" style={{ borderColor: rita.color, backgroundColor: `${rita.color}10` }}>
@@ -355,24 +357,26 @@ function MailCarrierScene() {
   const wally = TEAM.writer;
   return (
     <Scene id="mailCarrier">
-      <div className="relative flex items-end justify-between w-[720px] h-[200px]">
-        <AgentBot color={rita.color} badge={rita.badge} name={rita.name} role="finished her notes" size={96} mood="proud" />
+      <div className="relative flex items-end justify-between w-[720px] h-[235px]">
+        <RoleBot color={rita.color} badge={rita.badge} name={rita.name} role="finished her notes" size={96} mood="proud" />
         <div className="flex flex-col items-center mb-6">
           <div className="text-4xl">🐍📬</div>
           <div className="text-[14px] font-semibold" style={{ color: CYAN }}>our Python code</div>
           <div className="text-[12px] text-white/60">the mail carrier</div>
         </div>
-        <AgentBot color={wally.color} badge={wally.badge} name={wally.name} role="waiting for a task" size={96} mood="thinking" active />
+        <RoleBot color={wally.color} badge={wally.badge} name={wally.name} role="waiting for a task" size={96} mood="thinking" active />
         {/* the note travelling Rita -> code -> Wally, over and over */}
         <motion.div
           className="absolute top-0"
-          initial={{ left: 40 }}
-          animate={{ left: [40, 290, 290, 520, 520] }}
+          initial={{ left: 20 }}
+          animate={{ left: [20, 260, 260, 500, 500] }}
           transition={{ duration: 4, times: [0, 0.35, 0.5, 0.85, 1], repeat: Infinity, repeatDelay: 0.6 }}
         >
-          <div className="rounded-md px-2 py-1 shadow-lg bg-[#fde68a] text-[#1f2937] w-[170px] -rotate-2">
-            <div className="text-[11px] font-bold uppercase opacity-60">notes (just text)</div>
-            <div className="text-[12px] leading-tight">• Magma = melted rock<br />• Mauna Loa = biggest active volcano<br />• Lava: 700–1,200 °C …</div>
+          <div className="rounded-md px-2.5 py-1.5 shadow-lg bg-[#fde68a] text-[#1f2937] w-[200px] -rotate-2">
+            <div className="text-[12px] font-bold uppercase opacity-60">notes (just text)</div>
+            <div className="text-[13px] leading-snug">• Magma = melted rock</div>
+            <div className="text-[13px] leading-snug">• Mauna Loa = biggest active volcano</div>
+            <div className="text-[13px] leading-snug">• Lava: 700–1,200 °C …</div>
           </div>
         </motion.div>
       </div>
@@ -418,12 +422,12 @@ function RelayScene({ phase }: { phase: number }) {
       <div className="relative grid grid-cols-3 w-[940px] h-[140px] items-end">
         {legs.map((a, i) => (
           <div key={a.name} className="flex justify-center">
-            <AgentBot color={a.color} badge={a.badge} name={a.name} role={a.role} size={84} mood={moods[i]} active={phase < 3 && i === activeIdx} dimmed={phase < 3 && i !== activeIdx} />
+            <RoleBot color={a.color} badge={a.badge} name={a.name} role={a.role} size={84} mood={moods[i]} active={phase < 3 && i === activeIdx} dimmed={phase < 3 && i !== activeIdx} />
           </div>
         ))}
         {[0, 1].map((g) => (
           <div key={g} className="absolute top-[40px] flex flex-col items-center" style={{ left: `${(g + 1) * 33.33 - 6}%`, width: '12%' }}>
-            <div className="text-[11px] text-white/50">🐍 our code</div>
+            <div className="text-[12px] text-white/50">🐍 our code</div>
             <div className="text-2xl" style={{ color: CYAN }}>{g === 1 && phase >= 2 ? '⇄' : '→'}</div>
           </div>
         ))}
@@ -442,7 +446,7 @@ function RelayScene({ phase }: { phase: number }) {
       {/* what each runner produced */}
       <div className="grid grid-cols-3 w-[940px] mt-3 items-start">
         <div className="flex justify-center">
-          <StickyNote delay={phase === 0 ? 0.8 : 0} title="Rita's notes (from web_search)" lines={[...NOTES, <span key="src" className="text-[11px] opacity-60">source: usgs.gov</span>]} width={280} />
+          <StickyNote delay={phase === 0 ? 0.8 : 0} title="Rita's notes (from web_search)" lines={[...NOTES, <span key="src" className="text-[12px] opacity-60">source: usgs.gov</span>]} width={280} />
         </div>
         <div className="flex justify-center">
           {phase >= 1 && (
@@ -454,7 +458,7 @@ function RelayScene({ phase }: { phase: number }) {
                 {phase < 3 ? (
                   <div className={`rounded px-1 ${phase === 2 ? 'bg-red-200' : 'bg-amber-100'}`}>
                     Fun fact: Mount Everest is a volcano too!
-                    <span className={`block text-[11px] font-bold ${phase === 2 ? 'text-red-700' : 'text-amber-700'}`}>{phase === 2 ? '✗ caught by Cora' : '✨ not in the notes…'}</span>
+                    <span className={`block text-[12px] font-bold ${phase === 2 ? 'text-red-700' : 'text-amber-700'}`}>{phase === 2 ? '✗ caught by Cora' : '✨ not in the notes…'}</span>
                   </div>
                 ) : (
                   <motion.div initial={{ backgroundColor: '#bbf7d0' }} animate={{ backgroundColor: '#dcfce7' }} className="rounded px-1">

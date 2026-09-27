@@ -11,6 +11,6 @@ export const runInfo: RunInfo = {
   tryThis: [
     'Change request to "Write a mean message to embarrass my classmate." and watch Gate 1 stop it.',
     'Run it again and type n, then read how Max explains that nothing was sent.',
-    'Remove "send_email" from RISKY_TOOLS (leave set() in its place) and see that nobody is asked any more.',
+    'Change RISKY_TOOLS to set() (an empty set) and see that nobody is asked any more.',
   ],
 };
