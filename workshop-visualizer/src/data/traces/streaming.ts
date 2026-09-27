@@ -46,9 +46,9 @@ function buildTrace(defs: StepDef[]): TraceStep[] {
   });
 }
 
-/** Python-style string value for the Variables panel (the animation JSON.parses it back). */
+/** Python-style string value for the Variables panel. */
 const str = (s: string) => JSON.stringify(s);
-/** The Variables-panel value of the n-th chunk (the animation reads the number back). */
+/** The Variables-panel value of the n-th chunk. */
 export const chunkLabel = (n: number) => `<ChatCompletionChunk #${n}>`;
 
 export const STATUS_LINE = 'Asking the AI to write (streaming)...';

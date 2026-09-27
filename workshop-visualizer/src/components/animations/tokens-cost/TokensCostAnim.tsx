@@ -65,17 +65,24 @@ function Chip({ children, color }: { children: ReactNode; color: string }) {
 
 /** The question on a slip of paper. */
 function Slip({ text, compact, long }: { text: string; compact?: boolean; long: boolean }) {
-  const clamp = compact ? 44 : long ? 250 : undefined;
+  if (compact) {
+    return (
+      <div className="w-[70%] rounded-lg bg-white text-slate-800 shadow-xl px-3.5 py-2" style={{ opacity: 0.55 }}>
+        <div className="text-[13px] font-bold text-slate-500 mb-0.5">📄 question</div>
+        <div className="text-[14px] truncate">{text.replace(/\s+/g, ' ')}</div>
+      </div>
+    );
+  }
   return (
     <motion.div
       layout
       className="relative rounded-lg bg-white text-slate-800 shadow-xl overflow-hidden"
-      style={{ width: compact ? '70%' : long ? '82%' : '78%', padding: compact ? '8px 14px' : '16px 20px', opacity: compact ? 0.55 : 1 }}
+      style={{ width: long ? '82%' : '78%', padding: '16px 20px' }}
     >
       <div className="text-[13px] font-bold text-slate-500 mb-1">📄 question</div>
       <div
         className="leading-snug whitespace-pre-line"
-        style={{ fontSize: compact ? 14 : long ? 15 : 22, maxHeight: clamp, overflow: 'hidden' }}
+        style={{ fontSize: long ? 15 : 22, maxHeight: long ? 250 : undefined, overflow: 'hidden' }}
       >
         {text}
       </div>
@@ -680,10 +687,10 @@ function HistoryBars({ scene }: { scene: TokensCostScene }) {
   );
 }
 
-function Tips({ focus }: { focus: 'prompts' | 'answers' }) {
+function Tips({ focus, hints }: { focus: 'prompts' | 'answers'; hints: TokensCostScene['tipHints'] }) {
   const tips = [
-    { key: 'prompts', icon: '✂️', title: 'Shorter prompts', hint: 'cut what isn’t needed' },
-    { key: 'answers', icon: '📏', title: 'Shorter answers', hint: '“in 2 sentences”' },
+    { key: 'prompts', icon: '✂️', title: 'Shorter prompts', hint: hints.prompts },
+    { key: 'answers', icon: '📏', title: 'Shorter answers', hint: hints.answers },
     { key: 'model', icon: '🪙', title: 'Cheaper model', hint: 'mini models cost less' },
   ];
   return (
@@ -797,7 +804,7 @@ export default function TokensCostAnim() {
       body = <HistoryBars scene={scene} />;
       break;
     case 'tips':
-      body = <Tips focus={longQuestion ? 'prompts' : 'answers'} />;
+      body = <Tips focus={longQuestion ? 'prompts' : 'answers'} hints={scene.tipHints} />;
       break;
     case 'recap':
       body = <Recap />;

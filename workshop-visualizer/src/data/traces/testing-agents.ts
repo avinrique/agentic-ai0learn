@@ -135,7 +135,7 @@ const L = {
   runAdd: 'result = add(arguments["a"], arguments["b"])',
   retTool: 'return tool_call.function.name',
   tests: 'tests = [',
-  france: 'capital of France',
+  france: '"expect_tool": None',
   passed0: 'passed = 0',
   forLine: 'for test in tests:',
   call: 'tool_used, answer = ask_agent(test["question"])',

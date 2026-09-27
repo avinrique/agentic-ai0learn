@@ -1,6 +1,6 @@
 'use client';
 import { motion } from 'framer-motion';
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 
 // Shared pieces for the "Get Set Up" lesson: fake terminals, the station checklist,
 // the Mac/Windows switch, and a few drawings (key, safe, cost meter).
@@ -57,7 +57,7 @@ function StationChip({ icon, name, state, flipAt }: { icon: string; name: string
 export function StationStrip({ current, done, flipAt }: { current: number; done: number; flipAt?: number }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-[12px] font-semibold uppercase tracking-wider text-white/40 mr-1">Workshop</span>
+      <span className="text-[13px] font-semibold uppercase tracking-wider text-white/40 mr-1">Workshop</span>
       {STATIONS.map((s, i) => {
         const state = i < done ? 'done' : i === current ? 'current' : 'todo';
         return (
@@ -181,6 +181,7 @@ export function schedule(lines: TermLine[], start = 0.3): number[] {
   const at: number[] = [];
   let t = start;
   for (const l of lines) {
+    if (l.t === 'out' && l.wait) t += l.wait;
     at.push(t);
     if (l.t === 'cmd') t += l.cmd.length * TYPE_SPEED + 0.45;
     else if (l.t === 'out') t += 0.13;
@@ -197,6 +198,7 @@ export function Terminal({
   height,
   start = 0.3,
   instant = false,
+  scroll = false,
   title,
   children,
 }: {
@@ -208,11 +210,17 @@ export function Terminal({
   start?: number;
   /** true = no typing animation (used by the playground, which adds lines one by one). */
   instant?: boolean;
+  /** true = text starts at the top and the window scrolls to the newest line (like a real terminal). */
+  scroll?: boolean;
   title?: string;
   children?: ReactNode;
 }) {
   const at = instant ? lines.map(() => 0) : schedule(lines, start);
   const isMac = os === 'mac';
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (scroll && bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+  }, [scroll, lines.length]);
   return (
     <div
       className="rounded-xl overflow-hidden shadow-2xl border flex flex-col"
@@ -242,7 +250,11 @@ export function Terminal({
         </div>
       )}
       {/* body */}
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col justify-end px-4 py-3 font-mono leading-[1.55]" style={{ fontSize }}>
+      <div
+        ref={bodyRef}
+        className={`flex-1 min-h-0 flex flex-col px-4 py-3 font-mono leading-[1.55] ${scroll ? 'overflow-y-auto justify-start' : 'overflow-hidden justify-end'}`}
+        style={{ fontSize, scrollbarWidth: 'thin' }}
+      >
         {lines.map((l, i) => {
           const key = `${i}-${l.t}`;
           if (l.t === 'out') {
@@ -307,80 +319,6 @@ export const CMD = {
   cd: (os: OS) => (os === 'mac' ? 'cd /Users/sam/Downloads/ai-course' : 'cd C:\\Users\\sam\\Downloads\\ai-course'),
 };
 
-export const PY_VERSION = 'Python 3.13.7';
-
-// Outputs copy the real kit scripts (src/data/kit/scripts.ts: check_setup.py and run.py).
-// Version numbers, token counts and the AI's words are illustrative.
-export const REQUIREMENTS = ['openai', 'python-dotenv', 'tiktoken'];
-
-export const PIP_OUT: TermLine[] = [
-  { t: 'out', text: 'Collecting openai (from -r requirements.txt (line 1))', tone: 'plain' },
-  { t: 'out', text: 'Collecting python-dotenv (from -r requirements.txt (line 2))', tone: 'plain' },
-  { t: 'out', text: 'Collecting tiktoken (from -r requirements.txt (line 3))', tone: 'plain' },
-  { t: 'out', text: 'Collecting httpx<1,>=0.23.0 (from openai->-r requirements.txt (line 1))', tone: 'dim' },
-  { t: 'out', text: '…', tone: 'dim' },
-  { t: 'out', text: 'Installing collected packages: … tiktoken, python-dotenv, openai', tone: 'dim' },
-  { t: 'out', text: 'Successfully installed … openai-… python-dotenv-… tiktoken-…', tone: 'ok' },
-];
-
-/** What check_setup.py prints for a given state (mirrors the real script, line for line). */
-export function checkSetupLines({ inVenv, installed, envFile }: { inVenv: boolean; installed: boolean; envFile: boolean }): TermLine[] {
-  const lines: TermLine[] = [
-    { t: 'out', text: 'Checking your setup...', tone: 'plain' },
-    { t: 'out', text: `✓ ${PY_VERSION}`, tone: 'ok' },
-  ];
-  let problems = 0;
-  const problem = (msg: string, fix: string) => {
-    problems += 1;
-    lines.push({ t: 'out', text: `✗ ${msg}`, tone: 'err' }, { t: 'out', text: `  Fix: ${fix}`, tone: 'warn' });
-  };
-  for (const pkg of REQUIREMENTS) {
-    if (installed) lines.push({ t: 'out', text: `✓ ${pkg} is installed`, tone: 'ok' });
-    else problem(`${pkg} is not installed`, 'pip install -r requirements.txt');
-  }
-  if (!installed && !inVenv) {
-    lines.push(
-      { t: 'out', text: "  Tip: your .venv isn't turned on. Mac/Linux: source .venv/bin/activate", tone: 'plain' },
-      { t: 'out', text: '       Windows: .venv\\Scripts\\activate', tone: 'plain' },
-    );
-  }
-  if (!envFile) problem('No .env file with your API key', 'copy .env.example to a new file called .env, then paste your key into it');
-  else if (installed) lines.push({ t: 'out', text: '✓ Found OPENAI_API_KEY in .env', tone: 'ok' });
-  if (problems) {
-    lines.push({ t: 'out', text: '', tone: 'plain' }, { t: 'out', text: 'Fix the lines marked ✗, then run this check again.', tone: 'plain' });
-    return lines;
-  }
-  lines.push(
-    { t: 'out', text: 'Make one tiny test call to OpenAI? (costs a tiny fraction of a cent) [y/N] ', tone: 'warn', typed: 'y' },
-    { t: 'out', text: '✓ OpenAI answered: Welcome aboard, future AI builder!', tone: 'ok' },
-    { t: 'out', text: '  Tokens used: 20 in + 7 out = 27', tone: 'dim' },
-    { t: 'out', text: 'All set! Next: python run.py part1/basic_api.py', tone: 'note' },
-  );
-  return lines;
-}
-
-export const CHECK_OUT: TermLine[] = checkSetupLines({ inVenv: true, installed: true, envFile: true });
-
-/** run.py's own messages when something is missing. */
-export const RUN_NO_LIBS: TermLine[] = [
-  { t: 'out', text: "The course libraries aren't installed yet, or your .venv isn't turned on.", tone: 'err' },
-  { t: 'out', text: 'Turn on the .venv (see README.md), then run:  pip install -r requirements.txt', tone: 'plain' },
-];
-export const RUN_NO_KEY: TermLine[] = [
-  { t: 'out', text: 'No API key found.', tone: 'err' },
-  { t: 'out', text: 'Copy .env.example to a new file called .env and paste your key after OPENAI_API_KEY=', tone: 'plain' },
-  { t: 'out', text: 'Then check it with:  python check_setup.py', tone: 'plain' },
-];
-
-export const RUN_OUT: TermLine[] = [
-  { t: 'out', text: 'Sending a basic prompt to the AI...', tone: 'plain' },
-  { t: 'out', text: '', tone: 'plain' },
-  { t: 'out', text: "AI's Response:", tone: 'plain' },
-  { t: 'out', text: 'Oh AI, you slice through data with ease,', tone: 'ai' },
-  { t: 'out', text: 'Like mozzarella on a pizza breeze,', tone: 'ai' },
-  { t: 'out', text: "But you'll never taste the cheesy goodness, please!", tone: 'ai' },
-];
-
 // ---------- drawings ----------
 
 /** A gold key with a paper tag, the lesson's picture of an API key. */
@@ -418,7 +356,7 @@ export function SafeBox({ width = 250, label = '.env', children, locked = true }
       <div className="rounded-lg border-2 border-black/40 bg-black/30 min-h-[70px] flex items-center justify-center p-2">{children}</div>
       <div className="flex justify-between items-center mt-2 px-1">
         <div className="w-8 h-8 rounded-full border-4 border-slate-400 bg-slate-600 flex items-center justify-center text-[10px] text-white/70">{locked ? '●' : '○'}</div>
-        <div className="text-[12px] text-white/50">stays on your computer</div>
+        <div className="text-[13px] text-white/55">stays on your computer</div>
       </div>
     </div>
   );

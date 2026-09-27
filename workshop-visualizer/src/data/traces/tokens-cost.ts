@@ -87,6 +87,8 @@ export interface TokensCostScene {
   million: string;
   /** Illustrative input tokens for turns 1–4 of a chat that keeps re-sending history. */
   turns: number[];
+  /** Short hints on the money-saving tip cards (1–4 words each). */
+  tipHints: { prompts: string; answers: string };
 }
 
 interface Story extends Omit<TokensCostScene, 'inUnits' | 'outUnits' | 'turns'> {
@@ -121,6 +123,7 @@ function scene(s: Story): TokensCostScene {
     printed1000: s.printed1000,
     million: s.million,
     turns,
+    tipHints: s.tipHints,
   };
 }
 
@@ -299,6 +302,7 @@ const BLACK_HOLE: Story = {
   printedCost: '0.000027',
   printed1000: '0.03',
   million: '27',
+  tipHints: { prompts: 'cut what isn’t needed', answers: '“in 2 sentences”' },
   notes: {
     question: "Here's the question we'll send. Before sending it, let's count how many tokens it is.",
     writing: 'The AI writes its answer one token at a time (remember lesson 1?). Each new token clicks the OUT counter up by one.',
@@ -332,6 +336,7 @@ const DRAGON: Story = {
   printedCost: '0.000215',
   printed1000: '0.21',
   million: '215',
+  tipHints: { prompts: 'cut what isn’t needed', answers: '100 words, not 300' },
   notes: {
     question: 'Our question: a 300-word story. A short question that asks for a LONG answer. Watch what that does to the bill.',
     writing: 'The AI writes its story one token at a time (remember lesson 1?). Each new token clicks the OUT counter up. A 300-word story means hundreds of clicks!',
@@ -384,6 +389,7 @@ const SUMMARY: Story = {
   printedCost: '0.000061',
   printed1000: '0.06',
   million: '61',
+  tipHints: { prompts: 'paste only what you need', answers: '“in one sentence”' },
   notes: {
     question: 'Now the question is a pasted paragraph of about 180 words, plus "Summarise this in one sentence." A LONG question that asks for a SHORT answer.',
     writing: 'The AI writes its one-sentence summary one token at a time. Each new token clicks the OUT counter up. This time the IN lane is the big one.',

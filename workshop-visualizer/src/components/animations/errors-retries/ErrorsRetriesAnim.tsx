@@ -9,7 +9,7 @@
  * friendly message card instead of a red traceback.
  * Everything is derived from the current tracer step (pure function of the step).
  */
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import AgentBot, { BotMood } from '@/components/animations/characters/AgentBot';
 import { readVar, useTracerScene } from '@/components/animations/part4/useTracerScene';
@@ -167,7 +167,7 @@ function IntroScene() {
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.15 * i }}
-            className="w-[210px] rounded-xl border-2 px-4 py-3 flex items-center gap-3"
+            className="w-[232px] rounded-xl border-2 px-4 py-3 flex items-center gap-3"
             style={{ borderColor: t.color, background: `${t.color}12` }}
           >
             <span className="text-[32px]">{t.icon}</span>
@@ -224,7 +224,7 @@ function SetupScene({ trig }: { trig: string }) {
             0
           </motion.span>
         </div>
-        <span className="text-[16px] text-white/80">🖐 we retry by hand, to see how it works</span>
+        <span className="text-[16px] text-white/80">🖐 we retry by hand</span>
       </Card>
     );
   }
@@ -401,11 +401,13 @@ function RoadScene({ trig, attempt }: { trig: string; attempt: number }) {
             initial={{ scale: 0.4, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.9 }}
-            className="absolute bottom-[20px] left-[36%] w-[16%] flex flex-col items-center"
+            className="absolute bottom-[64px] left-[36%] w-[16%] flex flex-col items-center gap-1"
           >
-            <span className="text-[40px] leading-none">📡</span>
-            <span className="text-[26px] font-black leading-none -mt-1" style={{ color: RED }}>✖</span>
-            <span className="text-[15px] font-bold mt-1" style={{ color: BLUE }}>no internet</span>
+            <div className="relative">
+              <span className="text-[44px] leading-none">📡</span>
+              <span className="absolute -right-3 -bottom-1 text-[26px] font-black leading-none" style={{ color: RED }}>✖</span>
+            </div>
+            <span className="text-[15px] font-bold whitespace-nowrap" style={{ color: BLUE }}>no internet</span>
           </motion.div>
         </>
       ) : (
@@ -465,7 +467,7 @@ function RoadScene({ trig, attempt }: { trig: string; attempt: number }) {
           className="absolute bottom-0 left-0 right-0 text-center font-mono text-[15px]"
           style={{ color: KIND[outcome].color }}
         >
-          {outcome === 'ok' ? 'no error: the except nets are skipped' : `Python raises ${KIND[outcome].cls}`}
+          {outcome === 'ok' ? '✓ no error' : `Python raises ${KIND[outcome].cls}`}
         </motion.div>
       )}
     </div>
@@ -526,13 +528,32 @@ function NoteScene({ text, color }: { text: string; color: string }) {
 const RING_R = 88;
 const RING_C = 2 * Math.PI * RING_R;
 
+/** Seconds left on the sleep timer: counts down from `seconds` to 0 while `run` is true (restarts per step). */
+function useCountdown(seconds: number, run: boolean, stepKey: number): number {
+  const [left, setLeft] = useState(seconds);
+  useEffect(() => {
+    setLeft(seconds);
+    if (!run) return;
+    const start = performance.now();
+    const id = window.setInterval(() => {
+      const l = Math.max(0, seconds - (performance.now() - start) / 1000);
+      setLeft(l);
+      if (l === 0) window.clearInterval(id);
+    }, 100);
+    return () => window.clearInterval(id);
+  }, [seconds, run, stepKey]);
+  return left;
+}
+
 function TimerScene({ trig, wait, attempt, printed, stepKey }: { trig: string; wait: number; attempt: number; printed: string; stepKey: number }) {
   const sleeping = trig === 'sleep';
+  const left = useCountdown(wait, sleeping, stepKey);
+  const done = sleeping && left === 0;
   const ladder = [1, 2, 4];
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="flex items-center gap-6">
-        {sleeping && <Robot mood="sleeping" size={84} />}
+        {sleeping && <Robot mood={done ? 'happy' : 'sleeping'} size={84} />}
         <div className="relative w-[210px] h-[210px]">
           <svg viewBox="0 0 210 210" className="w-full h-full -rotate-90" aria-hidden>
             <circle cx="105" cy="105" r={RING_R} stroke="rgba(255,255,255,0.1)" strokeWidth="14" fill="none" />
@@ -552,8 +573,12 @@ function TimerScene({ trig, wait, attempt, printed, stepKey }: { trig: string; w
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-[50px] font-bold leading-none" style={{ color: AMBER }}>{wait}s</span>
-            <span className="text-[15px] text-white/60 mt-1">{sleeping ? '⏸ paused' : 'wait'}</span>
+            <span className="text-[50px] font-bold leading-none tabular-nums" style={{ color: done ? GREEN : AMBER }}>
+              {sleeping ? `${left.toFixed(1)}s` : `${wait}s`}
+            </span>
+            <span className="text-[15px] mt-1" style={{ color: done ? GREEN : 'rgba(255,255,255,0.6)' }}>
+              {!sleeping ? 'wait' : done ? '▶ go again' : '⏸ paused'}
+            </span>
           </div>
         </div>
       </div>
@@ -697,27 +722,48 @@ function PrintScene({ text, outcome }: { text: string; outcome: Outcome }) {
 }
 
 function RecapScene() {
-  const points: ReactNode[] = [
-    <>
-      <span className="font-mono" style={{ color: CYAN }}>try</span>/<span className="font-mono" style={{ color: CYAN }}>except</span> catches errors
-      instead of crashing.
-    </>,
-    <>Retry only what can fix itself (🚦 busy, 📡 offline), never 🔑 a bad key or 💳 no credit.</>,
-    <>Back off 1s, 2s, 4s… then give up politely.</>,
+  const rows: { color: string; big: ReactNode; label: string }[] = [
+    {
+      color: CYAN,
+      big: <span className="font-mono">🛟 try / except</span>,
+      label: 'catch, don’t crash',
+    },
+    {
+      color: GREEN,
+      big: (
+        <span>
+          retry 🚦 📡 <span className="text-white/30 mx-1">·</span> <span style={{ color: RED }}>stop 🔑 💳</span>
+        </span>
+      ),
+      label: 'retry what can heal',
+    },
+    {
+      color: AMBER,
+      big: <span className="font-mono">⏳ 1s → 2s → 4s → 🙏</span>,
+      label: 'back off, then give up',
+    },
   ];
   return (
-    <div className="flex flex-col gap-4 max-w-[640px]">
-      <div className="text-[18px] font-bold" style={{ color: CYAN }}>What you learned</div>
-      {points.map((p, i) => (
+    <div className="flex flex-col gap-4">
+      {rows.map((r, i) => (
         <motion.div
-          key={i}
-          initial={{ x: -10, opacity: 0 }}
+          key={r.label}
+          initial={{ x: -12, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.15 * i }}
-          className="text-[18px] leading-snug text-white/90 flex gap-3"
+          transition={{ delay: 0.15 + 0.2 * i }}
+          className="flex items-center gap-4 rounded-2xl border-2 px-5 py-3.5"
+          style={{ borderColor: `${r.color}66`, background: `${r.color}0d` }}
         >
-          <span className="font-bold" style={{ color: CYAN }}>{i + 1}.</span>
-          <span>{p}</span>
+          <span
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[16px] font-bold"
+            style={{ background: r.color, color: '#0a0a1a' }}
+          >
+            {i + 1}
+          </span>
+          <span className="text-[20px] font-bold min-w-[290px]" style={{ color: r.color }}>
+            {r.big}
+          </span>
+          <span className="text-[16px] text-white/70">{r.label}</span>
         </motion.div>
       ))}
     </div>

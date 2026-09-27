@@ -1,7 +1,7 @@
 'use client';
 import { motion } from 'framer-motion';
 import { ReactNode } from 'react';
-import { useTracerStore, TraceStep } from '@/stores/tracerStore';
+import { useTracerStore } from '@/stores/tracerStore';
 import { STATUS_LINE, STREAM_EXAMPLES, doneLine } from '@/data/traces/streaming';
 import {
   BLUE,
@@ -93,17 +93,6 @@ const TOP_FADE = 'linear-gradient(to bottom, transparent 0, #000 30px)';
 const GAP = 110; // ms between chunks in the fast-forward (slowed down so you can watch)
 const DROP = 600; // ms for a tile to fall down the pipe
 const TILE_H = 40;
-
-function readStr(step: TraceStep | undefined, name: string): string | null | undefined {
-  const raw = step?.variables.find((v) => v.name === name)?.value;
-  if (raw === undefined) return undefined;
-  if (raw === 'None') return null;
-  try {
-    return JSON.parse(raw) as string;
-  } catch {
-    return raw;
-  }
-}
 
 /** Last `max` characters of a text on one line (new lines shown as ↵). */
 function tail(text: string, max: number) {
@@ -243,10 +232,8 @@ export default function StreamingAnim() {
     printed = rank >= RANK.print2 ? 2 : rank >= RANK.print1 ? 1 : 0;
     stored = rank >= RANK.add2 ? 2 : rank >= RANK.add1 ? 1 : 0;
   }
-  const writtenText = pieces.slice(0, written).join('');
   const printedText = pieces.slice(0, printed).join('');
   const storedText = pieces.slice(0, stored).join('');
-  const piece = readStr(step, 'piece');
 
   // ── Pipe mode and the card/caption next to it ─────────────────────────────
   const streamOpen = rank >= RANK.sent || trig === 'intro';
