@@ -189,9 +189,9 @@ function tokensCostSteps(s: Story): TraceStep[] {
       exp: s.notes.writing,
     },
     {
-      at: 'print("\\nAnswer:"',
+      at: 'print("Answer:"',
       trig: 'answer',
-      out: `\nAnswer: ${s.answer}`,
+      out: `Answer: ${s.answer}`,
       exp: s.notes.answer,
     },
     {
@@ -203,9 +203,9 @@ function tokensCostSteps(s: Story): TraceStep[] {
       exp: 'Every response comes with a receipt: response.usage. It holds the EXACT token counts the API used, and those are what you pay for.',
     },
     {
-      at: 'print("\\nInput tokens (prompt):"',
+      at: 'print("Input tokens (prompt):"',
       trig: 'receipt-in',
-      out: `\nInput tokens (prompt): ${s.prompt}`,
+      out: `Input tokens (prompt): ${s.prompt}`,
       exp: `prompt_tokens = ${s.prompt}: the input. tiktoken counted ${s.estimate}; the API added ${s.prompt - s.estimate} more for the "envelope" around our message (its role label and markers).`,
     },
     {
@@ -251,9 +251,9 @@ function tokensCostSteps(s: Story): TraceStep[] {
       exp: `Add the two lanes: $${inCost} + $${outCost} = $${allCost}. The bar shows the split: ${inPct}% input, ${100 - inPct}% output.`,
     },
     {
-      at: 'print(f"\\nThis call cost:',
+      at: 'print(f"This call cost:',
       trig: 'cost-print',
-      out: `\nThis call cost: $${s.printedCost}`,
+      out: `This call cost: $${s.printedCost}`,
       exp: s.notes.costPrint,
     },
     {

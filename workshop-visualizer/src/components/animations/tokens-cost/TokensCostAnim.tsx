@@ -309,17 +309,17 @@ function Meter({ scene, phase }: { scene: TokensCostScene; phase: 'send' | 'writ
   const max = Math.max(scene.prompt, scene.completion);
   const writing = phase === 'writing';
   return (
-    <div className="w-full flex flex-col items-center gap-3">
+    <div className="w-full flex flex-col items-center gap-6">
       <div className="relative">
         <AgentBot {...TEAM.solo} name="gpt-4o-mini" role={undefined} size={96} mood={writing ? 'working' : 'thinking'} active={writing} />
         {writing &&
           [0, 1, 2].map((i) => (
             <motion.div
               key={i}
-              className="absolute left-1/2 top-[88px] w-5 h-3.5 rounded-sm"
+              className="absolute left-1/2 top-full w-5 h-3.5 rounded-sm"
               style={{ background: OUT, marginLeft: -10 }}
               initial={{ y: 0, opacity: 0 }}
-              animate={{ y: [0, 44], opacity: [0, 1, 0] }}
+              animate={{ y: [0, 26], opacity: [0, 1, 0] }}
               transition={{ repeat: Infinity, duration: 1.1, delay: i * 0.37, ease: 'easeIn' }}
             />
           ))}

@@ -19,11 +19,11 @@ response = client.chat.completions.create(
         {"role": "user", "content": question}
     ],
 )
-print("\\nAnswer:", response.choices[0].message.content)
+print("Answer:", response.choices[0].message.content)
 
 # The exact counts come back on the receipt: response.usage
 usage = response.usage
-print("\\nInput tokens (prompt):", usage.prompt_tokens)
+print("Input tokens (prompt):", usage.prompt_tokens)
 print("Output tokens (completion):", usage.completion_tokens)
 print("Total tokens:", usage.total_tokens)
 
@@ -35,5 +35,5 @@ OUTPUT_PRICE_PER_MILLION = 0.60  # gpt-4o-mini, tokens it writes
 input_cost = usage.prompt_tokens / 1_000_000 * INPUT_PRICE_PER_MILLION
 output_cost = usage.completion_tokens / 1_000_000 * OUTPUT_PRICE_PER_MILLION
 cost = input_cost + output_cost
-print(f"\\nThis call cost: \${cost:.6f}")
+print(f"This call cost: \${cost:.6f}")
 print(f"1,000 calls like this: \${cost * 1000:.2f}")`;
