@@ -3,6 +3,7 @@ import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import LessonBadge from '@/components/ui/LessonBadge';
 import JourneyStrip from '@/components/ui/JourneyStrip';
+import RunItButton from '@/components/ui/RunItButton';
 import StepControls from './StepControls';
 import ResizableHandle from './ResizableHandle';
 import { useTracerStore, TraceStep, TraceVariant } from '@/stores/tracerStore';
@@ -76,13 +77,16 @@ export default function LessonLayout({
               {!isFullscreen && <h1 className="text-xl font-bold text-white">{title}</h1>}
               {!isFullscreen && <p className="text-sm text-white/40 mt-0.5">{description}</p>}
             </div>
-            <button
-              onClick={toggleFullscreen}
-              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white text-sm transition-all shrink-0"
-              title="Fullscreen (F)"
-            >
-              {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <RunItButton lessonId={lessonId} />
+              <button
+                onClick={toggleFullscreen}
+                className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white text-sm transition-all"
+                title="Fullscreen (F)"
+              >
+                {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+              </button>
+            </div>
           </div>
           {!isFullscreen && currentStep === 0 && <JourneyStrip lessonId={lessonId} />}
           {currentTraceStep?.explanation && (

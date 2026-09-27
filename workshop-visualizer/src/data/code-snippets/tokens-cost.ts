@@ -7,7 +7,7 @@ client = OpenAI()
 
 question = "Explain what a black hole is in 2 sentences."
 
-# Count the tokens BEFORE sending (an estimate: the API adds a few for formatting)
+# Count tokens BEFORE sending (an estimate: the API adds a few for formatting)
 enc = tiktoken.get_encoding("o200k_base")
 estimate = len(enc.encode(question))
 print(f"Estimated input tokens: {estimate}")

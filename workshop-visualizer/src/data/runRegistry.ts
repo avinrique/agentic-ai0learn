@@ -1,10 +1,10 @@
-// Every code lesson's "Run this yourself" info, in course order. The run box
-// (src/components/ui/RunItModal.tsx) and the downloadable course kit
-// (src/lib/courseKit.ts) are both built from this list.
-// Adding a code lesson: create src/data/run/<id>.ts, then add one import and one entry.
+// Every code lesson's "Run it yourself" info, in course order. The course code kit
+// (src/lib/courseKit.ts) is built from this list, so a lesson listed here is also a
+// program in the download. New code lesson: one import + one entry below.
 import type { RunInfo } from '@/data/runInfo';
 import { runInfo as basicApi } from '@/data/run/basic-api';
 import { runInfo as streaming } from '@/data/run/streaming';
+import { runInfo as tokensCost } from '@/data/run/tokens-cost';
 import { runInfo as systemPromptsTracer } from '@/data/run/system-prompts-tracer';
 import { runInfo as conversationLoop } from '@/data/run/conversation-loop';
 import { runInfo as jsonOutput } from '@/data/run/json-output';
@@ -24,6 +24,7 @@ import { runInfo as guardrails } from '@/data/run/guardrails';
 export const runInfos: RunInfo[] = [
   basicApi,
   streaming,
+  tokensCost,
   systemPromptsTracer,
   conversationLoop,
   jsonOutput,
@@ -41,11 +42,14 @@ export const runInfos: RunInfo[] = [
   guardrails,
 ];
 
+const byLesson = new Map(runInfos.map((r) => [r.lessonId, r]));
+
+/** The run info for a lesson, or undefined if the lesson has no program to run. */
 export function getRunInfo(lessonId: string): RunInfo | undefined {
-  return runInfos.find((r) => r.lessonId === lessonId);
+  return byLesson.get(lessonId);
 }
 
-/** The program that goes into the kit: the full version if the lesson shortened it. */
-export function kitCode(info: RunInfo): string {
-  return info.runnableCode ?? info.shownCode;
+/** The program that goes in the download: the full version if the lesson shortened it. */
+export function kitCode(r: RunInfo): string {
+  return r.runnableCode ?? r.shownCode;
 }

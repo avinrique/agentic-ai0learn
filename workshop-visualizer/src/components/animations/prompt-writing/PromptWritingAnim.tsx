@@ -14,7 +14,7 @@ const BLUE = '#4a9eff';
 function Paper({ title, children, width, border = 'rgba(0,0,0,0.08)', dim = false, icon = '🤖' }: { title: string; children: ReactNode; width: number; border?: string; dim?: boolean; icon?: string }) {
   return (
     <motion.div animate={{ opacity: dim ? 0.55 : 1 }} className="rounded-xl bg-white text-[#1f2937] shadow-lg border-2" style={{ width, borderColor: border }}>
-      <div className="px-3 pt-1.5 pb-1 border-b border-black/10 text-[12px] font-bold uppercase tracking-wide text-black/45">
+      <div className="px-3 pt-1.5 pb-1 border-b border-black/10 text-[13px] font-bold uppercase tracking-wide text-black/45">
         {icon} {title}
       </div>
       <div className="px-3 py-2 space-y-1.5 text-[14.5px] leading-snug">{children}</div>
@@ -25,7 +25,7 @@ function Paper({ title, children, width, border = 'rgba(0,0,0,0.08)', dim = fals
 function PromptPaper({ title, children, width, border = '#f9a8d4', dim = false }: { title: string; children: ReactNode; width: number; border?: string; dim?: boolean }) {
   return (
     <motion.div animate={{ opacity: dim ? 0.55 : 1 }} className="rounded-xl bg-[#fffdf7] text-[#1f2937] shadow-lg border-2" style={{ width, borderColor: border }}>
-      <div className="px-3 pt-1.5 pb-1 border-b border-black/10 text-[12px] font-bold uppercase tracking-wide text-black/45">📝 {title}</div>
+      <div className="px-3 pt-1.5 pb-1 border-b border-black/10 text-[13px] font-bold uppercase tracking-wide text-black/45">📝 {title}</div>
       <div className="px-3 py-2 space-y-1.5 text-[15px] leading-snug">{children}</div>
     </motion.div>
   );
@@ -59,7 +59,7 @@ function IntroScene() {
           <div className="text-[13px] font-bold uppercase tracking-wide text-white/50 mb-2">What you&apos;ll learn</div>
           {learn.map((t, i) => (
             <motion.div key={t} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ ...spring, delay: 0.2 + i * 0.15 }} className="flex gap-3 items-start py-1.5">
-              <span className="w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-[12px] font-bold" style={{ color: BLUE, backgroundColor: `${BLUE}20`, border: `1px solid ${BLUE}50` }}>
+              <span className="w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-[13px] font-bold" style={{ color: BLUE, backgroundColor: `${BLUE}20`, border: `1px solid ${BLUE}50` }}>
                 {i + 1}
               </span>
               <span className="text-[15px] text-white/80">{t}</span>
@@ -71,10 +71,10 @@ function IntroScene() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.8 }} className="font-mono text-[13px] rounded-lg bg-black/40 border border-white/10 px-3 py-2 leading-relaxed">
             <div className="text-white/40">messages = [</div>
             <div className="pl-4 text-white/40">
-              {'{"role": "system", …}'} <span className="font-sans text-[12px] text-accent-purple">✓ last lesson</span>
+              {'{"role": "system", …}'} <span className="font-sans text-[13px] text-accent-purple">✓ last lesson</span>
             </div>
             <div className="pl-4 text-white">
-              {'{"role": "user", …}'} <span className="font-sans text-[12px] font-semibold" style={{ color: BLUE }}>← today</span>
+              {'{"role": "user", …}'} <span className="font-sans text-[13px] font-semibold" style={{ color: BLUE }}>← today</span>
             </div>
             <div className="text-white/40">]</div>
           </motion.div>
@@ -226,7 +226,6 @@ const POSTER_SEGS: Record<string, string> = {
   example: 'Make the title catchy, like: "Do Worms Like the Dark? 🪱"',
   limits: 'No hard science words. End with one fun fact.',
 };
-const LIMITS_DO = 'Use words a 10-year-old knows. End with one fun fact.';
 // The order the parts appear in the prompt text (the role goes on top).
 const PROMPT_ORDER: IngId[] = ['role', 'task', 'context', 'format', 'example', 'limits'];
 
@@ -283,7 +282,7 @@ function AnswerLine({ line, hl }: { line: PLine; hl: string | null }) {
   if (line.kind === 'box') {
     return (
       <motion.div {...anim} className="rounded-md px-2 py-1 border border-black/10" style={style}>
-        <div className="text-[12px] font-bold uppercase tracking-wide text-black/45">{line.label}</div>
+        <div className="text-[13px] font-bold uppercase tracking-wide text-black/45">{line.label}</div>
         <div className="text-[14.5px]">
           <Rich text={line.text} />
         </div>
@@ -324,7 +323,7 @@ function BuildScene({ stage }: { stage: number }) {
             <div className="flex items-center gap-2 px-3 py-1.5 border-b border-black/10">
               <Mia size={30} label={false} />
               <span className="text-[13px] font-bold uppercase tracking-wide text-black/50">Mia&apos;s prompt</span>
-              <span className="ml-auto text-[12px] font-mono text-black/40">draft {stage + 1}</span>
+              <span className="ml-auto text-[13px] font-mono text-black/40">draft {stage + 1}</span>
             </div>
             <div className="flex flex-wrap gap-1.5 px-3 pt-2">
               {RECIPE.map((id) => {
@@ -335,7 +334,7 @@ function BuildScene({ stage }: { stage: number }) {
                     key={id}
                     animate={{ scale: id === newest ? [1, 1.15, 1] : 1 }}
                     transition={{ duration: 0.6, delay: 0.1 }}
-                    className="px-2 py-0.5 rounded-full text-[12px] font-semibold border"
+                    className="px-2 py-0.5 rounded-full text-[13px] font-semibold border"
                     style={
                       on
                         ? { backgroundColor: ing.color, borderColor: ing.color, color: '#0f172a' }
@@ -355,7 +354,7 @@ function BuildScene({ stage }: { stage: number }) {
                 </motion.div>
               )}
               {PROMPT_ORDER.filter((id) => have.includes(id)).map((id) => (
-                <Seg key={id} id={id} glow={id === newest}>
+                <Seg key={id} id={id} glow={id === newest} dim={stage > 1 && id !== newest}>
                   {POSTER_SEGS[id]}
                 </Seg>
               ))}
@@ -377,7 +376,7 @@ function BuildScene({ stage }: { stage: number }) {
             </div>
           </div>
           <div className="rounded-xl bg-white text-[#1f2937] shadow-lg border-2" style={{ borderColor: hl ? `${hl}aa` : 'rgba(0,0,0,0.1)' }}>
-            <div className="px-3 pt-1.5 pb-1 border-b border-black/10 text-[12px] font-bold uppercase tracking-wide text-black/45">🤖 Solo Bot&apos;s answer</div>
+            <div className="px-3 pt-1.5 pb-1 border-b border-black/10 text-[13px] font-bold uppercase tracking-wide text-black/45">🤖 Solo Bot&apos;s answer</div>
             <div className="px-2 py-2 space-y-1.5 leading-snug">
               {POSTER_ANSWERS[stage].map((l) => (
                 <AnswerLine key={`${l.id}-${l.text}`} line={l} hl={l.hl ? hl : null} />
@@ -463,7 +462,7 @@ function Fence({ delay = 0 }: { delay?: number }) {
       className="w-full rounded bg-slate-300 text-slate-800 font-mono font-bold text-[15px] px-2 leading-6 flex items-center justify-between"
     >
       <span>&quot;&quot;&quot;</span>
-      <span className="text-[11px] font-sans font-semibold tracking-wide uppercase text-slate-600">🧱 fence</span>
+      <span className="text-[13px] font-sans font-semibold tracking-wide uppercase text-slate-600">🧱 fence</span>
     </motion.div>
   );
 }
@@ -506,7 +505,7 @@ function DelimitersScene() {
               <div>{TODO}</div>
             </div>
             <Fence delay={1.0} />
-            <div className="text-[12px] text-black/45 text-right">### works too</div>
+            <div className="text-[13px] text-black/45 text-right">### works too</div>
           </PromptPaper>
           <Paper title="Answer" width={500} border="#4ade80">
             <div>Over 14 days, all 6 bean plants slowly leaned toward the window. The notes also say a funny title is still to do.</div>
@@ -547,7 +546,7 @@ function StepByStepScene() {
               </div>
             </Paper>
           </div>
-          <Verdict ok={false} delay={0.4}>✗ A rushed guess (made-up slip)</Verdict>
+          <Verdict ok={false} delay={0.4}>✗ Rushed and wrong (example)</Verdict>
         </div>
 
         {/* step by step */}
@@ -562,19 +561,19 @@ function StepByStepScene() {
             className="rounded-xl border-2 border-emerald-400/70 px-4 py-3 text-[#1f2937] shadow-lg"
             style={{ backgroundColor: '#fefce8', backgroundImage: 'linear-gradient(#e0f2fe 1px, transparent 1px)', backgroundSize: '100% 30px' }}
           >
-            <div className="text-[12px] font-bold uppercase tracking-wide text-black/45 mb-1">🤖 Answer (scrap paper)</div>
+            <div className="text-[13px] font-bold uppercase tracking-wide text-black/45 mb-1">🤖 Answer (scrap paper)</div>
             {steps.map((s, i) => (
-              <motion.div key={s.n} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.0 + i * 0.6 }} className="flex items-center gap-2 text-[16px] leading-[30px]">
-                <span className="text-[12px] font-bold rounded px-1.5" style={{ backgroundColor: `${cyan}40` }}>
+              <motion.div key={s.n} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 + i * 0.35 }} className="flex items-center gap-2 text-[16px] leading-[30px]">
+                <span className="text-[13px] font-bold rounded px-1.5" style={{ backgroundColor: `${cyan}40` }}>
                   {s.n}
                 </span>
                 <span className="font-mono">{s.t}</span>
-                <motion.span initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.3 + i * 0.6 }} className="text-emerald-600 font-bold">
+                <motion.span initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.8 + i * 0.35 }} className="text-emerald-600 font-bold">
                   ✓
                 </motion.span>
               </motion.div>
             ))}
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3.0 }} className="text-[18px] font-bold leading-[30px]">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }} className="text-[18px] font-bold leading-[30px]">
               Average: 4 cm ✅
             </motion.div>
           </div>
@@ -616,10 +615,10 @@ function IterateScene() {
             return (
               <motion.div
                 key={n.t}
-                initial={{ opacity: 0, scale: 0.6 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, scale: 0.6, x: '-50%', y: '-50%' }}
+                animate={{ opacity: 1, scale: 1, x: '-50%', y: '-50%' }}
                 transition={{ ...spring, delay: 0.2 + i * 0.2 }}
-                className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full px-4 py-2 bg-navy-700 border-2 border-accent-blue/60 text-[16px] font-semibold text-white whitespace-nowrap"
+                className="absolute rounded-full px-4 py-2 bg-navy-700 border-2 border-accent-blue/60 text-[16px] font-semibold text-white whitespace-nowrap"
                 style={{ left: 170 + R * Math.cos(rad), top: 170 + R * Math.sin(rad) }}
               >
                 {n.t}
@@ -652,7 +651,7 @@ function IterateScene() {
               </motion.div>
             ))}
           </div>
-          <div className="mt-2 text-right text-[12px] text-white/45">bars = clarity meter</div>
+          <div className="mt-2 text-right text-[13px] text-white/45">bars = clarity meter</div>
         </div>
       </div>
     </Scene>

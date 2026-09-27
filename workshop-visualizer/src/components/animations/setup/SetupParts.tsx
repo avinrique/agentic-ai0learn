@@ -108,7 +108,8 @@ export type Tone = 'plain' | 'ok' | 'err' | 'dim' | 'warn' | 'ai' | 'note';
 
 export type TermLine =
   | { t: 'cmd'; cmd: string; where?: Where; venv?: boolean; hlVenv?: boolean; hlFolder?: boolean }
-  | { t: 'out'; text: string; tone?: Tone }
+  /** `typed` = what the student types after a question, like the "y" after [y/N]. */
+  | { t: 'out'; text: string; tone?: Tone; typed?: string }
   | { t: 'idle'; where?: Where; venv?: boolean; hlVenv?: boolean; hlFolder?: boolean };
 
 const TONE: Record<Tone, string> = {
@@ -255,6 +256,7 @@ export function Terminal({
                 style={{ color: TONE[l.tone ?? 'plain'] }}
               >
                 {l.text === '' ? '\u00a0' : l.text}
+                {l.typed && <span className="text-white font-semibold">{l.typed}</span>}
               </motion.div>
             );
           }
@@ -307,26 +309,67 @@ export const CMD = {
 
 export const PY_VERSION = 'Python 3.13.7';
 
-// Illustrative outputs. The AI's poem is the same example the Basic API lesson shows.
+// Outputs copy the real kit scripts (src/data/kit/scripts.ts: check_setup.py and run.py).
+// Version numbers, token counts and the AI's words are illustrative.
 export const REQUIREMENTS = ['openai', 'python-dotenv', 'tiktoken'];
 
 export const PIP_OUT: TermLine[] = [
   { t: 'out', text: 'Collecting openai (from -r requirements.txt (line 1))', tone: 'plain' },
   { t: 'out', text: 'Collecting python-dotenv (from -r requirements.txt (line 2))', tone: 'plain' },
   { t: 'out', text: 'Collecting tiktoken (from -r requirements.txt (line 3))', tone: 'plain' },
-  { t: 'out', text: 'Collecting httpx, pydantic, regex, … (helpers they need)', tone: 'dim' },
-  { t: 'out', text: 'Installing collected packages: …, tiktoken, python-dotenv, openai', tone: 'dim' },
-  { t: 'out', text: 'Successfully installed openai-… python-dotenv-… tiktoken-… (+ helpers)', tone: 'ok' },
+  { t: 'out', text: 'Collecting httpx<1,>=0.23.0 (from openai->-r requirements.txt (line 1))', tone: 'dim' },
+  { t: 'out', text: '…', tone: 'dim' },
+  { t: 'out', text: 'Installing collected packages: … tiktoken, python-dotenv, openai', tone: 'dim' },
+  { t: 'out', text: 'Successfully installed … openai-… python-dotenv-… tiktoken-…', tone: 'ok' },
 ];
 
-export const CHECK_OUT: TermLine[] = [
-  { t: 'out', text: 'Checking your setup...', tone: 'dim' },
-  { t: 'out', text: `✓ ${PY_VERSION}`, tone: 'ok' },
-  { t: 'out', text: '✓ openai is installed', tone: 'ok' },
-  { t: 'out', text: '✓ Found OPENAI_API_KEY in .env', tone: 'ok' },
-  { t: 'out', text: 'Make one tiny test call to OpenAI? It costs a tiny fraction of a cent. [y/N] y', tone: 'warn' },
-  { t: 'out', text: '✓ OpenAI answered: "Hello!"', tone: 'ok' },
-  { t: 'out', text: 'All set! Next: python run.py part1/basic_api.py', tone: 'note' },
+/** What check_setup.py prints for a given state (mirrors the real script, line for line). */
+export function checkSetupLines({ inVenv, installed, envFile }: { inVenv: boolean; installed: boolean; envFile: boolean }): TermLine[] {
+  const lines: TermLine[] = [
+    { t: 'out', text: 'Checking your setup...', tone: 'plain' },
+    { t: 'out', text: `✓ ${PY_VERSION}`, tone: 'ok' },
+  ];
+  let problems = 0;
+  const problem = (msg: string, fix: string) => {
+    problems += 1;
+    lines.push({ t: 'out', text: `✗ ${msg}`, tone: 'err' }, { t: 'out', text: `  Fix: ${fix}`, tone: 'warn' });
+  };
+  for (const pkg of REQUIREMENTS) {
+    if (installed) lines.push({ t: 'out', text: `✓ ${pkg} is installed`, tone: 'ok' });
+    else problem(`${pkg} is not installed`, 'pip install -r requirements.txt');
+  }
+  if (!installed && !inVenv) {
+    lines.push(
+      { t: 'out', text: "  Tip: your .venv isn't turned on. Mac/Linux: source .venv/bin/activate", tone: 'plain' },
+      { t: 'out', text: '       Windows: .venv\\Scripts\\activate', tone: 'plain' },
+    );
+  }
+  if (!envFile) problem('No .env file with your API key', 'copy .env.example to a new file called .env, then paste your key into it');
+  else if (installed) lines.push({ t: 'out', text: '✓ Found OPENAI_API_KEY in .env', tone: 'ok' });
+  if (problems) {
+    lines.push({ t: 'out', text: '', tone: 'plain' }, { t: 'out', text: 'Fix the lines marked ✗, then run this check again.', tone: 'plain' });
+    return lines;
+  }
+  lines.push(
+    { t: 'out', text: 'Make one tiny test call to OpenAI? (costs a tiny fraction of a cent) [y/N] ', tone: 'warn', typed: 'y' },
+    { t: 'out', text: '✓ OpenAI answered: Welcome aboard, future AI builder!', tone: 'ok' },
+    { t: 'out', text: '  Tokens used: 20 in + 7 out = 27', tone: 'dim' },
+    { t: 'out', text: 'All set! Next: python run.py part1/basic_api.py', tone: 'note' },
+  );
+  return lines;
+}
+
+export const CHECK_OUT: TermLine[] = checkSetupLines({ inVenv: true, installed: true, envFile: true });
+
+/** run.py's own messages when something is missing. */
+export const RUN_NO_LIBS: TermLine[] = [
+  { t: 'out', text: "The course libraries aren't installed yet, or your .venv isn't turned on.", tone: 'err' },
+  { t: 'out', text: 'Turn on the .venv (see README.md), then run:  pip install -r requirements.txt', tone: 'plain' },
+];
+export const RUN_NO_KEY: TermLine[] = [
+  { t: 'out', text: 'No API key found.', tone: 'err' },
+  { t: 'out', text: 'Copy .env.example to a new file called .env and paste your key after OPENAI_API_KEY=', tone: 'plain' },
+  { t: 'out', text: 'Then check it with:  python check_setup.py', tone: 'plain' },
 ];
 
 export const RUN_OUT: TermLine[] = [
@@ -342,9 +385,12 @@ export const RUN_OUT: TermLine[] = [
 
 /** A gold key with a paper tag, the lesson's picture of an API key. */
 export function KeyArt({ size = 220, tag = 'sk-proj-…', glow = false }: { size?: number; tag?: string; glow?: boolean }) {
+  // The paper tag grows with its text, so the key's name never spills out.
+  const tagW = Math.round(26 + tag.length * 8);
+  const W = 172 + tagW;
   return (
-    <svg viewBox="0 0 240 110" width={size} height={(size * 110) / 240} aria-hidden className="overflow-visible">
-      {glow && <ellipse cx="80" cy="55" rx="90" ry="45" fill={GOLD} opacity="0.12" />}
+    <svg viewBox={`0 0 ${W} 110`} width={size} height={(size * 110) / W} aria-hidden className="overflow-visible">
+      {glow && <circle cx="40" cy="55" r="44" fill={GOLD} opacity="0.14" />}
       {/* bow */}
       <circle cx="40" cy="55" r="26" fill={GOLD} stroke="#b45309" strokeWidth="3" />
       <circle cx="40" cy="55" r="10" fill="#0f0f2a" stroke="#b45309" strokeWidth="2" />
@@ -352,11 +398,11 @@ export function KeyArt({ size = 220, tag = 'sk-proj-…', glow = false }: { size
       <rect x="64" y="48" width="96" height="14" rx="3" fill={GOLD} stroke="#b45309" strokeWidth="2.5" />
       <path d="M122 62 v14 h10 v-8 h8 v10 h10 v-16" fill={GOLD} stroke="#b45309" strokeWidth="2.5" strokeLinejoin="round" />
       {/* string + tag */}
-      <path d="M40 29 Q70 5 170 18" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" fill="none" />
-      <g transform="rotate(-4 200 22)">
-        <rect x="160" y="6" width="80" height="30" rx="4" fill="#fffdf7" stroke="#d6d3d1" />
-        <circle cx="168" cy="21" r="3" fill="#0f0f2a" />
-        <text x="175" y="26" fontSize="12" fontFamily="JetBrains Mono, monospace" fill="#1f2937">{tag}</text>
+      <path d="M40 29 Q80 2 172 20" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" fill="none" />
+      <g transform={`rotate(-3 ${172 + tagW / 2} 22)`}>
+        <rect x="170" y="6" width={tagW} height="30" rx="4" fill="#fffdf7" stroke="#d6d3d1" />
+        <circle cx="179" cy="21" r="3" fill="#0f0f2a" />
+        <text x="188" y="26" fontSize="13" fontFamily="JetBrains Mono, monospace" fill="#1f2937">{tag}</text>
       </g>
     </svg>
   );

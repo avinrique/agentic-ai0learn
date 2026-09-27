@@ -148,10 +148,10 @@ export default function PromptFixerPlayground() {
             >
               {tip ? (
                 <>
-                  <span className="font-bold" style={{ color: ING[tip].color }}>
-                    💡 Next:{' '}
-                  </span>
-                  <span className="text-white/85">{s.tips[tip]}</span>
+                  <div className="font-bold mb-0.5" style={{ color: ING[tip].color }}>
+                    💡 Next best ingredient
+                  </div>
+                  <div className="text-white/85">{s.tips[tip]}</div>
                 </>
               ) : (
                 <span className="text-emerald-200">✨ Crystal clear! Notice you didn&apos;t need every chip, only the ones this job uses.</span>
@@ -163,7 +163,7 @@ export default function PromptFixerPlayground() {
         {/* ---------- the assembled prompt ---------- */}
         <div className="flex-1 min-w-0 flex flex-col gap-1.5">
           <div className="text-[13px] text-white/60">3. Your prompt, built live:</div>
-          <div className="flex-1 min-h-0 rounded-xl bg-[#fffdf7] text-[#1f2937] border-2 border-[#f9a8d4]/70 shadow-lg overflow-hidden">
+          <div className="min-h-0 rounded-xl bg-[#fffdf7] text-[#1f2937] border-2 border-[#f9a8d4]/70 shadow-lg overflow-hidden">
             <div className="px-3 py-2 space-y-1.5 text-[14px] leading-snug">
               {on('role') && <Seg id="role">{s.lines.role}</Seg>}
               <motion.div layout className="px-2.5 py-1 rounded-md bg-black/[0.05] text-[15px] font-medium">
@@ -179,7 +179,7 @@ export default function PromptFixerPlayground() {
                 <motion.div layout className="space-y-1">
                   {on('fence') && <FenceLine />}
                   <div className="px-2.5 py-1 rounded-md border border-dashed border-black/20 text-[13px] text-black/70 leading-snug">
-                    <div className="text-[12px] font-bold uppercase tracking-wide text-black/40">pasted story</div>
+                    <div className="text-[13px] font-bold uppercase tracking-wide text-black/40">pasted story</div>
                     {s.pasted.slice(0, -1).map((p) => (
                       <div key={p}>{p}</div>
                     ))}
@@ -202,7 +202,7 @@ export default function PromptFixerPlayground() {
             <AgentBot color={TEAM.solo.color} badge={TEAM.solo.badge} size={50} mood={busy ? 'working' : moodFor(score)} active={busy} />
             <div className="text-[13px] text-white/60 pb-2">{busy ? '✍️ writing…' : "4. Solo Bot's answer"}</div>
           </div>
-          <div key={sig} className="flex-1 min-h-0 rounded-xl bg-white text-[#1f2937] shadow-lg px-2 py-2 space-y-1.5 overflow-hidden">
+          <div key={sig} className="min-h-0 rounded-xl bg-white text-[#1f2937] shadow-lg px-2 py-2 space-y-1.5 overflow-hidden">
             {lines.map((l, i) => (
               <AnswerRow key={`${i}-${l.text}`} line={l} i={i} />
             ))}

@@ -32,9 +32,9 @@ function readme(): string {
 Every program from the course, ready to run on your own computer.
 Each file is the exact program you watched in a lesson.
 
-**First time?** Do the "Get Set Up" lesson first. It walks through every step below.
+**First time?** Do the "Get Set Up" lesson first (Part 1). It walks through every step below.
 
-> **On a Mac**, type \`python3\` instead of \`python\` in the commands below.
+> **On a Mac**, type \`python3\` instead of \`python\` until your toolbox is switched on (step 3).
 > **On Windows**, if \`python\` isn't found, try \`py\`.
 
 ## 1. Check your Python
@@ -47,26 +47,27 @@ No Python yet? Get it from https://www.python.org/downloads/
 
 ## 2. Open a terminal in this folder
 
-The folder with this README in it (\`ai-course\`).
+This folder is called \`ai-course\` (the one with this README in it). Unzip it first if you haven't.
 
-## 3. Make a virtual environment
+## 3. Make a toolbox (a virtual environment)
 
-A virtual environment is a private box for this course's libraries, so they don't mix with anything else on your computer.
+The toolbox is a private folder called \`.venv\` that holds this course's libraries, so they don't mix with anything else on your computer.
 
     python -m venv .venv
 
-Now turn it on:
+Now switch it on:
 
 - **Mac / Linux:** \`source .venv/bin/activate\`
-- **Windows (PowerShell):** \`.venv\\Scripts\\Activate.ps1\`
-- **Windows (Command Prompt):** \`.venv\\Scripts\\activate.bat\`
+- **Windows:** \`.venv\\Scripts\\activate\`
 
-You'll see \`(.venv)\` at the start of the line. Turn it on again every time you open a new terminal.
-(If PowerShell says running scripts is disabled, use Command Prompt instead.)
+You'll see \`(.venv)\` at the start of the line. Switch it on again every time you open a new terminal.
+(Windows PowerShell says "running scripts is disabled"? Use Command Prompt instead.)
 
 ## 4. Install the libraries
 
     pip install -r requirements.txt
+
+This installs three libraries: \`openai\`, \`python-dotenv\` and \`tiktoken\`.
 
 ## 5. Add your API key
 
@@ -84,6 +85,7 @@ Keep \`.env\` secret: never share it, screenshot it or upload it. (The \`.gitign
     python check_setup.py
 
 It checks Python, the libraries and your key, then asks before making one tiny test call.
+✓ lines mean ready. A ✗ line tells you what's wrong, and the \`Fix:\` line under it tells you what to do.
 
 ## 7. Run your first program
 
@@ -101,6 +103,7 @@ ${programList}
 - Every run makes a real call to OpenAI, so it costs a tiny bit of money. Check the prices at https://openai.com/api/pricing
 - The AI's answers change every time. That's normal!
 - Change the code and run it again. Each lesson's "Run it yourself" box has ideas to try.
+- To stop a program that's waiting for you to type, press Ctrl+C.
 - Something wrong? Run \`python check_setup.py\`. It explains the most common problems.
 `;
 }

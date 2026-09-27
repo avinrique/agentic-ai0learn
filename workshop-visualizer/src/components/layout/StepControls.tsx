@@ -10,6 +10,7 @@ import StepProgressBar from '@/components/ui/StepProgressBar';
 import StepTimeline from '@/components/ui/StepTimeline';
 import PaceToggle from '@/components/ui/PaceToggle';
 import { QuizLauncher } from '@/components/ui/LessonQuiz';
+import RunItButton from '@/components/ui/RunItButton';
 
 interface StepControlsProps {
   lessonId: string;
@@ -100,7 +101,8 @@ export default function StepControls({ lessonId }: StepControlsProps) {
           </span>
         </div>
 
-        {/* Quick check quiz, offered on the last step */}
+        {/* Quick check quiz (and, for code lessons, running the program), offered on the last step */}
+        {isLastStep && <RunItButton lessonId={lessonId} compact />}
         {isLastStep && <QuizLauncher lessonId={lessonId} />}
 
         {/* Next lesson */}

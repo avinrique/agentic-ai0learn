@@ -16,7 +16,7 @@ export function GET(_request: Request, { params }: { params: { path: string[] } 
   const fileName = kitPath.split('/').pop();
   return new Response(file.content, {
     headers: {
-      'Content-Type': `${kitPath.endsWith('.md') ? 'text/markdown' : 'text/plain'}; charset=utf-8`,
+      'Content-Type': 'text/plain; charset=utf-8',
       'Content-Disposition': `attachment; filename="${fileName}"`,
     },
   });

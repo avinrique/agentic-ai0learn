@@ -52,12 +52,14 @@ export const SCENARIOS: Scenario[] = [
     answer: (f) => {
       const L: ALine[] = [];
       const bottoms = f.limits ? 'bottom numbers' : 'denominators';
+      const eighths = f.limits ? 'both bottom numbers are 8' : 'common denominator 8';
       if (f.role) L.push({ by: 'role', text: "Great question! Let's work it out together. 😊" });
       if (f.context) L.push({ by: 'context', text: `Different ${bottoms} are tricky, so first we make them match.` });
       const worked = f.step || f.format || f.example;
       if (!worked) {
         if (f.role) L.push({ by: 'role', text: `Hint: make the ${bottoms} the same, then add the tops.` });
-        L.push({ by: 'base', text: '3/4 + 1/8 = 7/8' });
+        if (f.limits) L.push({ by: 'limits', text: '3/4 + 1/8 = 7/8 (make both bottom numbers 8 first)' });
+        else L.push({ by: 'base', text: '3/4 + 1/8 = 7/8 (using a common denominator of 8)' });
       } else {
         let steps: { by: ChipId; text: string }[];
         if (f.step && f.example) {
@@ -71,8 +73,13 @@ export const SCENARIOS: Scenario[] = [
             { by: 'step', text: 'Turn 3/4 into eighths: ×2 on top and bottom gives 6/8.' },
             { by: 'step', text: 'Add the tops: 6/8 + 1/8 = 7/8.' },
           ];
+        } else if (f.example && f.format) {
+          steps = [
+            { by: 'example', text: '3/4 + 1/8 → 6/8 + 1/8' },
+            { by: 'example', text: `6/8 + 1/8 = 7/8 (${eighths})` },
+          ];
         } else if (f.example) {
-          steps = [{ by: 'example', text: '3/4 + 1/8 → 6/8 + 1/8 = 7/8' }];
+          steps = [{ by: 'example', text: `3/4 + 1/8 → 6/8 + 1/8 = 7/8 (${eighths})` }];
         } else {
           steps = [
             { by: 'format', text: `Make the ${bottoms} match: 3/4 = 6/8` },
@@ -94,7 +101,7 @@ export const SCENARIOS: Scenario[] = [
     lines: {
       role: 'You are a fun party planner.',
       context: "It's my 12th birthday: pizza and a movie at my house on Saturday at 6 pm. It's for my classmates.",
-      format: 'Layout: a title, then When, Where and Bring, one line each.',
+      format: 'Layout: a title, then When, Where and What, one line each.',
       example: 'Make the title like this one: "Pizza Party Alert! 🍕"',
       limits: 'Under 50 words. Ask them to reply by Thursday.',
     },
@@ -102,7 +109,7 @@ export const SCENARIOS: Scenario[] = [
     weights: { context: 35, format: 20, limits: 20, example: 15, role: 10 },
     tips: {
       context: "Add context: the AI can't guess your date, place or plans.",
-      format: 'Add a format: When / Where / Bring lines are easy to scan.',
+      format: 'Add a format: When / Where / What lines are easy to scan.',
       limits: 'Add limits: keep it short and ask guests to reply.',
       example: 'Add an example: show the kind of title you like.',
       role: 'Add a role: a fun party planner adds energy.',
@@ -117,7 +124,7 @@ export const SCENARIOS: Scenario[] = [
       if (f.format) {
         L.push({ by: 'format', text: `🕕 **When:** ${when}` });
         L.push({ by: 'format', text: `📍 **Where:** ${where}` });
-        L.push({ by: 'format', text: `🎒 **Bring:** ${f.context ? '{{context|a pillow for the movie}}' : '[what to bring]'}` });
+        L.push({ by: 'format', text: `🍕 **What:** ${f.context ? '{{context|pizza and a movie}}' : '[what we will do]'}` });
       } else if (f.context) {
         L.push({ by: 'context', text: `Come and celebrate my {{context|12th birthday}} with {{context|pizza and a movie}}, ${when} at ${where}!` });
       } else {
@@ -160,7 +167,9 @@ export const SCENARIOS: Scenario[] = [
       if (f.role) L.push({ by: 'role', text: 'What a lovely story! 🐧 Here is my summary:' });
       if (f.example) {
         L.push({ by: 'example', kind: 'bullet', text: '**Who:** a young penguin who wishes he could fly' });
+        if (!f.format) L.push({ by: 'example', kind: 'bullet', text: '**Where:** an icy hill by the sea' });
         L.push({ by: 'example', kind: 'bullet', text: "**Problem:** he can't fly, and a seal attacks" });
+        if (!f.format) L.push({ by: 'example', kind: 'bullet', text: '**Middle:** he keeps splashing into the sea' });
         L.push({ by: 'example', kind: 'bullet', text: '**Ending:** his fast swimming saves his friends' });
       } else if (f.format) {
         L.push({ by: 'format', kind: 'bullet', text: '**Who:** Pip, a young penguin.' });

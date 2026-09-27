@@ -11,7 +11,7 @@ export const envExample = `# Copy this file to a new file called .env, then past
 OPENAI_API_KEY=sk-your-key-here
 `;
 
-export const gitignore = `# Your secret key and your private Python box stay on your computer.
+export const gitignore = `# These stay on your computer: your secret key, your toolbox and Python's cache.
 .env
 .venv/
 __pycache__/
@@ -47,8 +47,8 @@ def list_programs():
 def friendly_hint(error):
     """A plain-English explanation for the most common errors (or None)."""
     if isinstance(error, ModuleNotFoundError) and error.name in ("openai", "dotenv", "tiktoken"):
-        return ("The course libraries aren't installed yet, or your .venv isn't turned on. "
-                "Turn on the .venv (see README.md), then run: pip install -r requirements.txt")
+        return ("The course libraries aren't installed yet, or your toolbox (.venv) isn't switched on. "
+                "Switch it on (see README.md), then run: pip install -r requirements.txt")
     try:
         import openai
     except ImportError:
@@ -58,7 +58,7 @@ def friendly_hint(error):
     if isinstance(error, openai.RateLimitError):
         if getattr(error, "code", None) == "insufficient_quota" or "insufficient_quota" in str(error):
             return ("Your OpenAI account has no credit left (insufficient_quota). "
-                    "Add credit in the Billing page on platform.openai.com. Retrying won't help.")
+                    "Add credit on the Billing page at platform.openai.com. Trying again won't help.")
         return "Too many requests in a short time. Wait a minute, then try again."
     if isinstance(error, openai.APIConnectionError):
         return "Couldn't reach OpenAI. Check your internet connection, then try again."
@@ -86,11 +86,11 @@ if not os.path.isfile(program):
 try:
     from dotenv import load_dotenv
 except ImportError:
-    print("The course libraries aren't installed yet, or your .venv isn't turned on.")
-    print("Turn on the .venv (see README.md), then run:  pip install -r requirements.txt")
+    print("The course libraries aren't installed yet, or your toolbox (.venv) isn't switched on.")
+    print("Switch it on (see README.md), then run:  pip install -r requirements.txt")
     sys.exit(1)
 
-load_dotenv(os.path.join(KIT_FOLDER, ".env"))
+load_dotenv(os.path.join(KIT_FOLDER, ".env"), override=True)  # the key in .env wins
 if not os.environ.get("OPENAI_API_KEY", "").strip():
     print("No API key found.")
     print("Copy .env.example to a new file called .env and paste your key after OPENAI_API_KEY=")
@@ -125,7 +125,6 @@ import sys
 
 KIT_FOLDER = os.path.dirname(os.path.abspath(__file__))
 ENV_FILE = os.path.join(KIT_FOLDER, ".env")
-problems = 0
 
 # The check marks should never crash an old terminal.
 for stream in (sys.stdout, sys.stderr):
@@ -138,60 +137,54 @@ def ok(message):
 
 
 def problem(message, fix):
-    global problems
-    problems += 1
+    """Show what's wrong and how to fix it, then stop: fix one thing at a time."""
     print(f"✗ {message}")
     print(f"  Fix: {fix}")
+    sys.exit(1)
 
 
 print("Checking your setup...")
 
 # 1. Python 3.10 or newer
 v = sys.version_info
-if v >= (3, 10):
-    ok(f"Python {v.major}.{v.minor}.{v.micro}")
-else:
+if v < (3, 10):
     problem(f"Python {v.major}.{v.minor} is too old (you need 3.10 or newer)",
             "install a newer Python from https://www.python.org/downloads/")
+ok(f"Python {v.major}.{v.minor}.{v.micro}")
 
-# 2. The three libraries
-missing = False
+# 2. The three libraries. They live in the toolbox (.venv), so it must be switched on.
+toolbox_on = sys.prefix != sys.base_prefix
+switch_on = r".venv\Scripts\activate" if os.name == "nt" else "source .venv/bin/activate"
 for module, package in [("openai", "openai"), ("dotenv", "python-dotenv"), ("tiktoken", "tiktoken")]:
     try:
         __import__(module)
-        ok(f"{package} is installed")
     except ImportError:
-        missing = True
-        problem(f"{package} is not installed", "pip install -r requirements.txt")
-if missing and sys.prefix == sys.base_prefix:
-    print("  Tip: your .venv isn't turned on. Mac/Linux: source .venv/bin/activate")
-    print(r"       Windows: .venv\Scripts\activate")
+        if toolbox_on:
+            problem(f"{package} is not installed", "pip install -r requirements.txt")
+        else:
+            problem(f"{package} is not installed",
+                    f"switch on the toolbox ({switch_on}), then run pip install -r requirements.txt")
+    ok(f"{package} is installed")
 
-# 3. The API key, from the .env file. (Check it BEFORE making a client:
-#    with no key at all, OpenAI() stops with an error straight away.)
-try:
-    from dotenv import load_dotenv
-    load_dotenv(ENV_FILE)
-except ImportError:
-    pass
+# 3. The API key, from the .env file. We check it BEFORE making a client:
+#    with no key at all, OpenAI() stops with an error straight away.
+from dotenv import dotenv_values, load_dotenv
+
+load_dotenv(ENV_FILE, override=True)  # the key in .env wins over an old one saved elsewhere
+key_in_file = (dotenv_values(ENV_FILE).get("OPENAI_API_KEY") or "").strip()
 key = os.environ.get("OPENAI_API_KEY", "").strip()
-if not key:
-    if os.path.exists(ENV_FILE):
-        problem("Your .env file has no key in it", "open .env and paste your key after OPENAI_API_KEY=")
-    else:
-        problem("No .env file with your API key", "copy .env.example to a new file called .env, then paste your key into it")
+if not key and not os.path.exists(ENV_FILE):
+    problem("No .env file with OPENAI_API_KEY", "copy .env.example to .env and paste your key")
+elif not key:
+    problem("Your .env file has no key in it", "open .env and paste your key after OPENAI_API_KEY=")
 elif key == "sk-your-key-here":
     problem("The key in .env is still the example one", "replace sk-your-key-here with your real key")
 elif not key.startswith("sk-"):
     problem("Your key doesn't start with sk-", "copy the whole key again from https://platform.openai.com/api-keys")
-elif os.path.exists(ENV_FILE):
+elif key_in_file:
     ok("Found OPENAI_API_KEY in .env")
 else:
-    ok("Found OPENAI_API_KEY (from your computer's settings, not .env)")
-
-if problems:
-    print("\nFix the lines marked ✗, then run this check again.")
-    sys.exit(1)
+    ok("Found OPENAI_API_KEY (in your computer's settings, not in .env)")
 
 # 4. One tiny test call, only if you say yes
 try:
@@ -205,32 +198,27 @@ if answer.strip().lower() not in ("y", "yes"):
 
 from openai import OpenAI, APIConnectionError, APIStatusError, AuthenticationError, RateLimitError
 
-client = OpenAI(api_key=key)
+client = OpenAI(api_key=key, timeout=30)
 try:
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": "Say hello to a new AI student in 5 words or fewer."}],
+        messages=[{"role": "user", "content": "Say hello in one word."}],
     )
 except AuthenticationError:
     problem("OpenAI didn't accept your key (401: it's wrong, or it was deleted)",
             "make a new key at https://platform.openai.com/api-keys and paste it into .env")
-    sys.exit(1)
 except RateLimitError as error:
-    if getattr(error, "code", None) == "insufficient_quota" or "insufficient_quota" in str(error):
+    if error.code == "insufficient_quota" or "insufficient_quota" in str(error):
         problem("Your key works, but the account has no credit (insufficient_quota)",
-                "add credit in the Billing page on platform.openai.com. Retrying won't help.")
+                "add credit on the Billing page at platform.openai.com. Trying again won't help.")
     else:
         problem("Too many requests right now (RateLimitError)", "wait a minute, then run this check again")
-    sys.exit(1)
 except APIConnectionError:
     problem("Couldn't reach OpenAI (APIConnectionError)", "check your internet connection, then try again")
-    sys.exit(1)
 except APIStatusError as error:
-    problem(f"OpenAI sent back an error ({error.status_code}): {error.message}", "try again in a minute")
-    sys.exit(1)
+    problem(f"OpenAI sent back an error ({error.status_code}): {error.message}", "wait a minute, then try again")
 
-usage = response.usage
-ok(f"OpenAI answered: {response.choices[0].message.content}")
-print(f"  Tokens used: {usage.prompt_tokens} in + {usage.completion_tokens} out = {usage.total_tokens}")
+reply = (response.choices[0].message.content or "").strip().strip('"')
+ok(f'OpenAI answered: "{reply}"')
 print("All set! Next: python run.py part1/basic_api.py")
 `;

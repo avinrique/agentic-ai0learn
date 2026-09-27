@@ -102,7 +102,7 @@ export function Seg({ id, children, glow = false, dim = false, className = '' }:
       layout
       initial={{ opacity: 0, x: -14 }}
       animate={{
-        opacity: dim ? 0.55 : 1,
+        opacity: dim ? 0.6 : 1,
         x: 0,
         boxShadow: glow ? [`0 0 0px ${c}00`, `0 0 14px ${c}aa`, `0 0 0px ${c}00`] : `0 0 0px ${c}00`,
       }}
@@ -119,7 +119,7 @@ export function IngTag({ id, small = false }: { id: IngId; small?: boolean }) {
   const ing = ING[id];
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full font-semibold whitespace-nowrap ${small ? 'px-1.5 py-0 text-[11px]' : 'px-2 py-0.5 text-[12px]'}`}
+      className={`inline-flex items-center gap-1 rounded-full font-semibold whitespace-nowrap ${small ? 'px-2 py-0 text-[13px]' : 'px-2.5 py-0.5 text-[14px]'}`}
       style={{ color: '#0f172a', backgroundColor: ing.color }}
     >
       {ing.icon} {ing.label}
