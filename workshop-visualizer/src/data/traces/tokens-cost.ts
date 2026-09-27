@@ -145,7 +145,7 @@ function tokensCostSteps(s: Story): TraceStep[] {
       at: 'import tiktoken',
       trig: 'setup-tiktoken',
       set: { tiktoken: '<module tiktoken>' },
-      exp: "tiktoken is OpenAI's token counter. It cuts text into tokens right on your computer, for free, without calling the API. (Install it once: pip install tiktoken.)",
+      exp: "tiktoken is OpenAI's token counter. It cuts text into tokens right on your computer, for free, without calling the API. It came in the toolbox we filled in Setup.",
     },
     {
       at: 'client = OpenAI()',
