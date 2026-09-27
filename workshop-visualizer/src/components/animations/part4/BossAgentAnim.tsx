@@ -11,20 +11,28 @@ import { bossAgentScenes, type BossScene, type Helper, type NotepadNote, type Or
 
 const ACCENT = '#22d3ee';
 
-const HELPERS: Record<Helper, { bot: { name: string; color: string; badge: string; role: string }; fn: string; param: string; prompt: string }> = {
+const HELPERS: Record<
+  Helper,
+  { bot: { name: string; color: string; badge: string; role: string }; fn: string; param: string; prompt: string; desc: string }
+> = {
   rita: {
     bot: TEAM.researcher,
     fn: 'ask_researcher',
     param: 'question',
     prompt: '"You are Rita, a researcher. Answer with short, true facts."',
+    desc: 'Ask Rita the researcher to find facts.',
   },
   milo: {
     bot: TEAM.math,
     fn: 'ask_math_whiz',
     param: 'problem',
     prompt: '"You are Milo, a math whiz. Solve it step by step."',
+    desc: 'Ask Milo the math whiz to do a calculation.',
   },
 };
+
+/** The three menu steps, in order: the whole menu, then the descriptions, then the one parameter. */
+type MenuPart = 'names' | 'desc' | 'param' | null;
 
 const SETUP_PHASES = ['intro', 'runAgent', 'helpers', 'tools', 'phonebook', 'bossPrompt', 'inbox', 'notepad'];
 
@@ -102,7 +110,7 @@ function SlipChip({ slip, active }: { slip: OrderSlip; active: boolean }) {
 
 type DeskSize = 'big' | 'mid' | 'small';
 
-function HelperDesk({ who, s, size }: { who: Helper; s: BossScene; size: DeskSize }) {
+function HelperDesk({ who, s, size, menu }: { who: Helper; s: BossScene; size: DeskSize; menu: MenuPart }) {
   const h = HELPERS[who];
   const slip = s.current >= 0 ? s.slips[s.current] : undefined;
   const mine = slip?.to === who;
@@ -110,7 +118,8 @@ function HelperDesk({ who, s, size }: { who: Helper; s: BossScene; size: DeskSiz
   const llm = mine && s.phase === 'helperLLM';
   const answered = mine && s.phase === 'noteBack';
   const focused = s.focus === who;
-  const plateGlow = s.phase === 'tools' && (s.focus === 'all' || focused);
+  const plateGlow = menu === 'names';
+  const paramGlow = menu === 'param' && focused;
   const showPlate = size !== 'small' || s.phase === 'tools';
   const jobsDone = s.notepad.filter((n) => n.role === 'tool' && n.by === who).length;
 
@@ -138,6 +147,20 @@ function HelperDesk({ who, s, size }: { who: Helper; s: BossScene; size: DeskSiz
         dimmed={size === 'small'}
       />
       <div className="flex-1 min-w-0 flex flex-col gap-2">
+        {/* The order slip lands on this desk (it slides in from Max's side, on its own row above the plate) */}
+        {big && slip && mine && s.phase === 'send' && (
+          <motion.div
+            key={`slip-${slip.id}`}
+            className="rounded-md px-3 py-2 text-[15px] leading-snug shadow-lg"
+            style={{ background: '#fef3c7', color: '#1c1c44' }}
+            initial={{ x: -220, opacity: 0.4, rotate: -6 }}
+            animate={{ x: 0, opacity: 1, rotate: 0 }}
+            transition={{ duration: 0.9, ease: 'easeInOut' }}
+          >
+            <div className="font-mono text-[13px] font-semibold">📝 {slip.id}</div>
+            <div className="line-clamp-2">&quot;{slip.arg}&quot;</div>
+          </motion.div>
+        )}
         {showPlate && (
           <div
             className={`font-mono rounded px-2 py-0.5 self-start max-w-full break-words ${big ? 'text-[15px]' : 'text-[13px]'}`}
@@ -147,7 +170,26 @@ function HelperDesk({ who, s, size }: { who: Helper; s: BossScene; size: DeskSiz
               boxShadow: plateGlow ? `0 0 0 1px ${ACCENT}` : 'none',
             }}
           >
-            🔧 {h.fn}({h.param})
+            🔧 {h.fn}(
+            <span
+              className="rounded px-0.5"
+              style={paramGlow ? { background: '#fbbf2440', color: '#fde68a', boxShadow: '0 0 0 1px #fbbf24' } : undefined}
+            >
+              {h.param}
+            </span>
+            ){paramGlow && <span className="ml-2 font-sans text-amber-200">📝 one string</span>}
+          </div>
+        )}
+        {menu === 'desc' && (
+          <div
+            className={`rounded-md px-2 py-1 leading-snug ${big ? 'text-[16px]' : 'text-[13px]'}`}
+            style={{
+              background: focused ? '#fbbf2426' : 'rgba(255,255,255,0.04)',
+              boxShadow: focused ? '0 0 0 1.5px #fbbf24' : 'none',
+              color: focused ? '#fde68a' : 'rgba(255,255,255,0.6)',
+            }}
+          >
+            &quot;{h.desc}&quot;
           </div>
         )}
         {big && llm ? (
@@ -190,6 +232,10 @@ export default function BossAgentAnim() {
   const finished = s.phase === 'final' || s.phase === 'done' || s.phase === 'recap';
   const newNote = prev ? s.notepad.length > prev.notepad.length : false;
   const callsBump = prev ? s.maxCalls + s.helperCalls > prev.maxCalls + prev.helperCalls : false;
+  // Which part of the tool menu this step is about (1st menu step: names, 2nd: descriptions, 3rd: the parameter).
+  const menuParts: MenuPart[] = ['names', 'desc', 'param'];
+  const menu: MenuPart =
+    s.phase === 'tools' ? menuParts[Math.min(2, scenes.slice(0, idx).filter((x) => x.phase === 'tools').length)] : null;
 
   // Who is the focal point of this step?
   const helperFocus: Helper | null = s.focus === 'rita' || s.focus === 'milo' ? s.focus : null;
@@ -202,9 +248,8 @@ export default function BossAgentAnim() {
   const inboxBig = s.phase === 'inbox';
   const showSlips = !helperFocus && !setup && (s.slips.length > 0 || s.phase === 'reply' || s.phase === 'check');
 
-  // Where the flying slip / result note starts and lands (percent of the stage box).
+  // Where the result note starts (the helper's desk, percent of the stage box); it lands on Max's side.
   const spot = {
-    max: { left: '4%', top: '45%' },
     rita: { left: '50%', top: '22%' },
     milo: { left: '50%', top: '46%' },
   };
@@ -232,30 +277,51 @@ export default function BossAgentAnim() {
         </div>
       </div>
 
-      {/* One-idea banner, only on the steps that introduce it */}
-      {(s.phase === 'runAgent' || s.phase === 'phonebook') && (
+      {/* One-idea banner, only on the step that introduces the phone book */}
+      {s.phase === 'phonebook' && (
         <motion.div
           key={s.phase}
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl px-4 py-3 text-[16px] text-center"
+          className="rounded-xl px-4 py-3 text-center"
           style={{ background: `${ACCENT}12`, boxShadow: `inset 0 0 0 1.5px ${ACCENT}66` }}
         >
-          {s.phase === 'runAgent' ? (
-            <span>
-              <b className="font-mono" style={{ color: ACCENT }}>run_agent(system_prompt, task)</b> = 1 LLM call
-            </span>
-          ) : (
-            <span className="font-mono text-[15px]">
-              📖 &quot;ask_researcher&quot; → Rita 🔍 &nbsp;·&nbsp; &quot;ask_math_whiz&quot; → Milo 🧮
-            </span>
-          )}
+          <span className="font-mono text-[15px]">
+            📖 &quot;ask_researcher&quot; → Rita 🔍 &nbsp;·&nbsp; &quot;ask_math_whiz&quot; → Milo 🧮
+          </span>
         </motion.div>
       )}
 
       {/* Stage */}
       <div className="relative flex-1 min-h-0 flex gap-4">
-        {!(finished && s.final) && (
+        {/* run_agent: the one building block, big, with every agent in the office built from it */}
+        {s.phase === 'runAgent' && (
+          <motion.div
+            key="runAgent"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex-1 min-h-0 flex flex-col items-center justify-center gap-8"
+          >
+            <div
+              className="rounded-2xl px-7 py-5 flex flex-col items-center gap-3"
+              style={{ background: `${ACCENT}12`, boxShadow: `inset 0 0 0 1.5px ${ACCENT}88` }}
+            >
+              <span className="font-mono text-[20px] font-semibold" style={{ color: ACCENT }}>
+                run_agent(system_prompt, task)
+              </span>
+              <span className="text-[16px] text-white/85">📋 job card + 📝 task ➜ 🧠 1 LLM call ➜ 💬 reply</span>
+            </div>
+            <div className="flex items-end gap-10">
+              {[TEAM.boss, TEAM.researcher, TEAM.math].map((b) => (
+                <div key={b.name} className="flex flex-col items-center gap-2">
+                  <AgentBot color={b.color} badge={b.badge} name={b.name} mood="happy" size={64} />
+                  <span className="font-mono text-[13px] px-2 py-0.5 rounded bg-white/5 text-white/60">run_agent</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+        {s.phase !== 'runAgent' && !(finished && s.final) && (
           <>
             {/* Max's desk */}
             <motion.div
@@ -315,26 +381,13 @@ export default function BossAgentAnim() {
                 const sz = deskSize(who);
                 return (
                   <motion.div key={who} layout className="min-h-0" style={{ flex: sz === 'big' ? 3 : helperFocus ? 1 : '0 0 auto' }}>
-                    <HelperDesk who={who} s={s} size={sz} />
+                    <HelperDesk who={who} s={s} size={sz} menu={menu} />
                   </motion.div>
                 );
               })}
             </div>
 
-            {/* A slip flying to a helper, or a result note flying back to Max */}
-            {slip && s.phase === 'send' && (
-              <motion.div
-                key={`fly-${idx}`}
-                className="absolute z-20 w-[44%] rounded-md px-3 py-2 text-[15px] shadow-lg pointer-events-none"
-                style={{ background: '#fef3c7', color: '#1c1c44' }}
-                initial={{ ...spot.max, opacity: 0.4, rotate: -6 }}
-                animate={{ ...spot[slip.to], left: '54%', opacity: 1, rotate: 0 }}
-                transition={{ duration: 0.9, ease: 'easeInOut' }}
-              >
-                <div className="font-mono text-[13px] font-semibold">📝 {slip.id}</div>
-                <div className="line-clamp-2">&quot;{slip.arg}&quot;</div>
-              </motion.div>
-            )}
+            {/* A result note flying back to Max (the outgoing slip is drawn on the helper's desk) */}
             {slip && s.phase === 'noteBack' && (
               <motion.div
                 key={`back-${idx}`}

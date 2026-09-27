@@ -41,7 +41,7 @@ const QUESTIONS: PreparedQuestion[] = [
 ];
 
 const NO_RAG_ANSWER =
-  'I don’t have access to your company’s policies, so I can’t answer that. Please check your employee handbook or ask HR.';
+  'I don’t have access to your company’s policies, so I can’t answer that. Please ask HR.';
 const NOT_FOUND_ANSWER =
   'I couldn’t find that in the documents. You may want to ask HR directly.';
 
@@ -147,7 +147,7 @@ export default function RagPlayground() {
         <p className="text-xs text-white/40 uppercase tracking-wider font-bold">
           Try it yourself: a mini RAG search engine
         </p>
-        <p className="text-xs text-white/35">Example data: a made-up company handbook (10 chunks)</p>
+        <p className="text-xs text-white/35">Made-up company handbook (10 chunks) · prepared answers, no real model</p>
       </div>
 
       {/* Question chips + input */}
@@ -229,8 +229,8 @@ export default function RagPlayground() {
       <div className="flex-1 min-h-0 flex gap-4">
         {/* LEFT: ranked chunks */}
         <div className="w-[44%] flex flex-col min-h-0">
-          <p className="text-xs text-white/45 mb-1">
-            Handbook chunks, scored by <span className="text-[#fbbf24]">simple word-overlap</span>{' '}
+          <p className="text-xs text-white/45 mb-1 truncate">
+            Scored by <span className="text-[#fbbf24]">simple word-overlap</span>{' '}
             <span className="text-white/30">(real RAG uses embeddings)</span>
           </p>
           <div
@@ -245,7 +245,7 @@ export default function RagPlayground() {
                   key={r.chunk.id}
                   layout
                   transition={spring}
-                  className="flex items-center gap-2 px-2 py-1 rounded-lg border"
+                  className="flex items-center gap-2 px-2 py-[3px] rounded-lg border"
                   style={{
                     borderColor: inPrompt ? 'rgba(74,222,128,0.6)' : 'rgba(255,255,255,0.08)',
                     backgroundColor: inPrompt ? 'rgba(74,222,128,0.10)' : 'rgba(255,255,255,0.03)',
@@ -333,10 +333,13 @@ export default function RagPlayground() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}
                       transition={{ ...spring, delay: i * 0.15 }}
-                      className="px-2 py-1 rounded border border-[#4ade80]/35 bg-[#4ade80]/8 text-xs text-white/75 leading-snug line-clamp-2 shrink-0"
+                      className="px-2 py-1 rounded border border-[#4ade80]/35 text-xs text-white/75 leading-snug shrink-0"
                       style={{ backgroundColor: 'rgba(74,222,128,0.07)' }}
                     >
-                      <span className="text-[#4ade80] font-bold font-mono">context [{r.chunk.title}]:</span> {r.chunk.text}
+                      {/* Clamp on an inner block so the padding never shows a sliver of the next line. */}
+                      <p className="line-clamp-2 [@media(max-height:800px)]:line-clamp-1">
+                        <span className="text-[#4ade80] font-bold font-mono">context [{r.chunk.title}]:</span> {r.chunk.text}
+                      </p>
                     </motion.div>
                   ))}
                 {phase >= 2 && injected.length === 0 && (
@@ -381,16 +384,17 @@ export default function RagPlayground() {
               <p className="text-xs text-white/85 leading-snug">{phase >= 3 ? ragAnswer : '…'}</p>
               {phase >= 3 && found && (
                 <p className="text-[12px] text-[#4a9eff] font-mono mt-1">
-                  [Source: {injected.map((r) => r.chunk.title).join(', ')}]
+                  {/* Cite only the chunk the answer actually comes from (the best match). */}
+                  [Source: {injected[0].chunk.title}]
                 </p>
               )}
             </motion.div>
           </div>
-          <p className="text-[12px] text-white/35 shrink-0">
-            {isCustom
-              ? 'Simulated: for your own question, the “answer” just quotes the best chunk. A real model would write it in its own words.'
-              : 'Prepared example answers. No real model is called here.'}
-          </p>
+          {isCustom && (
+            <p className="text-[12px] text-white/35 shrink-0">
+              Simulated: for your own question, the “answer” just quotes the best chunk. A real model would write it in its own words.
+            </p>
+          )}
         </div>
       </div>
     </div>

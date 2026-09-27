@@ -167,7 +167,29 @@ function Badge({ ok, text, pulse }: { ok: boolean; text: string; pulse?: boolean
 // ---------------------------------------------------------------------------
 type Who = 'ai' | 'py' | 'none';
 
+/** This step appends to `messages` (our code does that, whatever the phase). */
+function appending(sc: AgentScene): boolean {
+  return sc.msgCount > sc.prevMsgCount;
+}
+
+/** Our code prints the answer (or a header / goodbye) after the AI has answered. */
+function printingAnswer(sc: AgentScene): boolean {
+  return (sc.phase === 'answer' || sc.phase === 'done') && !!sc.output.trim() && !sc.newVars.has('user_input');
+}
+
+/** The last step is the "What you learned" recap: nobody is busy. */
+function isRecap(sc: AgentScene): boolean {
+  return sc.step === sc.model.info.length - 1 && sc.step > 0 && !sc.output.trim();
+}
+
+/** The `break` line right after the answer: our code leaves the loop. */
+function breaking(sc: AgentScene): boolean {
+  return (sc.trigger === 'agentLoop-final' || sc.trigger === 'agentLoop-finalDone') && !sc.output.trim() && !isRecap(sc);
+}
+
 function who(sc: AgentScene): Who {
+  if (isRecap(sc)) return 'none';
+  if (appending(sc) || printingAnswer(sc) || breaking(sc) || sc.newVars.has('user_input')) return 'py';
   switch (sc.phase) {
     case 'thinking':
     case 'decide':
@@ -200,6 +222,11 @@ function aiState(sc: AgentScene): string {
 
 function pyState(sc: AgentScene): string {
   const c = sc.call;
+  if (isRecap(sc)) return 'finished';
+  if (appending(sc)) return 'adding to messages';
+  if (sc.newVars.has('user_input')) return 'input() waits for you';
+  if (printingAnswer(sc)) return 'printing';
+  if (breaking(sc)) return 'break: leaving the loop';
   switch (sc.phase) {
     case 'setup':
       return 'setting up';
@@ -411,6 +438,8 @@ function SetupFocal({
         <div className={`w-full grid gap-2.5 ${many ? 'grid-cols-2 max-w-[720px]' : 'grid-cols-1 max-w-[480px]'}`}>
           {defined.map((t, i) => {
             const isNew = scene.newVars.has(t.name) || (!anyNew && i === defined.length - 1);
+            // The new function is the focal item: a long signature gets the whole row instead of a "…".
+            const wide = many && isNew && `def ${t.name}(${(t.params ?? []).join(', ')})`.length > 28;
             return (
               <motion.div
                 key={t.name}
@@ -419,7 +448,7 @@ function SetupFocal({
                   opacity: isNew || defined.length === 1 ? 1 : 0.6,
                   scale: 1,
                 }}
-                className="rounded-xl border px-4 py-2.5 font-mono text-[16px] truncate"
+                className={`rounded-xl border px-4 py-2.5 font-mono text-[16px] truncate ${wide ? 'col-span-2' : ''}`}
                 style={{
                   color: t.color,
                   borderColor: isNew ? t.color : 'rgba(255,255,255,0.1)',
@@ -664,8 +693,9 @@ function SelectFocal({ scene, call, tools }: { scene: AgentScene; call: AgentCal
       </div>
     );
   }
+  // Wide enough that a 3-argument dict plus its "json.loads → dict" tag stays on one line.
   return (
-    <div className="w-full max-w-[640px] flex flex-col gap-3">
+    <div className="w-full max-w-[720px] flex flex-col gap-3">
       <SlipLine scene={scene} call={call} pulse={slipNow} />
       {anyRow && (
         <Card color="#60a5fa" label="🔎 your code reads the slip">
@@ -731,6 +761,9 @@ function SelectFocal({ scene, call, tools }: { scene: AgentScene; call: AgentCal
 function ExecuteFocal({ scene, call, showTerminal }: { scene: AgentScene; call: AgentCall; showTerminal: boolean }) {
   const done = call.resultStep <= scene.step;
   const executing = scene.phase === 'execute';
+  const resultText = unescape(unquote(call.result));
+  // A number stays big; a sentence (e.g. a notes line) gets a smaller font so it fits whole.
+  const longResult = resultText.length > 24;
   if (showTerminal) {
     const badge = safetyFor(call.name);
     return (
@@ -774,9 +807,11 @@ function ExecuteFocal({ scene, call, showTerminal }: { scene: AgentScene; call: 
             key={`res-${call.id}`}
             initial={{ scale: 1.6, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="px-3 py-0.5 rounded-lg bg-[#4ade80]/20 text-[#4ade80] font-mono font-bold text-[22px] break-words"
+            className={`px-3 py-0.5 rounded-lg bg-[#4ade80]/20 text-[#4ade80] font-mono font-bold break-words ${
+              longResult ? 'text-[17px] leading-snug' : 'text-[22px]'
+            }`}
           >
-            {truncate(unescape(unquote(call.result)), 70)}
+            {truncate(resultText, 130)}
           </motion.span>
         ) : (
           <motion.span
@@ -873,7 +908,7 @@ function AnswerFocal({
         <div className="flex flex-wrap justify-center gap-1.5">
           {earlier.map((c) => (
             <DoneChip key={c.id} color="#86efac">
-              ✓ {truncate(argsCall(c.name, c.args), 44)} = {truncate(unescape(unquote(c.result)), 24)}
+              ✓ {truncate(argsCall(c.name, c.args), 64)} = {truncate(unescape(unquote(c.result)), 24)}
             </DoneChip>
           ))}
         </div>
@@ -943,7 +978,10 @@ export default function AgentDataFlow({
         mode={'scanning' as MenuMode}
         chosen={t.calls.map((c) => c.name)}
         usedBefore={earlierNames}
-        filledArgs={Object.fromEntries(t.calls.map((c) => [c.name, c.args]))}
+        filledArgs={t.calls.reduce<Record<string, [string, string][][]>>((acc, c) => {
+          (acc[c.name] ??= []).push(c.args);
+          return acc;
+        }, {})}
         accentColor={accentColor}
         animKey={`${scene.step}`}
       />
@@ -981,7 +1019,7 @@ export default function AgentDataFlow({
         <div className="flex flex-wrap justify-center gap-1.5">
           {t.calls.map((c) => (
             <DoneChip key={c.id} color="#86efac">
-              ✓ {truncate(argsCall(c.name, c.args), 44)} = {truncate(unescape(unquote(c.result)), 24)}
+              ✓ {truncate(argsCall(c.name, c.args), 64)} = {truncate(unescape(unquote(c.result)), 24)}
             </DoneChip>
           ))}
         </div>

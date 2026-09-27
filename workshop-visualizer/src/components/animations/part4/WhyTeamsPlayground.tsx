@@ -226,7 +226,7 @@ export default function WhyTeamsPlayground() {
               </button>
             ))}
           </div>
-          <div className="text-[12px] text-white/50 mt-1.5">No Wally? Solo Bot does the writing (and everything else nobody is on).</div>
+          <div className="text-[12px] text-white/50 mt-1.5">Wally off? Then Solo Bot does the writing instead.</div>
         </div>
         <button
           onClick={() => setShown(0)}
@@ -260,7 +260,7 @@ export default function WhyTeamsPlayground() {
                         initial={{ opacity: 0, y: 8, rotate: -2 }}
                         animate={{ opacity: 1, y: 0, rotate: -1 }}
                         transition={spring}
-                        className="w-full rounded-md px-2 py-1.5 text-[12px] leading-snug shadow"
+                        className="w-full max-w-[260px] rounded-md px-2 py-1.5 text-[13px] leading-snug shadow"
                         style={{ backgroundColor: st.who.name === 'Cora' ? '#fbcfe8' : '#fde68a', color: '#1f2937' }}
                       >
                         {st.text}

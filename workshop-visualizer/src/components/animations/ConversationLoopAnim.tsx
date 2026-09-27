@@ -131,9 +131,12 @@ export default function ConversationLoopAnim() {
   const showCompare = s.isCalling && s.repeat && s.calls.length > 1;
   const pileFocus = s.station === 2 || s.station === 4 || s.isCalling || (!s.inLoop && s.messages.length > 0);
 
+  // Before the messages list exists (import / client lines): a setup checklist instead of the loop strip.
+  const setup = !s.inLoop && s.messages.length === 0;
+
   return (
     <div className="h-full flex flex-col px-5 py-4 gap-4 overflow-hidden text-white">
-      <LoopStrip station={s.station} inLoop={s.inLoop} turn={s.turn} />
+      {setup ? <SetupStrip line={line} /> : <LoopStrip station={s.station} inLoop={s.inLoop} turn={s.turn} />}
 
       <div className="flex-1 min-h-0 flex gap-4">
         {/* ── The messages pile (the only memory) ─────────────────── */}
@@ -247,6 +250,40 @@ export default function ConversationLoopAnim() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Setup (lines 2–3): the same two lines as every Part 1 lesson, current one lit.
+// ─────────────────────────────────────────────────────────────────────────────
+function SetupStrip({ line }: { line: number }) {
+  const chips = [
+    { l: 2, code: 'OpenAI', plain: 'library loaded' },
+    { l: 3, code: 'client', plain: 'phone line to OpenAI' },
+  ];
+  return (
+    <div className="shrink-0 flex items-center justify-center gap-2 flex-wrap">
+      {chips.map((c) => {
+        const current = line === c.l;
+        const on = line >= c.l;
+        return (
+          <motion.div
+            key={c.code}
+            animate={{ opacity: on ? 1 : 0.3, scale: current ? 1.06 : 1 }}
+            transition={spring}
+            className={`px-3 py-1 rounded-lg text-[15px] ${
+              current ? 'bg-accent-blue/15 ring-1 ring-accent-blue/70' : on ? 'bg-white/5' : 'border border-dashed border-white/10'
+            }`}
+          >
+            <span className="font-mono text-accent-blue">
+              {on && !current ? '✓ ' : ''}
+              {c.code}
+            </span>
+            {current && <span className="text-white/65"> · {c.plain}</span>}
+          </motion.div>
+        );
+      })}
     </div>
   );
 }

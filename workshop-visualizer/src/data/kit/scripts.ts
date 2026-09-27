@@ -173,7 +173,9 @@ from dotenv import dotenv_values, load_dotenv
 load_dotenv(ENV_FILE, override=True)  # the key in .env wins over an old one saved elsewhere
 key_in_file = (dotenv_values(ENV_FILE).get("OPENAI_API_KEY") or "").strip()
 key = os.environ.get("OPENAI_API_KEY", "").strip()
-if not key and not os.path.exists(ENV_FILE):
+if not key and not os.path.exists(ENV_FILE) and os.path.exists(ENV_FILE + ".txt"):
+    problem("Your key file is called .env.txt", "rename it to .env (Notepad added .txt to the name)")
+elif not key and not os.path.exists(ENV_FILE):
     problem("No .env file with OPENAI_API_KEY", "copy .env.example to .env and paste your key")
 elif not key:
     problem("Your .env file has no key in it", "open .env and paste your key after OPENAI_API_KEY=")
@@ -202,7 +204,7 @@ client = OpenAI(api_key=key, timeout=30)
 try:
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": "Say hello in one word."}],
+        messages=[{"role": "user", "content": "Say hello to a new AI student in 5 words or fewer."}],
     )
 except AuthenticationError:
     problem("OpenAI didn't accept your key (401: it's wrong, or it was deleted)",
@@ -216,9 +218,10 @@ except RateLimitError as error:
 except APIConnectionError:
     problem("Couldn't reach OpenAI (APIConnectionError)", "check your internet connection, then try again")
 except APIStatusError as error:
-    problem(f"OpenAI sent back an error ({error.status_code}): {error.message}", "wait a minute, then try again")
+    details = error.body.get("message") if isinstance(error.body, dict) else None
+    problem(f"OpenAI sent back an error ({error.status_code}): {details or 'no details'}", "wait a minute, then try again")
 
 reply = (response.choices[0].message.content or "").strip().strip('"')
-ok(f'OpenAI answered: "{reply}"')
+ok(f"OpenAI answered: {reply}")
 print("All set! Next: python run.py part1/basic_api.py")
 `;

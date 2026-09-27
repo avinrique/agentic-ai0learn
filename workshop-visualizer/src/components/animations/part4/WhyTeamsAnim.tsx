@@ -357,7 +357,7 @@ function MailCarrierScene() {
   const wally = TEAM.writer;
   return (
     <Scene id="mailCarrier">
-      <div className="relative flex items-end justify-between w-[720px] h-[235px]">
+      <div className="relative flex items-end justify-between w-[720px] h-[248px]">
         <RoleBot color={rita.color} badge={rita.badge} name={rita.name} role="finished her notes" size={96} mood="proud" />
         <div className="flex flex-col items-center mb-6">
           <div className="text-4xl">🐍📬</div>

@@ -174,13 +174,8 @@ export default function LLMMeaningPlayground() {
                   initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }}
                   transition={{ duration: 0.8, delay: 1.3 }}
                 />
-                <motion.text
-                  x={(A.x + land.x) / 2} y={(A.y + land.y) / 2 - 8} textAnchor="middle"
-                  fill="#f472b6" fontSize="12" fontWeight="bold"
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }}
-                >
-                  + ({eq.plus} − {eq.minus})
-                </motion.text>
+                {/* No text label here: the short arrow sits between two word labels and a label would cover them.
+                    The side panel explains the arrow in words. */}
                 {/* landing point */}
                 <motion.circle
                   cx={land.x} cy={land.y} r={5} fill="#ffffff"
@@ -235,8 +230,8 @@ export default function LLMMeaningPlayground() {
       </div>
 
       {/* Side panel */}
-      <div className="w-64 flex-shrink-0 flex flex-col gap-3 pt-7">
-        <div className="flex rounded-lg border border-white/15 overflow-hidden text-sm">
+      <div className="w-72 flex-shrink-0 flex flex-col gap-3 pt-7 min-h-0">
+        <div className="flex shrink-0 rounded-lg border border-white/15 overflow-hidden text-sm">
           {(['neighbours', 'math'] as Mode[]).map((m) => (
             <button
               key={m}
@@ -285,7 +280,7 @@ export default function LLMMeaningPlayground() {
                   key={i}
                   onClick={() => { setEqIdx(i); setRunId((r) => r + 1); }}
                   whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                  className={`px-3 py-1.5 rounded-lg border text-sm font-mono text-left ${
+                  className={`px-3 py-1.5 rounded-lg border text-[13px] font-mono text-left whitespace-nowrap ${
                     i === eqIdx ? 'border-accent-green/60 bg-accent-green/10 text-accent-green' : 'border-white/15 bg-white/5 text-white/70 hover:bg-white/10'
                   }`}
                 >

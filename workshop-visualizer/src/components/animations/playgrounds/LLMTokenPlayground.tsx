@@ -267,8 +267,10 @@ export default function LLMTokenPlayground() {
             </motion.span>
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto">
-            <div className="flex flex-wrap gap-1.5 content-start">
-              <AnimatePresence initial={false}>
+            {/* popLayout: a token that is being replaced (e.g. while typing) leaves the flow at once,
+                so the other tokens never pile up or overlap. */}
+            <div className="relative flex flex-wrap gap-1.5 content-start">
+              <AnimatePresence initial={false} mode="popLayout">
                 {pieces.map((p, i) => {
                   const start = charPos;
                   charPos += p.length;
@@ -280,7 +282,7 @@ export default function LLMTokenPlayground() {
                       layout
                       initial={{ opacity: 0, y: 8, scale: 0.7 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.6 }}
+                      exit={{ opacity: 0, scale: 0.6, transition: { duration: 0.15 } }}
                       transition={{ type: 'spring', damping: 20, stiffness: 260 }}
                       className="flex flex-col items-center"
                     >

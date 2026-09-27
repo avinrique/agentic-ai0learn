@@ -21,7 +21,8 @@ interface ToolSelectionAnimProps {
   mode: MenuMode;
   chosen?: string[]; // names picked in the current turn
   usedBefore?: string[]; // names picked in earlier turns
-  filledArgs?: Record<string, [string, string][]>; // arguments the AI filled in, per chosen tool
+  /** arguments the AI filled in, per chosen tool: one list per call (a tool can be picked twice in one reply) */
+  filledArgs?: Record<string, [string, string][][]>;
   highlightField?: 'name' | 'desc' | 'params' | null;
   accentColor: string;
   animKey: string; // restart the scan animation when the step changes
@@ -56,7 +57,9 @@ export default function ToolSelectionAnim({
         const wasUsed = usedBefore.includes(tool.name);
         const somePicked = chosen.length > 0 && (mode === 'chosen' || mode === 'scanning');
         const dim = mode === 'unused' || (somePicked && !isChosen);
-        const args = filledArgs[tool.name];
+        // One row of parameter chips per call (e.g. multiply picked twice: a=7 b=8, then a=9 b=4).
+        const callArgs = isChosen && filledArgs[tool.name]?.length ? filledArgs[tool.name] : [undefined];
+        const times = isChosen ? filledArgs[tool.name]?.length ?? 1 : 1;
         const showParams = !many || highlightField === 'params' || isChosen;
         // On short screens: a dimmed card shows only its name; with many tools the descriptions
         // only show on the step about descriptions (and on the picked card).
@@ -122,7 +125,7 @@ export default function ToolSelectionAnim({
                   className="flex-shrink-0 text-[13px] font-bold px-2 rounded-full whitespace-nowrap"
                   style={{ color: '#0a0a1a', backgroundColor: tool.color }}
                 >
-                  PICKED
+                  PICKED{times > 1 ? ` ×${times}` : ''}
                 </motion.span>
               )}
             </div>
@@ -135,14 +138,15 @@ export default function ToolSelectionAnim({
                 {tool.description}
               </div>
             )}
-            {showParams && tool.params && tool.params.length > 0 && (
+            {showParams && tool.params && tool.params.length > 0 && callArgs.map((args, row) => (
               <div
+                key={row}
                 className={`flex flex-wrap gap-1.5 mt-1.5 rounded p-0.5 ${hl('params')} ${
                   shortHideParams ? '[@media(max-height:800px)]:hidden' : ''
                 }`}
               >
-                {tool.params.map((p, k) => {
-                  const val = isChosen ? args?.find(([name]) => name === p)?.[1] : undefined;
+                {(tool.params ?? []).map((p, k) => {
+                  const val = args?.find(([name]) => name === p)?.[1];
                   return (
                     <motion.span
                       key={p}
@@ -171,7 +175,7 @@ export default function ToolSelectionAnim({
                   );
                 })}
               </div>
-            )}
+            ))}
           </motion.div>
         );
       })}

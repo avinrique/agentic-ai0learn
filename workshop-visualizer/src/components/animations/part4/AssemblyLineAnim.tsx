@@ -128,10 +128,17 @@ export default function AssemblyLineAnim() {
   // Short screens: a smaller newsroom (just tall enough for the big sticky note on the note steps),
   // and none at all while the run_agent machine is open (the machine is the whole story then).
   const hideStage = short && bottom === 'open';
-  const stageH = !short ? 330 : noteBig ? 280 : 210;
+  const stageH = !short ? 330 : noteBig ? 290 : 210;
   const botSize = short ? 64 : 84;
-  // A step that prints: one quiet console line under the scene (the article/recap panels already show the text).
-  const printLine = printed && bottom !== 'article' && bottom !== 'recap' ? printed.replace(/\s*\n+\s*/g, ' ') : '';
+  // The big sticky note: wider on short (narrow) screens so the three facts fit in a few lines.
+  const noteW = short ? 46 : 36;
+  // A step that prints: one quiet console line under the scene (unless it prints the paragraph that the
+  // article panel already shows in full, e.g. the heading "Wally's paragraph:" still gets its line).
+  const printOneLine = printed.replace(/\s*\n+\s*/g, ' ').trim();
+  const printLine =
+    printOneLine && bottom !== 'recap' && !(bottom === 'article' && article && article.includes(printOneLine.slice(0, 40)))
+      ? printOneLine
+      : '';
 
   const card =
     trig === 'rita-card'
@@ -216,18 +223,27 @@ export default function AssemblyLineAnim() {
                 animate={{
                   scale: 1,
                   opacity: 1,
-                  left: noteAtWally ? (noteBig ? '64%' : '72%') : '1%',
+                  left: noteAtWally ? (noteBig ? `${100 - noteW}%` : '72%') : '1%',
                   rotate: noteBig ? (noteAtWally ? 1.5 : -1.5) : 0,
                 }}
                 transition={{ left: { duration: carrying ? 1.6 : 0.4, ease: 'easeInOut' }, default: { duration: 0.4 } }}
-                className={`absolute bottom-0 rounded-md shadow-xl ${noteBig ? 'w-[36%] p-3 text-[13.5px] leading-snug' : 'px-3 py-1.5 text-[13px]'}`}
-                style={{ background: '#fde68a', color: '#3b2f05', boxShadow: carrying ? `0 0 18px ${ACCENT}` : undefined }}
+                className={`absolute bottom-0 rounded-md shadow-xl ${noteBig ? 'p-3 text-[13.5px] leading-snug' : 'px-3 py-1.5 text-[13px]'}`}
+                style={{
+                  width: noteBig ? `${noteW}%` : undefined,
+                  background: '#fde68a',
+                  color: '#3b2f05',
+                  boxShadow: carrying ? `0 0 18px ${ACCENT}` : undefined,
+                }}
               >
                 <div className="font-bold">
                   📌 {noteBig ? (noteAtWally ? "Wally's task" : "Rita's facts") : '✓ facts'}
                 </div>
                 {noteBig && (
-                  <div className="whitespace-pre-line overflow-hidden mt-1" style={{ maxHeight: short ? 104 : 140 }}>
+                  // Clamped by whole lines (ending in "…" if a long reply ever needs more), never cut mid-line.
+                  <div
+                    className="whitespace-pre-line overflow-hidden mt-1"
+                    style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: short ? 6 : 7 }}
+                  >
                     {facts}
                   </div>
                 )}

@@ -474,10 +474,18 @@ function LoadsView({ s }: { s: S }) {
       <div className="w-full">
         {s.line >= 33 && s.pretty ? (
           <Card label="pretty_json" color="#22d3ee" glow>
-            <pre className="font-mono text-[13px] leading-relaxed text-white/80 max-h-[200px] overflow-hidden whitespace-pre-wrap">
-              {s.pretty.split('\n').slice(0, 7).join('\n')}
-              {'\n  …'}
-            </pre>
+            {/* One JSON line per row (long ones end in "…"), so the indents stay easy to see. */}
+            <div className="font-mono text-[14px] leading-relaxed text-white/80">
+              {s.pretty
+                .split('\n')
+                .slice(0, 7)
+                .map((ln, i) => (
+                  <div key={i} className="whitespace-pre overflow-hidden text-ellipsis">
+                    {ln}
+                  </div>
+                ))}
+              <div className="whitespace-pre text-white/45">{'  …'}</div>
+            </div>
           </Card>
         ) : s.hasParsed ? (
           <Card label="parsed_json" color="#22d3ee" glow>

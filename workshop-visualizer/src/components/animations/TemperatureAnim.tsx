@@ -199,10 +199,9 @@ export default function TemperatureAnim() {
         transition={spring}
       >
         <div className="flex flex-col items-center gap-6">
-          {/* Big dial */}
-          <motion.div className="relative w-48 h-48">
-            {/* Dial background */}
-            <svg viewBox="0 0 200 200" className="w-full h-full">
+          {/* Big dial: a half-circle gauge; the needle swings around the centre (100, 120) */}
+          <div className="w-64">
+            <svg viewBox="0 0 200 150" className="w-full h-auto">
               <defs>
                 <linearGradient id="dialGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stopColor="#4a9eff" />
@@ -212,36 +211,29 @@ export default function TemperatureAnim() {
               </defs>
               {/* Arc */}
               <path
-                d="M 30 150 A 80 80 0 0 1 170 150"
+                d="M 20 120 A 80 80 0 0 1 180 120"
                 fill="none"
                 stroke="url(#dialGrad)"
                 strokeWidth="8"
                 strokeLinecap="round"
-                opacity={0.4}
+                opacity={0.5}
               />
               {/* Labels */}
-              <text x="30" y="174" textAnchor="middle" fill="#4a9eff" fontSize="15" fontFamily="monospace">0</text>
-              <text x="100" y="54" textAnchor="middle" fill="#fbbf24" fontSize="15" fontFamily="monospace">1.0</text>
-              <text x="170" y="174" textAnchor="middle" fill="#ef4444" fontSize="15" fontFamily="monospace">2.0</text>
+              <text x="20" y="143" textAnchor="middle" fill="#4a9eff" fontSize="14" fontFamily="monospace">0</text>
+              <text x="100" y="30" textAnchor="middle" fill="#fbbf24" fontSize="14" fontFamily="monospace">1.0</text>
+              <text x="180" y="143" textAnchor="middle" fill="#ef4444" fontSize="14" fontFamily="monospace">2.0</text>
+              {/* Needle. The invisible circle makes the group's box centred on the pivot, so it rotates around it. */}
+              <motion.g
+                initial={{ rotate: -80 }}
+                animate={{ rotate: s === 0 ? [-80, 0, 80, 0, -80] : -80 }}
+                transition={s === 0 ? { duration: 4, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
+              >
+                <circle cx="100" cy="120" r="66" fill="transparent" stroke="none" />
+                <line x1="100" y1="120" x2="100" y2="58" stroke="rgba(255,255,255,0.75)" strokeWidth="4" strokeLinecap="round" />
+              </motion.g>
+              <circle cx="100" cy="120" r="7" fill="#ffffff" />
             </svg>
-
-            {/* Animated needle */}
-            <motion.div
-              className="absolute"
-              style={{ top: '50%', left: '50%', transformOrigin: 'bottom center' }}
-              animate={{
-                rotate: s === 0 ? [-90, 0, 90, 0, -90] : 0,
-              }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
-            >
-              <div className="w-1 h-16 bg-white/60 rounded-full -translate-x-1/2 -translate-y-full" />
-              <div className="w-3 h-3 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
-            </motion.div>
-          </motion.div>
+          </div>
 
           <motion.p
             className="text-lg font-bold text-white/80"
@@ -270,7 +262,7 @@ export default function TemperatureAnim() {
                 transition={{ ...spring, delay: 0.5 + i * 0.15 }}
               >
                 <span className="text-2xl">{item.icon}</span>
-                <span className="text-xs" style={{ color: item.color }}>{item.label}</span>
+                <span className="text-sm" style={{ color: item.color }}>{item.label}</span>
               </motion.div>
             ))}
           </div>
@@ -400,7 +392,7 @@ export default function TemperatureAnim() {
               <div className="space-y-1.5">
                 {sceneEx.tokens.map((t, i) => ({ label: t.label, color: t.color, v: applyTemperature(sceneEx.tokens, 0.1)[i] })).map((p, i) => (
                   <div key={p.label} className="flex items-center gap-2">
-                    <span className="w-16 text-right text-sm font-mono text-white/60">{p.label}</span>
+                    <span className="w-20 shrink-0 text-right text-sm font-mono text-white/60">{p.label}</span>
                     <div className="flex-1 bg-white/5 rounded-full h-5 overflow-hidden">
                       <motion.div
                         className="h-full rounded-full flex items-center px-1"
@@ -434,7 +426,7 @@ export default function TemperatureAnim() {
               <div className="space-y-1.5">
                 {sceneEx.tokens.map((t, i) => ({ label: t.label, color: t.color, v: applyTemperature(sceneEx.tokens, 2)[i] })).map((p, i) => (
                   <div key={p.label} className="flex items-center gap-2">
-                    <span className="w-16 text-right text-sm font-mono text-white/60">{p.label}</span>
+                    <span className="w-20 shrink-0 text-right text-sm font-mono text-white/60">{p.label}</span>
                     <div className="flex-1 bg-white/5 rounded-full h-5 overflow-hidden">
                       <motion.div
                         className="h-full rounded-full flex items-center px-1"
@@ -707,7 +699,7 @@ export default function TemperatureAnim() {
                   </div>
                   {included ? (
                     <motion.span
-                      className="text-xs px-2 py-0.5 rounded-full border font-bold"
+                      className="w-12 text-center text-xs py-0.5 rounded-full border font-bold"
                       style={{ color: '#4ade80', borderColor: '#4ade8040', backgroundColor: '#4ade8015' }}
                       animate={{ opacity: s === 7 ? 1 : 0 }}
                       transition={{ ...spring, delay: 0.7 }}
@@ -716,7 +708,7 @@ export default function TemperatureAnim() {
                     </motion.span>
                   ) : (
                     <motion.span
-                      className="text-xs px-2 py-0.5 rounded-full border font-bold"
+                      className="w-12 text-center text-xs py-0.5 rounded-full border font-bold"
                       style={{ color: '#ef4444', borderColor: '#ef444440', backgroundColor: '#ef444415' }}
                       animate={{ opacity: s === 7 ? 1 : 0 }}
                       transition={{ ...spring, delay: 0.7 }}
@@ -728,10 +720,11 @@ export default function TemperatureAnim() {
               );
             })}
 
-            {/* Red cutoff line */}
+            {/* Red cutoff line, in the gap between row 1 (kept) and row 2 (cut).
+                marginTop 0: space-y would otherwise push this absolute line down into the Lyon row. */}
             <motion.div
-              className="absolute left-24 right-12 border-t-2 border-dashed"
-              style={{ borderColor: '#ef4444', top: '40px' }}
+              className="absolute left-24 right-14 border-t-2 border-dashed"
+              style={{ borderColor: '#ef4444', top: '36px', marginTop: 0 }}
               animate={{ opacity: s === 7 ? 0.6 : 0 }}
               transition={{ ...smooth, delay: 0.8 }}
             />

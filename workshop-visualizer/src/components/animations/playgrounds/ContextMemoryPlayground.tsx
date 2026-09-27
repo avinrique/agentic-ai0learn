@@ -174,6 +174,9 @@ export default function ContextMemoryPlayground() {
   const pickConvo = (i: number) => { setConvoIdx(i); setTurn(0); setStrategy('all'); };
   const canNext = turn < lastTurn && !(cur && cur.over);
 
+  const droppedCount = cur ? cur.status.filter((x) => x !== 'sent').length : 0;
+  const droppedTokens = cur ? cur.msgs.reduce((sum, m, i) => sum + (cur.status[i] !== 'sent' ? m.tokens : 0), 0) : 0;
+
   const meterPct = cur ? Math.min(cur.tokens / LIMIT, 1.3) : 0;
   const meterColor = !cur ? '#4ade80' : cur.tokens > LIMIT ? '#ef4444' : cur.tokens > LIMIT * 0.8 ? '#fbbf24' : '#4ade80';
 
@@ -238,6 +241,28 @@ export default function ContextMemoryPlayground() {
                     <Row role="summary" content={c.summary} tokens={estTokens(c.summary)} tag="summary" tagColor="#a78bfa" wrap />
                   </motion.div>
                 )}
+                {/* Short screens: the struck-out older messages fold into one line so the newest
+                    question and the reply always stay visible. */}
+                {cur && droppedCount > 0 && (
+                  <motion.div
+                    key={`folded-${convoIdx}-${cur.useSummary ? 'sum' : 'drop'}`}
+                    layout
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="hidden [@media(max-height:800px)]:flex items-center gap-2 px-2 py-1 rounded-md border border-dashed text-xs font-bold"
+                    style={cur.useSummary
+                      ? { color: '#a78bfa', borderColor: '#a78bfa60', backgroundColor: '#a78bfa0d' }
+                      : { color: '#ef4444', borderColor: '#ef444460', backgroundColor: '#ef44440d' }}
+                  >
+                    <span className="flex-1 min-w-0 truncate">
+                      {cur.useSummary
+                        ? `↳ ${droppedCount} older messages are now in the summary`
+                        : `✂ ${droppedCount} oldest messages dropped (not sent)`}
+                    </span>
+                    <span className="font-mono font-normal text-white/40 shrink-0">−{droppedTokens}t</span>
+                  </motion.div>
+                )}
                 {cur?.msgs.map((m, i) => {
                   const st = cur.status[i];
                   const isNew = i === cur.msgs.length - 1;
@@ -249,6 +274,7 @@ export default function ContextMemoryPlayground() {
                       animate={{ opacity: st === 'sent' ? 1 : 0.35, x: 0 }}
                       exit={{ opacity: 0 }}
                       transition={spring}
+                      className={st === 'sent' ? '' : '[@media(max-height:800px)]:hidden'}
                     >
                       <Row
                         role={m.role}
@@ -357,10 +383,10 @@ export default function ContextMemoryPlayground() {
                 transition={{ duration: 0.4 }}
               >
                 {cur?.over
-                  ? 'Too big! The API would reject this call. Pick a strategy:'
+                  ? 'Too big! The API would reject this call.'
                   : everOverflowed
-                    ? 'Switch strategies and watch what the model can still see:'
-                    : 'When the list gets too big, you need a strategy:'}
+                    ? 'Switch strategies and compare:'
+                    : 'When the list gets too big, pick a strategy:'}
               </motion.p>
             </AnimatePresence>
             <div className="flex gap-1.5">

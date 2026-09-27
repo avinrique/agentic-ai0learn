@@ -1,6 +1,6 @@
 'use client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useConceptStore } from '@/stores/conceptStore';
 import LLMTokenPlayground from './playgrounds/LLMTokenPlayground';
 import LLMMeaningPlayground from './playgrounds/LLMMeaningPlayground';
@@ -103,10 +103,10 @@ function nodeY(nodeIndex: number, totalNodes: number, height: number) {
 
 const autoSteps = [
   { input: ['The', 'capital', 'of', 'France', 'is'], output: 'Paris' },
-  { input: ['...', 'France', 'is', 'Paris'], output: 'is' },
-  { input: ['...', 'is', 'Paris', 'is'], output: 'the' },
-  { input: ['...', 'Paris', 'is', 'the'], output: 'capital' },
-  { input: ['...', 'is', 'the', 'capital'], output: 'city' },
+  { input: ['...', 'France', 'is', 'Paris'], output: 'and' },
+  { input: ['...', 'is', 'Paris', 'and'], output: 'it' },
+  { input: ['...', 'Paris', 'and', 'it'], output: 'is' },
+  { input: ['...', 'and', 'it', 'is'], output: 'beautiful' },
 ];
 
 type AutoPhase = 0 | 1 | 2 | 3;
@@ -207,6 +207,9 @@ export default function LLMPipelineAnim() {
   const [autoIdx, setAutoIdx] = useState(0);
   const [autoPhase, setAutoPhase] = useState<AutoPhase>(0);
   const [completedTokens, setCompletedTokens] = useState<string[]>([]);
+  // After the last iteration the new token is already in completedTokens: don't draw it twice.
+  const autoCommitted = completedTokens.length > autoIdx;
+  const autoResetRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Temperature cycling state
   const [tempIdx, setTempIdx] = useState(0);
@@ -246,6 +249,7 @@ export default function LLMPipelineAnim() {
   // Step 13: Autoregressive animation
   useEffect(() => {
     if (s !== 13) {
+      clearTimeout(autoResetRef.current);
       setAutoIdx(0);
       setAutoPhase(0);
       setCompletedTokens([]);
@@ -261,7 +265,7 @@ export default function LLMPipelineAnim() {
           setAutoIdx((i) => i + 1);
           setAutoPhase(0);
         } else {
-          setTimeout(() => {
+          autoResetRef.current = setTimeout(() => {
             setAutoIdx(0);
             setAutoPhase(0);
             setCompletedTokens([]);
@@ -1429,21 +1433,17 @@ export default function LLMPipelineAnim() {
               })
             )}
 
-            {['Input\nLayer', 'Hidden 1', 'Hidden 2', 'Hidden 3', 'Output\nLayer'].map((label, i) => (
+            {['Input', 'Hidden 1', 'Hidden 2', 'Hidden 3', 'Output'].map((label, i) => (
               <text
                 key={label}
                 x={networkLayers[i].cx}
-                y={netH - 5}
+                y={netH - 3}
                 fill="white"
-                fillOpacity={s === 11 ? 0.2 : 0}
+                fillOpacity={s === 11 ? 0.4 : 0}
                 textAnchor="middle"
-                fontSize={9}
+                fontSize={11}
               >
-                {label.split('\n').map((line, j) => (
-                  <tspan key={j} x={networkLayers[i].cx} dy={j === 0 ? 0 : 11}>
-                    {line}
-                  </tspan>
-                ))}
+                {label}
               </text>
             ))}
 
@@ -1455,18 +1455,6 @@ export default function LLMPipelineAnim() {
               </text>
             </g>
           </svg>
-
-          {/* Animated parameter counter */}
-          <motion.div
-            className="absolute -right-2 top-1/2 -translate-y-1/2 z-10"
-            animate={{ opacity: s === 11 ? 1 : 0, x: s === 11 ? 0 : 20 }}
-            transition={{ ...spring, delay: 0.8 }}
-          >
-            <div className="px-3 py-2 rounded-lg border border-accent-blue/20 bg-accent-blue/5 text-center">
-              <p className="text-sm text-white/30">Parameters</p>
-              <p className="text-sm font-mono font-bold text-accent-blue">Billions</p>
-            </div>
-          </motion.div>
 
           {/* Layer labels */}
           <motion.div
@@ -1601,7 +1589,7 @@ export default function LLMPipelineAnim() {
                 transition={{ duration: 0.3 }}
               >
                 {autoSteps[autoIdx].input.map((tok, j) => (
-                  <span key={j} className="text-xs font-mono text-white/50">{tok}</span>
+                  <span key={j} className="text-sm font-mono text-white/65">{tok}</span>
                 ))}
               </motion.div>
             </AnimatePresence>
@@ -1655,13 +1643,13 @@ export default function LLMPipelineAnim() {
           </div>
 
           <AnimatePresence>
-            {autoPhase === 3 && (
+            {autoPhase === 3 && !autoCommitted && (
               <motion.span
                 key={`fly-${autoIdx}`}
                 className="absolute px-3 py-1 rounded-lg bg-accent-green/25 text-accent-green font-mono font-bold text-sm border border-accent-green/40 z-20"
                 style={{ textShadow: '0 0 10px rgba(74,222,128,0.6)' }}
                 initial={{ right: '19%', top: '50%', y: '-50%' }}
-                animate={{ right: '81%', top: '80%', scale: 0.85 }}
+                animate={{ right: '81%', top: '80%' }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
               >
@@ -1695,7 +1683,7 @@ export default function LLMPipelineAnim() {
                 {i < completedTokens.length - 1 ? ' ' : ''}
               </span>
             ))}
-            {autoPhase >= 2 && (
+            {autoPhase >= 2 && !autoCommitted && (
               <motion.span
                 className="text-accent-green font-bold"
                 style={{ textShadow: '0 0 6px rgba(74,222,128,0.3)' }}

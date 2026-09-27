@@ -142,7 +142,6 @@ function IntroScene() {
     <Scene>
       <SceneLabel>What you’ll learn</SceneLabel>
       <h2 className="text-3xl font-bold text-white">Four Team Shapes</h2>
-      <p className="text-[15px] text-white/60 -mt-1">Same robots. Four different ways to pass the notes.</p>
       <div className="grid grid-cols-4 gap-3 w-full max-w-4xl mt-1">
         {shapes.map((s, i) => (
           <motion.div
@@ -154,7 +153,7 @@ function IntroScene() {
           >
             <div className="text-3xl">{s.icon}</div>
             <div className="text-[15px] font-bold text-white mt-1">{i + 1}. {s.name}</div>
-            <div className="text-[12px] text-white/50">{s.like}</div>
+            <div className="text-[13px] text-white/55">{s.like}</div>
             <div className="flex items-end gap-0.5 my-2">
               {s.bots.map((b, j) => (
                 <div key={j} className="flex items-center">

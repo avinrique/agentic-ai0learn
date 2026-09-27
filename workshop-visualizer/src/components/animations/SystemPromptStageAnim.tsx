@@ -164,7 +164,7 @@ export default function SystemPromptStageAnim({ noSystemReply }: Props) {
           <div className="min-h-0 grid grid-cols-2 gap-4">
             <div className="rounded-2xl bg-white/[0.04] px-4 py-3 flex flex-col gap-2 min-h-0">
               <div className="text-[14px] font-semibold text-white/55">🤖 no system prompt</div>
-              <div className="text-[15px] text-white/70 whitespace-pre-wrap overflow-hidden leading-snug">{noSystemReply}</div>
+              <div className="text-[15px] text-white/70 whitespace-pre-wrap break-words overflow-hidden leading-snug">{noSystemReply}</div>
             </div>
             <motion.div
               animate={{ boxShadow: `0 0 18px ${persona.color}44` }}
@@ -174,7 +174,7 @@ export default function SystemPromptStageAnim({ noSystemReply }: Props) {
               <div className="text-[14px] font-semibold" style={{ color: persona.color }}>
                 {persona.icon} with the card
               </div>
-              <div className={`text-[15px] text-white/90 whitespace-pre-wrap overflow-hidden leading-snug ${persona.replyClass}`}>
+              <div className={`text-[15px] text-white/90 whitespace-pre-wrap break-words overflow-hidden leading-snug ${persona.replyClass}`}>
                 {reply}
               </div>
             </motion.div>

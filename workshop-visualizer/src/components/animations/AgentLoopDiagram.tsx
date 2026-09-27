@@ -697,8 +697,11 @@ export default function AgentLoopDiagram({
   loop: boolean;
 }) {
   const visible = scene.model.turns.filter((t) => t.sendStep <= scene.step);
+  // "break" / "done" appears on the line that ends the run (or after it), not while the answer is
+  // still being read or printed.
   const finished =
-    visible.some((t) => t.answerStep <= scene.step) && (scene.phase === 'answer' || scene.phase === 'done');
+    visible.some((t) => t.answerStep <= scene.step) &&
+    (scene.phase === 'done' || scene.trigger === 'agentLoop-final' || scene.trigger === 'agentLoop-finalDone');
   return (
     <div className="flex-shrink-0">
       <div className="flex items-center gap-1.5 min-w-0">

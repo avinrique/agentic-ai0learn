@@ -1,6 +1,6 @@
 'use client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 /*
  * "Prompt builder" playground for the System Prompts lesson.
@@ -352,6 +352,28 @@ export default function SystemPromptsPlayground() {
   const cfg: Config = { persona, format, cooking, cite, safety };
   const { lines, status } = buildReply(cfg, question);
   const replyKey = `${persona}-${format}-${cooking}-${cite}-${safety}-${question}`;
+
+  // On short screens a long reply (e.g. JSON + sources) can be taller than the space left.
+  // Then the reply box scrolls, and a fade + "scroll" hint shows that there is more.
+  // A callback ref (state), because with AnimatePresence mode="wait" the new reply box mounts
+  // only after the old one has faded out.
+  const [replyEl, setReplyEl] = useState<HTMLDivElement | null>(null);
+  const [replyOverflows, setReplyOverflows] = useState(false);
+  useEffect(() => {
+    const el = replyEl;
+    setReplyOverflows(false);
+    if (!el) return;
+    const check = () => setReplyOverflows(el.scrollHeight > el.clientHeight + 4 && el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+    const t = setTimeout(check, 700); // after the lines have animated in
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    el.addEventListener('scroll', check);
+    return () => {
+      clearTimeout(t);
+      ro.disconnect();
+      el.removeEventListener('scroll', check);
+    };
+  }, [replyEl]);
   const q = questions.find((x) => x.id === question)!;
 
   const promptLines: { text: string; label: string; color: string }[] = [];
@@ -439,7 +461,7 @@ export default function SystemPromptsPlayground() {
       <div className="flex-1 min-w-0 flex flex-col gap-3">
         {/* System prompt card */}
         <motion.div
-          className="rounded-xl border-2 p-3 relative"
+          className="rounded-xl border-2 p-3 [@media(max-height:800px)]:px-3 [@media(max-height:800px)]:py-2 relative"
           animate={{
             borderColor: broke ? 'rgba(239,68,68,0.6)' : status === 'held' ? 'rgba(74,222,128,0.6)' : 'rgba(167,139,250,0.4)',
             backgroundColor: broke ? 'rgba(239,68,68,0.06)' : 'rgba(167,139,250,0.06)',
@@ -447,7 +469,7 @@ export default function SystemPromptsPlayground() {
           }}
           transition={{ duration: 0.4 }}
         >
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 [@media(max-height:800px)]:mb-1">
             <span className="text-xs font-mono font-bold text-[#a78bfa] bg-[#a78bfa]/15 px-2 py-0.5 rounded">
               messages[0] · role: &quot;system&quot;
             </span>
@@ -457,7 +479,7 @@ export default function SystemPromptsPlayground() {
               </motion.span>
             )}
           </div>
-          <div className="min-h-[44px] space-y-1">
+          <div className="min-h-[44px] space-y-1 [@media(max-height:800px)]:space-y-0.5">
             <AnimatePresence initial={false}>
               {promptLines.length === 0 && (
                 <motion.p
@@ -481,12 +503,13 @@ export default function SystemPromptsPlayground() {
                   transition={spring}
                 >
                   <span
-                    className="text-[12px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5 w-[72px] text-center"
+                    className="text-[12px] font-bold px-1.5 py-0.5 [@media(max-height:800px)]:py-0 rounded flex-shrink-0 mt-0.5 [@media(max-height:800px)]:mt-0 w-[72px] text-center"
                     style={{ color: l.color, backgroundColor: `${l.color}20` }}
                   >
                     {l.label}
                   </span>
-                  <span className="relative text-xs font-mono text-white/80 leading-snug">
+                  {/* Short screens: one line per block, so the reply below keeps room to show. */}
+                  <span className="relative min-w-0 text-xs font-mono text-white/80 leading-snug [@media(max-height:800px)]:truncate" title={l.text}>
                     {l.text}
                     {/* Strike-through when the injection breaks the prompt */}
                     <motion.span
@@ -504,7 +527,7 @@ export default function SystemPromptsPlayground() {
 
         {/* Question chips */}
         <div>
-          <p className="text-xs uppercase tracking-wider text-white/40 mb-1.5">2. Ask a question</p>
+          <p className="text-xs uppercase tracking-wider text-white/40 mb-1.5 [@media(max-height:800px)]:mb-1">2. Ask a question</p>
           <div className="flex flex-wrap gap-1.5">
             {questions.map((x) => (
               <Chip
@@ -525,7 +548,7 @@ export default function SystemPromptsPlayground() {
           <AnimatePresence mode="wait">
             <motion.div
               key={`q-${question}`}
-              className="self-end max-w-[85%] rounded-xl rounded-br-sm px-3 py-2 text-sm border"
+              className="self-end max-w-[85%] rounded-xl rounded-br-sm px-3 py-2 [@media(max-height:800px)]:py-1 text-sm border"
               style={{
                 borderColor: question === 'inject' ? 'rgba(239,68,68,0.4)' : 'rgba(74,158,255,0.35)',
                 backgroundColor: question === 'inject' ? 'rgba(239,68,68,0.08)' : 'rgba(74,158,255,0.1)',
@@ -536,7 +559,7 @@ export default function SystemPromptsPlayground() {
               exit={{ opacity: 0, x: 30 }}
               transition={spring}
             >
-              <span className="text-[12px] font-bold uppercase text-white/40 block">user</span>
+              <span className="text-[12px] font-bold uppercase text-white/40 block [@media(max-height:800px)]:inline [@media(max-height:800px)]:mr-2">user</span>
               {q.text}
             </motion.div>
           </AnimatePresence>
@@ -544,7 +567,9 @@ export default function SystemPromptsPlayground() {
           <AnimatePresence mode="wait">
             <motion.div
               key={replyKey}
-              className="self-start max-w-[92%] rounded-xl rounded-bl-sm px-3 py-2 border border-[#4ade80]/30 bg-[#4ade80]/[0.06] overflow-auto min-h-0"
+              ref={setReplyEl}
+              className="self-start max-w-[92%] [@media(max-height:800px)]:max-w-full rounded-xl rounded-bl-sm px-3 py-2 border border-[#4ade80]/30 bg-[#4ade80]/[0.06] overflow-auto min-h-0"
+              style={replyOverflows ? { maskImage: 'linear-gradient(to bottom, black 75%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, black 75%, transparent)' } : undefined}
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -593,6 +618,9 @@ export default function SystemPromptsPlayground() {
               </div>
             </motion.div>
           </AnimatePresence>
+          {replyOverflows && (
+            <p className="-mt-1 shrink-0 text-[12px] font-bold text-[#4ade80]/80">↓ Scroll the reply to read the rest</p>
+          )}
 
           {/* Context notes */}
           <AnimatePresence>
@@ -617,8 +645,7 @@ export default function SystemPromptsPlayground() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
-                These sources are real, but a model with no documents to read can invent sources that look just as good
-                (see the Hallucination lesson).
+                These sources are real, but a model with no documents to read can invent ones that look just as good.
               </motion.p>
             )}
           </AnimatePresence>

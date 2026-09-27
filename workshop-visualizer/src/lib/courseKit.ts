@@ -30,7 +30,8 @@ function readme(): string {
   return `# AI Course Code
 
 Every program from the course, ready to run on your own computer.
-Each file is the exact program you watched in a lesson.
+Each file is the program you watched in a lesson. (A few are longer: where a lesson
+shortened a tool list to \`{...}\`, the file here has the full, runnable version.)
 
 **First time?** Do the "Get Set Up" lesson first (Part 1). It walks through every step below.
 
@@ -48,6 +49,12 @@ No Python yet? Get it from https://www.python.org/downloads/
 ## 2. Open a terminal in this folder
 
 This folder is called \`ai-course\` (the one with this README in it). Unzip it first if you haven't.
+
+Open a terminal (Mac: the Terminal app; Windows: Command Prompt), type \`cd\` and a space,
+drag the \`ai-course\` folder into the terminal window, then press Enter.
+
+(On Windows, "Extract All" may put it inside another folder called \`ai-course-code\`.
+That's fine: drag in the inner \`ai-course\` folder, the one with this README in it.)
 
 ## 3. Make a toolbox (a virtual environment)
 
@@ -76,7 +83,13 @@ Copy \`.env.example\` to a new file called \`.env\`:
 - **Mac / Linux:** \`cp .env.example .env\`
 - **Windows:** \`copy .env.example .env\`
 
-Open \`.env\` in a text editor and paste your key after the \`=\` sign, like \`OPENAI_API_KEY=sk-...\`
+Open it in a text editor:
+
+- **Mac:** \`open -e .env\`
+- **Windows:** \`notepad .env\`
+
+Paste your key after the \`=\` sign, like \`OPENAI_API_KEY=sk-...\`, then save.
+(Can't see \`.env\` in Finder or File Explorer? Names that start with a dot are often hidden. That's normal.)
 
 Keep \`.env\` secret: never share it, screenshot it or upload it. (The \`.gitignore\` file keeps it out of git.)
 

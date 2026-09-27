@@ -115,7 +115,7 @@ export default function AgentsAnim() {
     if (s === 4) {
       setWeatherPhase(0);
       const timer = setInterval(() => {
-        setWeatherPhase((prev) => (prev < 5 ? prev + 1 : 0));
+        setWeatherPhase((prev) => (prev < 6 ? prev + 1 : 0)); // 6 = hold on the final answer
       }, 1200);
       return () => clearInterval(timer);
     }
@@ -139,7 +139,7 @@ export default function AgentsAnim() {
     if (s === 5) {
       setMultiPhase(0);
       const timer = setInterval(() => {
-        setMultiPhase((prev) => (prev < 3 ? prev + 1 : 0));
+        setMultiPhase((prev) => (prev < 4 ? prev + 1 : 0)); // 3-4 = all tools done, final answer shown
       }, 1500);
       return () => clearInterval(timer);
     }
@@ -667,15 +667,6 @@ export default function AgentsAnim() {
                   {step.text}
                 </p>
               </div>
-              {/* Active indicator */}
-              {weatherPhase === i && (
-                <motion.div
-                  className="w-2 h-2 rounded-full mt-3 shrink-0"
-                  style={{ backgroundColor: step.color }}
-                  animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 1, repeat: Infinity }}
-                />
-              )}
             </motion.div>
           ))}
 
@@ -757,8 +748,8 @@ export default function AgentsAnim() {
           <motion.div
             className="mt-3 px-4 py-2.5 rounded-xl border-2 border-[#fbbf24]/25 bg-[#fbbf24]/5"
             animate={{
-              opacity: s === 5 && multiPhase >= 2 ? 1 : 0,
-              y: s === 5 && multiPhase >= 2 ? 0 : 10,
+              opacity: s === 5 && multiPhase >= 3 ? 1 : 0,
+              y: s === 5 && multiPhase >= 3 ? 0 : 10,
             }}
             transition={smooth}
           >

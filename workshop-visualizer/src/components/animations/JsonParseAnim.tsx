@@ -150,8 +150,15 @@ export default function JsonParseAnim() {
   const typed = useTicker(rawJson.length, at('apiProcessing'), 18, resetKey);
   const jsonShown = rawJson.slice(0, typed);
 
-  // First key/value of the reply, for the "What is JSON?" card.
+  // The "What is JSON?" card: the example the explanation names (e.g. {"difficulty": "easy"}), so the
+  // picture and the words always match; otherwise the first asked-for key/value of this example's reply.
+  const introExample = useMemo(() => {
+    const text = steps.find((s) => s.animationTrigger === 'jsonIntro')?.explanation ?? '';
+    const m = text.match(/\{\s*"([A-Za-z_]\w*)"\s*:\s*("[^"]*"|-?\d+(?:\.\d+)?)\s*\}/);
+    return m ? { k: m[1], v: m[2] } : null;
+  }, [steps]);
   const sample = useMemo(() => {
+    if (introExample) return introExample;
     const first = items[0] ?? {};
     // Shortest asked-for value reads best as a tiny example: {"difficulty": "easy"}.
     const cands = askedKeys.filter((a) => a in first);
@@ -161,7 +168,7 @@ export default function JsonParseAnim() {
       'difficulty';
     const v = first[k] ?? 'easy';
     return { k, v: JSON.stringify(v) };
-  }, [items, askedKeys]);
+  }, [items, askedKeys, introExample]);
 
   // Render the user prompt with asked-for keys highlighted.
   const highlightPrompt = (text: string) => {

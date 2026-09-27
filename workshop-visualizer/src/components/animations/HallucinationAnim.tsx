@@ -944,7 +944,7 @@ export default function HallucinationAnim() {
         animate={{ opacity: s === 9 ? 1 : 0 }}
         transition={spring}
       >
-        <div className="max-w-lg w-full">
+        <div className="max-w-2xl w-full">
           <motion.p
             className="text-base font-semibold text-white/70 mb-5 text-center"
             animate={{ opacity: s === 9 ? 1 : 0, y: s === 9 ? 0 : -10 }}
@@ -968,7 +968,7 @@ export default function HallucinationAnim() {
               ].map((item, i) => (
                 <motion.div
                   key={i}
-                  className="flex items-center justify-between px-3 py-2 rounded-lg border"
+                  className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border"
                   style={{
                     borderColor: item.real ? '#4ade8040' : '#ef444440',
                     backgroundColor: item.real ? '#4ade8008' : '#ef444408',
@@ -976,8 +976,8 @@ export default function HallucinationAnim() {
                   animate={{ opacity: s === 9 ? 1 : 0, x: s === 9 ? 0 : -10 }}
                   transition={{ ...spring, delay: 0.5 + i * 0.2 }}
                 >
-                  <span className="text-xs text-white/60 font-mono">{item.cite}</span>
-                  <span className="text-xs font-bold" style={{ color: item.real ? '#4ade80' : '#ef4444' }}>
+                  <span className="text-sm text-white/60 font-mono">{item.cite}</span>
+                  <span className="text-sm font-bold whitespace-nowrap shrink-0" style={{ color: item.real ? '#4ade80' : '#ef4444' }}>
                     {item.real ? '✓ Real' : '✗ Fake'}
                   </span>
                 </motion.div>

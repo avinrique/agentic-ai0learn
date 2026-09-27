@@ -15,10 +15,14 @@ import { runInfo as simpleAgent } from '@/data/run/simple-agent';
 import { runInfo as multiFunction } from '@/data/run/multi-function';
 import { runInfo as multiTool } from '@/data/run/multi-tool';
 import { runInfo as studyBuddyPro } from '@/data/run/study-buddy-pro';
+import { runInfo as ragCode } from '@/data/run/rag-code';
 import { runInfo as terminalAssistant } from '@/data/run/terminal-assistant';
+import { runInfo as testingAgents } from '@/data/run/testing-agents';
 import { runInfo as assemblyLine } from '@/data/run/assembly-line';
 import { runInfo as writerCritic } from '@/data/run/writer-critic';
 import { runInfo as bossAgent } from '@/data/run/boss-agent';
+import { runInfo as parallelAgents } from '@/data/run/parallel-agents';
+import { runInfo as sharedMemory } from '@/data/run/shared-memory';
 import { runInfo as guardrails } from '@/data/run/guardrails';
 
 export const runInfos: RunInfo[] = [
@@ -35,10 +39,14 @@ export const runInfos: RunInfo[] = [
   multiFunction,
   multiTool,
   studyBuddyPro,
+  ragCode,
   terminalAssistant,
+  testingAgents,
   assemblyLine,
   writerCritic,
   bossAgent,
+  parallelAgents,
+  sharedMemory,
   guardrails,
 ];
 
