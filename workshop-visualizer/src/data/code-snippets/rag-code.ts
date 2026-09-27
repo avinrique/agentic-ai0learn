@@ -15,18 +15,18 @@ def embed(texts):  # each text -> a long list of numbers
         model="text-embedding-3-small", input=texts)
     return [item.embedding for item in result.data]
 
-def similarity(a, b):  # 1 = same direction; lower = less alike
+def similarity(a, b):  # 1 = same direction (very alike)
     dot = sum(x * y for x, y in zip(a, b))
     length_a = sum(x * x for x in a) ** 0.5
     length_b = sum(x * x for x in b) ** 0.5
     return dot / (length_a * length_b)
 
+# 1. Retrieve: find the 2 documents closest in meaning
 doc_vectors = embed(documents)  # embed the handbook once
 question = "How many books can I borrow?"
 question_vector = embed([question])[0]
-
-# 1. Retrieve: score every document, keep the top 2
-scores = [similarity(question_vector, v) for v in doc_vectors]
+scores = [similarity(question_vector, doc_vector)
+          for doc_vector in doc_vectors]
 ranked = sorted(zip(scores, documents), reverse=True)
 for score, doc in ranked:
     print(round(score, 2), doc)

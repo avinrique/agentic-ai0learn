@@ -13,6 +13,7 @@ export default function RunItModal({ info, onClose }: { info: RunInfo; onClose: 
   const command = `python run.py ${info.fileName}`;
   const [copied, setCopied] = useState(false);
   const commandRef = useRef<HTMLElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const shortened = info.runnableCode !== undefined && info.runnableCode !== info.shownCode;
   const extraNames = (info.extraFiles ?? []).map((path) => path.split('/').pop());
 
@@ -25,6 +26,11 @@ export default function RunItModal({ info, onClose }: { info: RunInfo; onClose: 
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
   }, [onClose]);
+
+  // Move keyboard focus into the box, so Tab starts at its buttons (not the page behind it).
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     if (!copied) return;
@@ -57,7 +63,9 @@ export default function RunItModal({ info, onClose }: { info: RunInfo; onClose: 
         exit={{ y: 30, scale: 0.96 }}
         transition={spring}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl max-h-full flex flex-col rounded-2xl border border-white/10 bg-navy-800 shadow-2xl overflow-hidden"
+        ref={dialogRef}
+        tabIndex={-1}
+        className="w-full max-w-2xl max-h-full flex flex-col rounded-2xl border border-white/10 bg-navy-800 shadow-2xl overflow-hidden outline-none"
         role="dialog"
         aria-modal="true"
         aria-label="Run it yourself"

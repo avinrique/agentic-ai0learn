@@ -136,10 +136,10 @@ function Scoreboard({ states, passed, bump, big }: { states: SlotState[]; passed
         <span className={`font-mono text-white/50 ${big ? 'text-[30px]' : 'text-[16px]'}`}> / {states.length}</span>
         {bump && (
           <motion.span
-            initial={{ y: 10, opacity: 0 }}
+            initial={{ y: -6, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="absolute right-full mr-1.5 top-1/2 -translate-y-1/2 text-[18px] font-black whitespace-nowrap"
+            className="absolute left-0 top-full text-[16px] font-black whitespace-nowrap"
             style={{ color: GREEN }}
           >
             +1
@@ -300,6 +300,8 @@ function Machine({
 
   const cardFocal = phase === 0 || phase === 8;
   const why = trig === 'fail-why';
+  // The small tool chip matters up to check 1 (and whenever it explains a failure).
+  const toolChipBright = phase <= 6 || bug || (why && kind === 'notool');
 
   const toolChip = (big: boolean) => {
     if (run.toolUsed === 'add' && t.args) {
@@ -308,7 +310,7 @@ function Machine({
         <motion.div
           key={big ? 'tool-big' : 'tool-small'}
           initial={{ scale: 0.7, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
+          animate={{ scale: 1, opacity: big || toolChipBright ? 1 : 0.45 }}
           className={`w-full rounded-xl text-center font-mono ${big ? 'px-3 py-4' : 'px-2 py-1.5'}`}
           style={{ border: `2px solid ${bug ? RED : GOLD}`, background: bug ? `${RED}14` : `${GOLD}12` }}
         >
@@ -328,7 +330,7 @@ function Machine({
       <motion.div
         key={inHead ? 'head' : 'none'}
         initial={{ scale: 0.7, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
+        animate={{ scale: 1, opacity: toolChipBright ? 1 : 0.45 }}
         className="w-fit mx-auto rounded-full px-3 py-1 text-[15px] font-semibold"
         style={
           inHead
@@ -423,7 +425,7 @@ function Machine({
           ok={toolOk}
           shown={phase >= 6}
           focal={phase === 6 || (why && kind === 'notool')}
-          dim={phase < 6 || (why && kind === 'wrong') || (phase === 7 && toolOk)}
+          dim={phase < 6 || (why && kind === 'wrong') || (phase === 7 && toolOk) || trig === 'count'}
           note={toolNote}
           noteColor={GOLD}
         />
@@ -438,7 +440,7 @@ function Machine({
           ok={answerOk}
           shown={phase >= 7}
           focal={phase === 7 || (why && kind === 'wrong')}
-          dim={phase < 7 || (why && kind === 'notool')}
+          dim={phase < 7 || (why && kind === 'notool') || trig === 'count'}
           note={answerNote}
           noteColor={GREEN}
         />
@@ -588,11 +590,35 @@ export default function TestingAgentsAnim() {
   } else if (trig === 'regress') {
     stage = <RegressionRuns kind={story.kind} passed={passed} />;
   } else if (trig === 'recap') {
+    const recap: { icon: string; label: ReactNode; color: string }[] = [
+      { icon: '📋', label: 'question + must-have', color: '#e2e8f0' },
+      {
+        icon: '🔧 📝',
+        label: (
+          <>
+            <span style={{ color: GOLD }}>tool</span> AND <span style={{ color: GREEN }}>answer</span>
+          </>
+        ),
+        color: ACCENT,
+      },
+      { icon: '🔁', label: 're-run, track score', color: GOLD },
+    ];
     stage = (
-      <div className="h-full flex flex-col justify-center gap-5 px-8 text-[20px] leading-snug">
-        <div>1️⃣ A test = a question + what a good answer must have.</div>
-        <div>2️⃣ Check the <b style={{ color: GOLD }}>tool used</b> AND the <b style={{ color: GREEN }}>answer</b>.</div>
-        <div>3️⃣ Re-run all tests after every change. Track the score.</div>
+      <div className="h-full flex items-center justify-center gap-5">
+        {recap.map((r, i) => (
+          <motion.div
+            key={i}
+            initial={{ y: 16, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: i * 0.2 }}
+            className="flex flex-col items-center justify-center gap-3 w-[210px] h-[170px] rounded-2xl"
+            style={{ border: `2px solid ${r.color}`, background: `${r.color}10` }}
+          >
+            <span className="text-[15px] font-bold text-white/50">{i + 1}</span>
+            <span className="text-[40px] leading-none">{r.icon}</span>
+            <span className="text-[18px] font-semibold text-white text-center">{r.label}</span>
+          </motion.div>
+        ))}
       </div>
     );
   }

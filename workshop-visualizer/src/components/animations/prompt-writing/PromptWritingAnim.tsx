@@ -325,7 +325,7 @@ function BuildScene({ stage }: { stage: number }) {
               <span className="text-[13px] font-bold uppercase tracking-wide text-black/50">Mia&apos;s prompt</span>
               <span className="ml-auto text-[13px] font-mono text-black/40">draft {stage + 1}</span>
             </div>
-            <div className="flex flex-wrap gap-1.5 px-3 pt-2">
+            <div className="flex flex-wrap gap-1 px-3 pt-2">
               {RECIPE.map((id) => {
                 const ing = ING[id];
                 const on = have.includes(id);

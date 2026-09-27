@@ -50,19 +50,21 @@ export function NumberStrip({
 /** A small document chip: icon + short name. */
 export function DocChip({ i, glow, dim, color = GREEN }: { i: number; glow?: boolean; dim?: boolean; color?: string }) {
   const d = RAG_DOCS[i];
+  // Solid backgrounds, so the map's distance lines never show through a chip.
   return (
     <div
-      className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[14px] font-medium"
+      className="whitespace-nowrap rounded-full px-3 py-1.5 text-[14px] font-medium"
       style={{
-        background: glow ? `${color}22` : '#14143a',
-        border: `1.5px solid ${glow ? color : 'rgba(255,255,255,0.18)'}`,
+        background: glow ? '#163a2c' : '#14143a',
+        border: `1.5px solid ${glow ? color : dim ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.18)'}`,
         color: glow ? '#fff' : 'rgba(255,255,255,0.8)',
         boxShadow: glow ? `0 0 16px ${color}77` : 'none',
-        opacity: dim ? 0.45 : 1,
       }}
     >
-      <span>{d.icon}</span>
-      {d.short}
+      <span className="flex items-center gap-1.5" style={{ opacity: dim ? 0.45 : 1 }}>
+        <span>{d.icon}</span>
+        {d.short}
+      </span>
     </div>
   );
 }
@@ -72,8 +74,6 @@ export function DocChip({ i, glow, dim, color = GREEN }: { i: number; glow?: boo
 export function MeaningMap({ story }: { story: RagStory }) {
   const top2 = rankedIdx(story).slice(0, 2);
   const [px, py] = story.pin;
-  const labelRight = px < 0.3;
-  const labelLeft = px > 0.62;
 
   return (
     <div className="relative w-full h-[420px] rounded-xl border border-white/10 overflow-hidden"
@@ -84,6 +84,13 @@ export function MeaningMap({ story }: { story: RagStory }) {
       }}
     >
       <div className="absolute left-3 bottom-2 text-[13px] text-white/40">🗺️ meaning map · illustrative</div>
+      <div
+        className="absolute left-3 top-3 z-10 flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-[15px] font-semibold"
+        style={{ background: '#0b1b33', border: `1.5px solid ${BLUE}`, color: '#cfe4ff' }}
+      >
+        <span className="flex h-5 w-5 items-center justify-center rounded-full text-[11px]" style={{ background: BLUE }}>❓</span>
+        {story.question}
+      </div>
 
       {/* Distance lines from the question to every document */}
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
@@ -147,25 +154,10 @@ export function MeaningMap({ story }: { story: RagStory }) {
         transition={{ type: 'spring', damping: 11, stiffness: 140, delay: 0.15 }}
       >
         <div
-          className="absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-[15px]"
+          className="absolute -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-[17px]"
           style={{ background: BLUE, boxShadow: `0 0 18px ${BLUE}` }}
         >
           ❓
-        </div>
-        <div
-          className="absolute -translate-y-1/2 whitespace-nowrap rounded-md px-2.5 py-1 text-[14px] font-semibold"
-          style={{
-            background: '#0b1b33',
-            border: `1.5px solid ${BLUE}`,
-            color: '#cfe4ff',
-            ...(labelRight
-              ? { left: 24, top: 0 }
-              : labelLeft
-                ? { right: 24, top: 0 }
-                : { left: 0, top: -34, transform: 'translate(-50%, -50%)' }),
-          }}
-        >
-          {story.question}
         </div>
       </motion.div>
     </div>
