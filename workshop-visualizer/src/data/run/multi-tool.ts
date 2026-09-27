@@ -10,7 +10,7 @@ export const runInfo: RunInfo = {
     'First "Tool result:" with the line it found in study_buddy_notes.txt, then StudyBuddy\'s friendly answer about LangChain.',
   tryThis: [
     'Change the question to "What is 25 + 17?" and watch it pick the add tool instead.',
-    'Add your own fact as a new line in study_buddy_notes.txt, then ask about it.',
-    'Ask about something that is not in the notes, like "What is Kubernetes?".',
+    'Add your own fact as a new line in study_buddy_notes.txt, then change the question to ask about it.',
+    'Change the question to something that is not in the notes, like "What is Kubernetes?".',
   ],
 };

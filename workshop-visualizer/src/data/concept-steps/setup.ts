@@ -22,7 +22,7 @@ export const setupSteps: ConceptStep[] = [
   },
   // Step 3
   {
-    explanation: 'Station 1: Python, the language our programs are written in. Get Python 3.10 or newer from python.org. On Windows, tick “Add python.exe to PATH” before you click Install.',
+    explanation: 'Station 1: Python, the language our programs are written in. Get Python 3.10 or newer from python.org. Windows: use the standalone installer and tick “Add python.exe to PATH” first.',
     animationTrigger: 'python',
     subtitle: 'PATH = the list of places your computer looks for commands.',
   },
@@ -66,23 +66,23 @@ export const setupSteps: ConceptStep[] = [
   {
     explanation: 'Station 4: your API key, a secret password that tells OpenAI the request is yours. On platform.openai.com, open API keys and click “Create new secret key”.',
     animationTrigger: 'apiKey',
-    subtitle: "It's shown only once, so copy it right away.",
+    subtitle: 'Under 18? A parent or teacher creates the account and the key.',
   },
   // Step 11
   {
-    explanation: 'Using the API is billed separately from a ChatGPT subscription. Add a small amount of credit, then set a budget limit so you never spend more than you planned.',
+    explanation: 'Using the API is billed separately from a ChatGPT subscription. Add a little prepaid credit and keep auto-recharge off: when the credit runs out, calls simply stop.',
     animationTrigger: 'credit',
-    subtitle: 'The budget limit is your safety net.',
+    subtitle: 'A budget alert can also email you when you get close.',
   },
   // Step 12
   {
-    explanation: "Look at the cost meter. You pay per token, and tokens in and tokens out have separate prices. With gpt-4o-mini, running each lesson's program a few times typically costs a few cents.",
+    explanation: "Look at the cost meter. You pay per token, and tokens in and out have separate prices. With gpt-4o-mini, running every lesson's program a few times typically costs a few cents in total.",
     animationTrigger: 'cost',
-    subtitle: 'Illustrative numbers. Prices change: check openai.com/api/pricing.',
+    subtitle: 'A token is a small piece of text, about ¾ of a word.',
   },
   // Step 13
   {
-    explanation: 'Station 5: the secret safe. Copy .env.example to a new file called .env, open it, and paste your key right after OPENAI_API_KEY=. run.py reads it from there.',
+    explanation: 'Station 5: the secret safe. Copy .env.example to a new file called .env, open it, and replace sk-your-key-here with your key. run.py reads it from there.',
     animationTrigger: 'envFile',
     subtitle: 'No spaces, no quotes.',
   },
@@ -90,7 +90,7 @@ export const setupSteps: ConceptStep[] = [
   {
     explanation: 'Why a safe? Your key works like a house key and a credit card in one: anyone who sees it can spend your credit. So it never goes on a “postcard”.',
     animationTrigger: 'postcard',
-    subtitle: 'Leaked? Delete it on the website and make a new one.',
+    subtitle: 'GitHub = a public website where people share code.',
   },
   // Step 15
   {
@@ -102,11 +102,11 @@ export const setupSteps: ConceptStep[] = [
   {
     explanation: "The big moment: run the first lesson's program with run.py. The AI's poem prints right in your terminal. Yours will be different: the AI writes a new one each time.",
     animationTrigger: 'firstRun',
-    subtitle: 'Every code lesson has a 💻 Run it yourself button.',
+    subtitle: 'run.py loads your key from .env, then runs the program.',
   },
   // Step 17
   {
-    explanation: 'Something went wrong? Read the last line of the error. These four errors cover most setup problems, and each one has a simple fix.',
+    explanation: 'Something went wrong? Read the message: run.py and check_setup.py explain problems in plain words. These five cover most setup trouble, and each has a simple fix.',
     animationTrigger: 'errors',
     subtitle: 'An error message is a clue, not a disaster.',
   },
@@ -114,7 +114,7 @@ export const setupSteps: ConceptStep[] = [
   {
     explanation: 'Coming back another day? Setup is done, but every new terminal needs three moves: go to the folder, switch on the toolbox, run the lesson.',
     animationTrigger: 'routine',
-    subtitle: 'Forget step 2 and you get ModuleNotFoundError.',
+    subtitle: "Skip step 2 and the lesson won't start: the toolbox is off.",
   },
   // Step 19
   {
@@ -130,7 +130,7 @@ export const setupSteps: ConceptStep[] = [
   },
   // Step 21
   {
-    explanation: 'What you learned: (1) Python, the kit and a toolbox run the lessons. (2) Your key lives in .env, never in code or chats. (3) You pay per token, so set a budget.',
+    explanation: 'What you learned: (1) Python, the kit and a toolbox run the lessons. (2) Your key lives in .env, never in code or chats. (3) You pay per token from prepaid credit.',
     animationTrigger: 'takeaways',
     subtitle: 'Next: we read the poem program line by line.',
   },

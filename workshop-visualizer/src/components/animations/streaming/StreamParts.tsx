@@ -1,6 +1,6 @@
 'use client';
 import { motion } from 'framer-motion';
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useLayoutEffect, useState } from 'react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Small building blocks for StreamingAnim (Lesson 11). The icons and colours
@@ -33,19 +33,70 @@ export function useClock(active: boolean, resetKey: string, maxMs: number) {
   return state.key === resetKey ? state.t : 0;
 }
 
+/**
+ * Content-box size of an element, kept up to date. Returns a callback ref (kept in state)
+ * so the observer re-attaches when the element remounts (e.g. after the compare step).
+ */
+export function useSize<T extends HTMLElement>() {
+  const [el, ref] = useState<T | null>(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  useLayoutEffect(() => {
+    if (!el) return;
+    const read = () => {
+      const cs = getComputedStyle(el);
+      const w = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const h = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      setSize((old) => (old.w === w && old.h === h ? old : { w, h }));
+    };
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    read();
+    return () => ro.disconnect();
+  }, [el]);
+  return [ref, size] as const;
+}
+
 /** Height of an element, kept up to date. */
 export function useHeight<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
-  const [h, setH] = useState(0);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => setH(el.clientHeight));
-    ro.observe(el);
-    setH(el.clientHeight);
+  const [ref, size] = useSize<T>();
+  return [ref, size.h] as const;
+}
+
+/**
+ * Holds one focal card in a slot: centred vertically, laid out at least `minWidth` wide,
+ * and scaled down (never up) when the slot is shorter or narrower than the card, so it
+ * never spills over its neighbours on small screens.
+ */
+export function FitBox({ children, minWidth = 470 }: { children: ReactNode; minWidth?: number }) {
+  const [outer, setOuter] = useState<HTMLDivElement | null>(null);
+  const [inner, setInner] = useState<HTMLDivElement | null>(null);
+  const [box, setBox] = useState({ w: 0, h: 0, cw: 0, ch: 0 });
+  useLayoutEffect(() => {
+    if (!outer || !inner) return;
+    const read = () => {
+      const next = { w: outer.clientWidth, h: outer.clientHeight, cw: inner.scrollWidth, ch: inner.offsetHeight };
+      setBox((old) => (old.w === next.w && old.h === next.h && old.cw === next.cw && old.ch === next.ch ? old : next));
+    };
+    const ro = new ResizeObserver(read);
+    ro.observe(outer);
+    ro.observe(inner);
+    for (const c of Array.from(inner.children)) ro.observe(c);
+    read();
     return () => ro.disconnect();
-  }, []);
-  return [ref, h] as const;
+  }, [outer, inner, children]);
+  const width = Math.max(box.w, minWidth);
+  const s = box.w > 0 && box.ch > 0 ? Math.min(1, box.w / Math.max(width, box.cw), box.h / box.ch) : 1;
+  return (
+    <div ref={setOuter} className="relative h-full w-full min-w-0">
+      <div
+        ref={setInner}
+        className="absolute left-0 top-1/2 flex flex-col items-start"
+        style={{ width, transform: `translateY(-50%) scale(${s})`, transformOrigin: 'left center' }}
+      >
+        {children}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -169,7 +220,7 @@ export function Layer({
 /** A dotted path like chunk.choices[0].delta.content, with one segment picked out. */
 export function Path({ segs, hot, dim = false }: { segs: string[]; hot?: string; dim?: boolean }) {
   return (
-    <div className={`font-mono text-[15px] ${dim ? 'opacity-45' : ''}`}>
+    <div className={`font-mono text-[15px] whitespace-nowrap ${dim ? 'opacity-70' : ''}`}>
       {segs.map((s, i) => (
         <span
           key={i}

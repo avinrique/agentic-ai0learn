@@ -20,7 +20,7 @@ export const runInfo: RunInfo = {
     'The loop goes round a few times: multiply(50, 2) gives 100, then subtract(100, 15) gives 85, and finally the tutor explains that the answer is 85.',
   tryThis: [
     'Change the question to "What is 100 / 5 + 3?".',
-    'Try "What is 7 * 8 + 9 * 4?": the AI can ask for two tools at once.',
-    'Try "What is 10 / 0?" and see how the tutor handles it.',
+    'Change it to "What is 7 * 8 + 9 * 4?": the AI can ask for two tools at once.',
+    'Change it to "What is 10 / 0?" and see how the tutor handles it.',
   ],
 };

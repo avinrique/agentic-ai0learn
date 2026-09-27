@@ -1,31 +1,39 @@
 'use client';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, useIsPresent } from 'framer-motion';
 import type { RunInfo } from '@/data/runInfo';
-import { KIT_ZIP_URL, kitFileUrl } from '@/lib/kitUrls';
+import { KIT_FOLDER, KIT_ZIP_URL, kitFileUrl } from '@/lib/kitUrls';
 
 const spring = { type: 'spring' as const, damping: 22, stiffness: 220 };
+const fastExit = { duration: 0.15 };
+const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // The "Run it yourself" box: how to run this lesson's program on your own computer.
 // Styled like the Quick check quiz (src/components/ui/LessonQuiz.tsx).
 export default function RunItModal({ info, onClose }: { info: RunInfo; onClose: () => void }) {
   const command = `python run.py ${info.fileName}`;
+  const folder = `${KIT_FOLDER}/${info.fileName.split('/').slice(0, -1).join('/')}/`;
   const [copied, setCopied] = useState(false);
   const commandRef = useRef<HTMLElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  // False while the closing animation plays: the box is on its way out and must not
+  // catch keys or clicks meant for the page any more.
+  const isPresent = useIsPresent();
   const shortened = info.runnableCode !== undefined && info.runnableCode !== info.shownCode;
-  const extraNames = (info.extraFiles ?? []).map((path) => path.split('/').pop());
 
-  // Esc closes; keys must not reach the step navigation (arrows, space, F) while the box is open.
+  // While open: Esc closes, Tab stays inside the box, and no key reaches the step
+  // navigation behind it (arrows, space, F).
   useEffect(() => {
+    if (!isPresent) return;
     const onKey = (e: KeyboardEvent) => {
       e.stopPropagation();
       if (e.key === 'Escape') onClose();
+      if (e.key === 'Tab') trapTab(e, dialogRef.current);
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [onClose]);
+  }, [isPresent, onClose]);
 
   // Move keyboard focus into the box, so Tab starts at its buttons (not the page behind it).
   useEffect(() => {
@@ -52,15 +60,16 @@ export default function RunItModal({ info, onClose }: { info: RunInfo; onClose: 
   return (
     <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      style={{ pointerEvents: isPresent ? 'auto' : 'none' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      exit={{ opacity: 0, transition: fastExit }}
       onClick={onClose}
     >
       <motion.div
         initial={{ y: 30, scale: 0.96 }}
         animate={{ y: 0, scale: 1 }}
-        exit={{ y: 30, scale: 0.96 }}
+        exit={{ y: 30, scale: 0.96, transition: fastExit }}
         transition={spring}
         onClick={(e) => e.stopPropagation()}
         ref={dialogRef}
@@ -97,7 +106,7 @@ export default function RunItModal({ info, onClose }: { info: RunInfo; onClose: 
             </div>
           </Section>
 
-          <Section n={2} title="Run this in the ai-course folder">
+          <Section n={2} title={`Run this in the ${KIT_FOLDER} folder`}>
             <div className="flex items-stretch rounded-lg border border-white/10 bg-black/30 overflow-hidden">
               <code ref={commandRef} className="flex-1 px-4 py-2.5 font-mono text-[15px] text-white select-all">
                 {command}
@@ -122,7 +131,11 @@ export default function RunItModal({ info, onClose }: { info: RunInfo; onClose: 
             <p className="text-[15px] leading-relaxed text-white/80">{info.expect}</p>
           </Section>
 
-          <Section n={4} title="Try this">
+          <Section
+            n={4}
+            title="Try this"
+            hint={info.needsInput ? 'type it in, or change the code and run again' : 'change the code, save, run again'}
+          >
             <ul className="space-y-1.5">
               {info.tryThis.map((idea) => (
                 <li key={idea} className="flex gap-2 text-[15px] leading-relaxed text-white/80">
@@ -134,19 +147,20 @@ export default function RunItModal({ info, onClose }: { info: RunInfo; onClose: 
           </Section>
         </div>
 
-        {/* Footer: the single-file download, plus what's different about it */}
+        {/* Footer: what's different about the download, plus a fresh copy of this one file */}
         <div className="px-6 py-3 border-t border-white/10 text-[14px] text-white/45 space-y-1">
           {shortened && (
             <div>
-              📋 The lesson hid the long tool list with <code className="font-mono text-white/65">{'{...}'}</code>; the download has
-              the full version.
+              📋 The download has the full tools list that the lesson shortened to{' '}
+              <code className="font-mono text-white/65">...</code> to fit on screen.
             </div>
           )}
           <div>
+            Already have the zip?{' '}
             <a href={kitFileUrl(info.fileName)} download className="text-white/65 underline underline-offset-2 hover:text-white">
               Download just this file
-            </a>
-            {extraNames.length > 0 && <> (it also needs {extraNames.join(' and ')}, which is in the zip)</>}
+            </a>{' '}
+            for a fresh copy (it goes in <code className="font-mono">{folder}</code>).
           </div>
         </div>
       </motion.div>
@@ -154,14 +168,35 @@ export default function RunItModal({ info, onClose }: { info: RunInfo; onClose: 
   );
 }
 
-function Section({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+/** Keep Tab / Shift+Tab cycling through the box's own buttons and links. */
+function trapTab(e: KeyboardEvent, dialog: HTMLElement | null) {
+  if (!dialog) return;
+  const items = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE));
+  if (items.length === 0) return;
+  const first = items[0];
+  const last = items[items.length - 1];
+  const active = document.activeElement;
+  const inside = active instanceof Node && dialog.contains(active) && active !== dialog;
+  if (e.shiftKey && (!inside || active === first)) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && (!inside || active === last)) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
+function Section({ n, title, hint, children }: { n: number; title: string; hint?: string; children: ReactNode }) {
   return (
     <section className="flex gap-3">
       <span className="mt-0.5 w-6 h-6 shrink-0 rounded-full border border-accent-green/50 text-accent-green text-[14px] font-bold flex items-center justify-center">
         {n}
       </span>
       <div className="flex-1 min-w-0">
-        <h3 className="text-[16px] font-semibold text-white mb-2">{title}</h3>
+        <h3 className="text-[16px] font-semibold text-white mb-2">
+          {title}
+          {hint && <span className="ml-2 text-[14px] font-normal text-white/45">({hint})</span>}
+        </h3>
         {children}
       </div>
     </section>

@@ -30,7 +30,7 @@ export const promptWritingSteps: ConceptStep[] = [
   },
   // Step 4
   {
-    explanation: "Meet Mia. She needs text for her science-fair poster and types 'help with my poster'. Solo Bot has to ask what it's about, and the clarity meter is almost empty.",
+    explanation: "Meet Mia. She needs text for her science-fair poster and types 'help with my poster'. Solo Bot has to ask what it's about, and our pretend clarity meter is almost empty.",
     animationTrigger: 'poster0',
     subtitle: 'Our running example.',
   },
@@ -42,7 +42,7 @@ export const promptWritingSteps: ConceptStep[] = [
   },
   // Step 6
   {
-    explanation: "Add a role: 'You are a friendly science teacher.' You met roles in system prompts, and they work in any message. The voice gets warmer, but it's still long.",
+    explanation: "Add a role: 'You are a friendly science teacher.' It's the persona you met in system prompts, and it works in any message too. The voice gets warmer, but it's still long.",
     animationTrigger: 'addRole',
     subtitle: '🎭 Role: who the AI should be.',
   },
@@ -78,7 +78,7 @@ export const promptWritingSteps: ConceptStep[] = [
   },
   // Step 12
   {
-    explanation: 'Mia pastes her lab notes. Without a fence, the AI obeys a note inside them. Wrap pasted text in triple quotes or ### so it knows where the text starts and ends.',
+    explanation: 'Mia pastes her lab notes. Without a fence, the AI obeys a note inside them. Wrap pasted text in triple quotes or ### so it can tell where the text starts and ends.',
     animationTrigger: 'delimiters',
     subtitle: 'Fence off pasted text.',
   },
@@ -90,13 +90,13 @@ export const promptWritingSteps: ConceptStep[] = [
   },
   // Step 14
   {
-    explanation: "Prompts are drafts. Write, test, look at the answer, fix one thing, repeat. Look at Mia's versions: each small fix pushed the clarity meter up.",
+    explanation: "Like your system prompt, every prompt is a draft: write, test, look at the answer, fix one thing, repeat. Look at Mia's versions: each small fix pushed the meter up.",
     animationTrigger: 'iterate',
     subtitle: 'Your first prompt is a first draft.',
   },
   // Step 15
   {
-    explanation: 'Three common mistakes: too vague, too many tasks at once, and rules that fight each other. Read the fix under each one.',
+    explanation: 'Three common mistakes: too vague, too many tasks at once, and rules that fight each other (you met those in system prompts). Read the fix under each one.',
     animationTrigger: 'mistakes',
     subtitle: 'Be specific, one job at a time, no contradictions.',
   },

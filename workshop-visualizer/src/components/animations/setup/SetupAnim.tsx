@@ -5,20 +5,16 @@ import { useConceptStore } from '@/stores/conceptStore';
 import AgentBot, { TEAM } from '@/components/animations/characters/AgentBot';
 import {
   BLUE,
-  CHECK_OUT,
   CMD,
   CYAN,
   FileRow,
+  FitBox,
   GOLD,
   GREEN,
   KeyArt,
   OS,
   OsToggle,
-  PIP_OUT,
-  PY_VERSION,
   RED,
-  REQUIREMENTS,
-  RUN_OUT,
   SafeBox,
   STATIONS,
   StationStrip,
@@ -27,21 +23,18 @@ import {
   endTime,
   spring,
 } from './SetupParts';
+import { CHECK_OUT, COPIED_WIN, PIP_OUT, PY_VERSION, REQUIREMENTS, RUN_OUT } from './realOutput';
 import SetupSimulator from './SetupSimulator';
 import SpotTheLeak from './SpotTheLeak';
 
 const SOLO = TEAM.solo;
 const pop = { initial: { opacity: 0, scale: 0.85 }, animate: { opacity: 1, scale: 1 } };
 
-function Scene({ children, className = '' }: { children: ReactNode; className?: string }) {
+/** A step's picture: centered, and shrunk to fit if the panel is small. */
+function Scene({ children }: { children: ReactNode }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-      className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-4 ${className}`}
-    >
-      {children}
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="absolute inset-0 px-6 py-4">
+      <FitBox>{children}</FitBox>
     </motion.div>
   );
 }
@@ -66,7 +59,7 @@ function Key({ children }: { children: ReactNode }) {
 
 function Chip({ children, color = CYAN, className = '' }: { children: ReactNode; color?: string; className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[14px] ${className}`} style={{ color: '#e5e7eb', backgroundColor: `${color}1c`, border: `1px solid ${color}55` }}>
+    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[14px] whitespace-nowrap ${className}`} style={{ color: '#e5e7eb', backgroundColor: `${color}1c`, border: `1px solid ${color}55` }}>
       {children}
     </span>
   );
@@ -102,10 +95,7 @@ function termLines(trigger: string, os: OS): TermLine[] {
         { t: 'idle', where: 'kit', hlFolder: true },
       ];
     case 'venv':
-      return [
-        { t: 'cmd', cmd: CMD.venv(os) },
-        { t: 'idle' },
-      ];
+      return [{ t: 'cmd', cmd: CMD.venv(os) }, { t: 'idle' }];
     case 'activate':
       return [
         { t: 'cmd', cmd: CMD.activate(os) },
@@ -116,7 +106,7 @@ function termLines(trigger: string, os: OS): TermLine[] {
     case 'envFile':
       return [
         { t: 'cmd', cmd: CMD.copyEnv(os), venv: true },
-        ...(os === 'win' ? [{ t: 'out' as const, text: '        1 file(s) copied.' }] : []),
+        ...(os === 'win' ? [COPIED_WIN] : []),
         { t: 'cmd', cmd: CMD.editEnv(os), venv: true },
         { t: 'idle', venv: true },
       ];
@@ -134,12 +124,11 @@ function termLines(trigger: string, os: OS): TermLine[] {
 function IntroScene() {
   return (
     <Scene>
-      <div className="text-[13px] font-semibold tracking-widest uppercase mb-1" style={{ color: CYAN }}>Part 1 · From watching to doing</div>
       <h2 className="text-3xl font-bold text-white mb-6">Your own AI workshop</h2>
       <div className="flex items-center gap-10">
         <div className="flex flex-col items-center gap-2">
           <Bubble delay={0.9}>Let&apos;s set up your workshop!</Bubble>
-          <AgentBot color={SOLO.color} badge={SOLO.badge} name={SOLO.name} role="your setup helper" size={120} mood="happy" active />
+          <AgentBot color={SOLO.color} badge={SOLO.badge} name={SOLO.name} size={120} mood="happy" active />
         </div>
         <div className="grid grid-cols-3 gap-3">
           {STATIONS.map((s, i) => (
@@ -148,10 +137,10 @@ function IntroScene() {
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...spring, delay: 0.25 + i * 0.12 }}
-              className="relative w-[180px] rounded-xl border border-white/12 bg-white/[0.04] px-4 py-3"
+              className="relative w-[180px] rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3"
             >
               <div className="absolute top-2.5 right-3 w-5 h-5 rounded border-2 border-white/25" />
-              <div className="text-[12px] font-bold text-white/40">STATION {i + 1}</div>
+              <div className="text-[13px] font-bold text-white/40">STATION {i + 1}</div>
               <div className="text-3xl my-1">{s.icon}</div>
               <div className="text-[16px] font-bold text-white">{s.name}</div>
               <div className="text-[13px] text-white/55">{s.what}</div>
@@ -227,7 +216,7 @@ function BigPictureScene() {
 
 function HowToOpen({ os }: { os: OS }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="flex items-center gap-2.5 text-[15px] text-white/75">
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="flex items-center gap-2.5 text-[15px] text-white/75 whitespace-nowrap">
       <span className="text-white/50 mr-1">Open it:</span>
       {os === 'mac' ? (
         <>
@@ -247,8 +236,10 @@ function TerminalScene({ os }: { os: OS }) {
   return (
     <Scene>
       <Terminal os={os} lines={termLines('terminal', os)} width={760} fontSize={20} />
-      <div className="flex gap-6 mt-4 text-[14px]">
-        <span className="text-white/60"><span className="font-mono text-white/60">{os === 'mac' ? 'sam@MacBook ~ %' : 'C:\\Users\\sam>'}</span> = where you are</span>
+      <div className="flex gap-6 mt-4 text-[14px] whitespace-nowrap">
+        <span className="text-white/60">
+          <span className="font-mono text-white/60">{os === 'mac' ? 'sam@MacBook ~ %' : 'C:\\Users\\sam>'}</span> = where you are
+        </span>
         <span className="text-white font-semibold">white = what you type</span>
         <span className="text-white/60">below = the reply</span>
       </div>
@@ -263,7 +254,7 @@ function Checkbox({ label, tick, delay }: { label: string; tick: boolean; delay:
   return (
     <div className="flex items-center gap-2 text-[14px] text-[#1f2937]">
       <motion.span
-        className="w-[18px] h-[18px] rounded-[3px] border-2 flex items-center justify-center text-[12px] font-bold"
+        className="w-[18px] h-[18px] rounded-[3px] border-2 flex items-center justify-center text-[13px] font-bold"
         initial={{ backgroundColor: '#ffffff', borderColor: '#6b7280', color: 'rgba(255,255,255,0)' }}
         animate={tick ? { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#ffffff' } : undefined}
         transition={{ delay, duration: 0.2 }}
@@ -275,17 +266,19 @@ function Checkbox({ label, tick, delay }: { label: string; tick: boolean; delay:
   );
 }
 
+const PY_EXAMPLE = PY_VERSION.replace('Python ', ''); // e.g. 3.14.7, the same example everywhere
+
 function WindowsInstaller() {
   return (
     <div className="w-[640px] rounded-md overflow-hidden shadow-2xl border border-black/40 bg-white">
       <div className="h-8 px-3 flex items-center justify-between bg-[#f3f3f3] border-b border-black/10 text-[13px] text-[#1f2937]">
-        <span>🐍 Python 3.13.7 (64-bit) Setup</span>
+        <span>🐍 Python {PY_EXAMPLE} (64-bit) Setup</span>
         <span className="text-black/50 tracking-[0.6em]">— ✕</span>
       </div>
       <div className="flex">
         <div className="w-[120px] bg-gradient-to-b from-[#306998] to-[#ffd43b] flex items-start justify-center pt-6 text-5xl">🐍</div>
         <div className="flex-1 p-5 text-[#1f2937]">
-          <div className="text-[20px] font-semibold text-[#1e3a8a]">Install Python 3.13.7 (64-bit)</div>
+          <div className="text-[20px] font-semibold text-[#1e3a8a]">Install Python {PY_EXAMPLE} (64-bit)</div>
           <div className="text-[13px] text-black/55 mt-1">Select Install Now to install Python with default settings.</div>
           <motion.div
             className="mt-4 rounded px-3 py-2"
@@ -294,7 +287,7 @@ function WindowsInstaller() {
             transition={{ delay: 2.4, duration: 0.3 }}
           >
             <div className="text-[17px] font-semibold text-[#1d4ed8]">➜ Install Now</div>
-            <div className="text-[12px] text-black/50 pl-5">Includes IDLE, pip and documentation</div>
+            <div className="text-[13px] text-black/50 pl-5">Includes IDLE, pip and documentation</div>
           </motion.div>
           <div className="px-3 py-1 text-[15px] text-[#1d4ed8]">➜ Customize installation</div>
           <div className="mt-5 space-y-2 relative">
@@ -337,7 +330,7 @@ function MacInstaller() {
         </div>
         <div className="flex-1 rounded-md bg-white border border-black/10 p-4 flex flex-col">
           <div className="text-[18px] font-semibold">Welcome to the Python Installer</div>
-          <div className="text-[13px] text-black/55 mt-1">Python 3.13.7 for macOS</div>
+          <div className="text-[13px] text-black/55 mt-1">Python {PY_EXAMPLE} for macOS</div>
           <div className="flex-1" />
           <div className="flex justify-end gap-2 mt-10">
             <span className="px-3 py-1 rounded-md bg-white border border-black/20 text-[14px]">Go Back</span>
@@ -361,7 +354,9 @@ function PythonScene({ os }: { os: OS }) {
   return (
     <Scene>
       <div className="flex items-center gap-2 mb-5 text-[14px] text-white/70">
-        <Chip color={BLUE}>🌐 python.org</Chip>→<Chip color={BLUE}>Downloads</Chip>→<Chip color={BLUE}>Python 3.10 or newer</Chip>
+        <Chip color={BLUE}>🌐 python.org</Chip>→<Chip color={BLUE}>Downloads</Chip>→
+        {/* python.org's big Windows button now gives the "install manager"; the link under it gives this installer */}
+        {os === 'win' ? <Chip color={GOLD}>“Or get the standalone installer”</Chip> : <Chip color={BLUE}>the macOS installer</Chip>}
       </div>
       <div className="flex items-center gap-6">
         {os === 'win' ? <WindowsInstaller /> : <MacInstaller />}
@@ -376,12 +371,12 @@ function PythonScene({ os }: { os: OS }) {
 }
 
 function PythonCheckScene({ os }: { os: OS }) {
+  const lines = termLines('pythonCheck', os);
   return (
     <Scene>
-      <Terminal os={os} lines={termLines('pythonCheck', os)} width={760} fontSize={20} />
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: endTime(termLines('pythonCheck', os)) }} className="mt-5 flex gap-3">
-        <Chip color={GREEN}>✓ any version 3.10 or newer is fine</Chip>
-        {os === 'mac' && <Chip color={GOLD}>Mac: python3, not python (for now)</Chip>}
+      <Terminal os={os} lines={lines} width={760} fontSize={20} />
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: endTime(lines) }} className="mt-5">
+        <Chip color={GREEN}>✓ 3.10 or newer = ready</Chip>
       </motion.div>
     </Scene>
   );
@@ -397,7 +392,7 @@ const KIT_FILES: { icon: string; name: string; label: string; hl?: boolean }[] =
   { icon: '📁', name: 'part1/ … part4/', label: 'every lesson program' },
 ];
 
-function KitScene() {
+function KitScene({ os }: { os: OS }) {
   return (
     <Scene>
       <div className="flex items-center gap-8">
@@ -407,22 +402,19 @@ function KitScene() {
             <div className="text-[13px] text-white/60 mt-1">.zip</div>
           </div>
           <div className="font-mono text-[14px] text-white">ai-course-code.zip</div>
-          <a
-            href="/code/ai-course-code.zip"
-            download
-            className="px-4 py-1.5 rounded-lg font-semibold text-[15px] text-navy-900 hover:brightness-110"
-            style={{ backgroundColor: CYAN }}
-          >
+          <a href="/code/ai-course-code.zip" download className="px-4 py-1.5 rounded-lg font-semibold text-[15px] text-navy-900 hover:brightness-110" style={{ backgroundColor: CYAN }}>
             ⬇ Download the kit
           </a>
         </motion.div>
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center gap-1">
           <Arrow delay={0.4} />
-          <div className="text-[13px] text-white/50">unzip</div>
+          <div className="text-[14px] text-white/60 text-center whitespace-nowrap">{os === 'win' ? 'right-click →' : 'double-click'}</div>
+          {os === 'win' && <div className="text-[14px] text-white/60 whitespace-nowrap">Extract All…</div>}
         </div>
         <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ ...spring, delay: 0.6 }} className="rounded-xl border-2 p-4 w-[520px]" style={{ borderColor: `${CYAN}60`, backgroundColor: `${CYAN}08` }}>
-          <div className="flex items-center gap-2 text-[18px] font-bold text-white mb-2 font-mono">📂 ai-course/</div>
-          <div className="pl-3 border-l-2 border-white/10 space-y-0.5">
+          {os === 'win' && <div className="font-mono text-[15px] text-white/50 mb-1">📂 ai-course-code\</div>}
+          <div className={`flex items-center gap-2 text-[18px] font-bold text-white mb-2 font-mono ${os === 'win' ? 'pl-5' : ''}`}>📂 ai-course{os === 'win' ? '\\' : '/'}</div>
+          <div className={`pl-3 border-l-2 border-white/10 space-y-0.5 ${os === 'win' ? 'ml-5' : ''}`}>
             {KIT_FILES.map((f, i) => (
               <FileRow key={f.name} icon={f.icon} name={f.name} label={f.label} hl={f.hl} delay={0.9 + i * 0.12} />
             ))}
@@ -437,14 +429,15 @@ function OpenFolderScene({ os }: { os: OS }) {
   return (
     <Scene>
       <div className="flex items-center gap-3 mb-6 text-[15px] text-white/80">
-        <Chip>1 · type <span className="font-mono text-white">cd</span> and a space</Chip>→
-        <Chip>2 · drag the ai-course folder into the window</Chip>→
-        <Chip>3 · press <Key>Enter</Key></Chip>
+        <Chip>
+          1 · type <span className="font-mono text-white">cd</span> and a space
+        </Chip>
+        →<Chip>2 · drag the ai-course folder into the window</Chip>→
+        <Chip>
+          3 · press <Key>Enter</Key>
+        </Chip>
       </div>
       <Terminal os={os} lines={termLines('openFolder', os)} width={860} fontSize={19} />
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: endTime(termLines('openFolder', os)) + 0.2 }} className="mt-4 text-[15px]" style={{ color: GREEN }}>
-        📍 You&apos;re in the kit folder
-      </motion.div>
     </Scene>
   );
 }
@@ -452,33 +445,26 @@ function OpenFolderScene({ os }: { os: OS }) {
 function VenvScene({ os }: { os: OS }) {
   const lines = termLines('venv', os);
   const t = endTime(lines);
+  const slash = os === 'win' ? '\\' : '/';
   return (
     <Scene>
-      <div className="flex items-center gap-8">
-        <Terminal os={os} lines={lines} width={600} fontSize={19} />
-        <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ ...spring, delay: 0.3 }} className="rounded-xl border border-white/12 bg-white/[0.03] p-4 w-[330px]">
-          <div className="font-mono text-[16px] font-bold text-white mb-2">📂 ai-course/</div>
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            transition={{ delay: t, duration: 0.4 }}
-            className="overflow-hidden"
-          >
-            <div className="flex items-center gap-3 rounded-lg px-3 py-2 mb-1" style={{ backgroundColor: `${GREEN}18`, outline: `2px solid ${GREEN}90` }}>
-              <span className="text-4xl">🧰</span>
-              <div>
-                <div className="font-mono text-[18px] text-white font-bold">.venv/</div>
-                <div className="text-[13px]" style={{ color: GREEN }}>new: your private toolbox</div>
-              </div>
+      <Terminal os={os} lines={lines} width={860} fontSize={19} />
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.3 }} className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] p-4 w-[420px]">
+        <div className="font-mono text-[16px] font-bold text-white mb-2">📂 ai-course{slash}</div>
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ delay: t, duration: 0.4 }} className="overflow-hidden">
+          <div className="flex items-center gap-3 rounded-lg px-3 py-2 m-0.5 mb-1.5" style={{ backgroundColor: `${GREEN}18`, outline: `2px solid ${GREEN}90` }}>
+            <span className="text-4xl">🧰</span>
+            <div>
+              <div className="font-mono text-[18px] text-white font-bold">.venv{slash}</div>
+              <div className="text-[14px]" style={{ color: GREEN }}>new: your private toolbox</div>
             </div>
-          </motion.div>
-          <div className="opacity-45 pl-1">
-            <FileRow icon="📁" name="part1/ … part4/" />
-            <FileRow icon="🐍" name="run.py" />
-            <FileRow icon="📄" name="requirements.txt" />
           </div>
         </motion.div>
-      </div>
+        <div className="opacity-45 pl-1">
+          <FileRow icon="📁" name={`part1${slash} … part4${slash}`} />
+          <FileRow icon="🐍" name="run.py" />
+        </div>
+      </motion.div>
     </Scene>
   );
 }
@@ -488,15 +474,18 @@ function ActivateScene({ os }: { os: OS }) {
   const t = endTime(lines);
   return (
     <Scene>
-      <Terminal os={os} lines={lines} width={820} fontSize={20} />
+      <Terminal os={os} lines={lines} width={900} fontSize={19} />
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: t + 0.2 }} className="mt-5 flex items-center gap-3">
-        <span className="px-3 py-1.5 rounded-lg font-mono text-[18px] font-bold" style={{ color: '#a5f3fc', backgroundColor: 'rgba(34,211,238,0.2)' }}>(.venv)</span>
+        <span className="px-3 py-1.5 rounded-lg font-mono text-[18px] font-bold" style={{ color: '#a5f3fc', backgroundColor: 'rgba(34,211,238,0.2)' }}>
+          (.venv)
+        </span>
         <span className="text-[17px] text-white">= 🧰 toolbox ON</span>
       </motion.div>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: t + 0.6 }} className="mt-5 flex gap-3">
-        <Chip color={GOLD}>🔁 New terminal? Activate again.</Chip>
-        {os === 'win' && <Chip color="#94a3b8">PowerShell says scripts are disabled? Use Command Prompt.</Chip>}
-      </motion.div>
+      {os === 'win' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: t + 0.6 }} className="mt-5">
+          <Chip color="#94a3b8">PowerShell says scripts are disabled? Use Command Prompt.</Chip>
+        </motion.div>
+      )}
     </Scene>
   );
 }
@@ -507,7 +496,7 @@ function PipScene({ os }: { os: OS }) {
     <Scene>
       <div className="flex items-center gap-6">
         <motion.div initial={{ opacity: 0, rotate: -4, y: 10 }} animate={{ opacity: 1, rotate: -2, y: 0 }} transition={spring} className="w-[200px] rounded-md bg-[#fffdf7] text-[#1f2937] shadow-lg">
-          <div className="px-3 pt-2 pb-1 border-b border-black/10 font-mono text-[13px] font-bold text-black/60">requirements.txt</div>
+          <div className="px-3 pt-2 pb-1 border-b border-black/10 font-mono text-[14px] font-bold text-black/60">🛒 requirements.txt</div>
           <div className="px-3 py-2 space-y-1">
             {REQUIREMENTS.map((r, i) => (
               <div key={r} className="flex items-center gap-2 font-mono text-[15px]">
@@ -518,13 +507,9 @@ function PipScene({ os }: { os: OS }) {
               </div>
             ))}
           </div>
-          <div className="px-3 pb-2 text-[12px] text-black/50">🛒 the shopping list</div>
         </motion.div>
-        <Terminal os={os} lines={lines} width={820} fontSize={15} />
+        <Terminal os={os} lines={lines} width={840} fontSize={15} />
       </div>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="mt-5 text-[15px] text-white/70">
-        📲 <span className="font-mono text-white">pip</span> = Python&apos;s app store · it fills the toolbox that is switched on
-      </motion.div>
     </Scene>
   );
 }
@@ -541,9 +526,6 @@ function ApiKeyScene() {
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }} className="px-4 py-2 rounded-xl text-[16px] font-semibold" style={{ color: '#fde68a', backgroundColor: `${GOLD}18`, border: `1px solid ${GOLD}60` }}>
         ⚠️ Shown only once: copy it now
       </motion.div>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.7 }} className="mt-4 text-[14px] text-white/65">
-        👪 Under 18? A parent or teacher creates the account and the key.
-      </motion.div>
     </Scene>
   );
 }
@@ -552,7 +534,7 @@ function CreditScene() {
   return (
     <Scene>
       <div className="flex items-center gap-6">
-        <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={spring} className="w-[300px] rounded-2xl border border-white/12 bg-white/[0.03] p-5 text-center opacity-80">
+        <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={spring} className="w-[300px] rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-center opacity-80">
           <div className="text-4xl">💬</div>
           <div className="text-[18px] font-bold text-white mt-1">ChatGPT subscription</div>
           <div className="text-[14px] text-white/55">for the chat app</div>
@@ -566,18 +548,30 @@ function CreditScene() {
           <div className="text-[14px] text-white/65">for your code · pay per use</div>
         </motion.div>
       </div>
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 1.0 }} className="mt-10 w-[700px]">
-        <div className="flex justify-between text-[15px] text-white/80 mb-2">
-          <span>① Add a little credit <span className="text-white/50">(e.g. $5)</span></span>
-          <span style={{ color: '#fca5a5' }}>② Set a budget limit</span>
+
+      {/* prepaid credit: when it's used up, calls stop */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 1.0 }} className="mt-10 w-[720px]">
+        <div className="flex items-center justify-between text-[15px] text-white/80 mb-2">
+          <span>
+            ① Add a little credit <span className="text-white/50">(e.g. $5)</span>
+          </span>
+          <span className="flex items-center gap-2">
+            ② Auto-recharge
+            <span className="px-2 py-0.5 rounded-full text-[13px] font-bold" style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#e5e7eb', border: '1px solid rgba(255,255,255,0.3)' }}>
+              OFF
+            </span>
+          </span>
         </div>
-        <div className="relative h-7 rounded-full bg-white/[0.06] border border-white/12">
-          <motion.div className="absolute left-0 top-0 bottom-0 rounded-full" style={{ backgroundColor: `${GREEN}90` }} initial={{ width: '0%' }} animate={{ width: '9%' }} transition={{ delay: 1.5, duration: 0.8 }} />
-          <div className="absolute top-[-6px] bottom-[-6px] border-l-[3px] border-dashed" style={{ left: '80%', borderColor: RED }} />
-          <div className="absolute top-8 text-[13px]" style={{ left: '80%', transform: 'translateX(-50%)', color: '#fca5a5' }}>
-            🛑 stop here
-          </div>
-          <div className="absolute top-8 left-0 text-[13px] text-white/55">spent so far</div>
+        <div className="relative h-8 rounded-lg border-2 overflow-hidden" style={{ borderColor: `${GREEN}70`, backgroundColor: `${GREEN}30` }}>
+          {/* the part already spent */}
+          <motion.div className="absolute left-0 top-0 bottom-0 bg-white/15" initial={{ width: '0%' }} animate={{ width: '6%' }} transition={{ delay: 1.5, duration: 0.8 }} />
+          <div className="absolute inset-0 flex items-center justify-center text-[14px] font-semibold text-white/85">$5 of credit</div>
+        </div>
+        <div className="relative h-6 mt-1.5 text-[14px]">
+          <span className="absolute left-0 text-white/55">spent so far</span>
+          <span className="absolute right-0 font-semibold" style={{ color: '#fca5a5' }}>
+            credit runs out = calls stop 🛑
+          </span>
         </div>
       </motion.div>
     </Scene>
@@ -585,7 +579,7 @@ function CreditScene() {
 }
 
 function CostMeter() {
-  // needle angle: -90 = far left (0), +90 = far right (budget limit)
+  // needle angle: -90 = far left ($0), +90 = far right (all $5 used)
   const R = 150;
   const arc = (from: number, to: number) => {
     const p = (a: number) => {
@@ -595,18 +589,17 @@ function CostMeter() {
     return `M ${p(from)} A ${R} ${R} 0 0 1 ${p(to)}`;
   };
   return (
-    <svg viewBox="0 0 360 215" width={420} height={251} aria-hidden>
+    <svg viewBox="0 0 360 215" width={400} height={239} aria-hidden>
       <path d={arc(-90, 30)} stroke={GREEN} strokeWidth="22" fill="none" opacity="0.75" />
       <path d={arc(30, 62)} stroke={GOLD} strokeWidth="22" fill="none" opacity="0.75" />
       <path d={arc(62, 90)} stroke={RED} strokeWidth="22" fill="none" opacity="0.85" />
-      <text x="16" y="208" fontSize="15" fill="rgba(255,255,255,0.6)">0¢</text>
-      <text x="300" y="208" fontSize="14" fill="#fca5a5">limit</text>
-      <motion.g initial={{ rotate: -90 }} animate={{ rotate: -68 }} transition={{ delay: 0.8, type: 'spring', stiffness: 60, damping: 10 }} style={{ originX: '180px', originY: '180px' }}>
-        <line x1="180" y1="180" x2="180" y2="52" stroke="white" strokeWidth="5" strokeLinecap="round" />
+      <text x="12" y="208" fontSize="15" fill="rgba(255,255,255,0.65)">$0</text>
+      <text x="348" y="208" fontSize="15" textAnchor="end" fill="rgba(255,255,255,0.65)">$5</text>
+      {/* a few cents out of $5 barely moves the needle. Rotate around the hub: the bottom of the line's own box. */}
+      <motion.g initial={{ rotate: -90 }} animate={{ rotate: -84 }} transition={{ delay: 0.8, type: 'spring', stiffness: 60, damping: 10 }} style={{ originX: 0.5, originY: 1 }}>
+        <line x1="180" y1="180" x2="180" y2="56" stroke="white" strokeWidth="5" strokeLinecap="round" />
       </motion.g>
       <circle cx="180" cy="180" r="11" fill="white" />
-      <text x="180" y="125" textAnchor="middle" fontSize="24" fontWeight="700" fill="white">a few cents</text>
-      <text x="180" y="148" textAnchor="middle" fontSize="13" fill="rgba(255,255,255,0.6)">each lesson&apos;s program, a few runs</text>
     </svg>
   );
 }
@@ -628,44 +621,61 @@ function CostScene() {
         <motion.div {...pop} transition={{ ...spring, delay: 0.3 }} className="flex flex-col items-center">
           <div className="text-[13px] font-bold uppercase tracking-wider text-white/50 mb-1">🧾 Cost meter · gpt-4o-mini</div>
           <CostMeter />
+          <div className="-mt-1 text-[26px] font-bold text-white">a few cents</div>
+          <div className="text-[14px] text-white/60">the whole course: every program, a few runs</div>
         </motion.div>
       </div>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6 }} className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-[14px] text-white/75 text-center max-w-[760px]">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6 }} className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-[14px] text-white/75 text-center">
         Example: the poem program, one run ≈ 20 tokens in + 40 out ≈ <span className="font-bold text-white">$0.00003</span>
-        <div className="text-[13px] text-white/45 mt-0.5">example prices: $0.15 per 1M tokens in, $0.60 per 1M out · illustrative, check openai.com/api/pricing</div>
+        <div className="text-[13px] text-white/45 mt-0.5">illustrative, with example prices: $0.15 per 1M tokens in, $0.60 per 1M out · check openai.com/api/pricing</div>
       </motion.div>
     </Scene>
   );
 }
+
+// The first two lines of the kit's .env.example (shortened: they're comments, the key line is what matters)
+const ENV_COMMENTS = ['# Copy this file to a new file called .env, then paste…', '# Keep .env secret: never share it, screenshot it or…'];
 
 function EnvFileScene({ os }: { os: OS }) {
   const lines = termLines('envFile', os);
   const t = endTime(lines);
   return (
     <Scene>
-      <div className="flex items-center gap-8">
-        <Terminal os={os} lines={lines} width={560} fontSize={17} />
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...spring, delay: t }}>
-          <SafeBox width={440}>
-            <div className="w-full">
-              <div className="text-[12px] text-white/45 mb-1">{os === 'mac' ? '.env — TextEdit' : '.env — Notepad'}</div>
-              <div className="font-mono text-[17px] whitespace-nowrap">
-                <span className="text-white">OPENAI_API_KEY=</span>
-                <motion.span
-                  className="inline-block align-bottom overflow-hidden whitespace-pre font-bold"
-                  style={{ color: GOLD }}
-                  initial={{ width: 0 }}
-                  animate={{ width: '17ch' }}
-                  transition={{ delay: t + 0.8, duration: 0.25 }}
-                >
-                  sk-proj-4fQx…9aZ
-                </motion.span>
+      <Terminal os={os} lines={lines} width={900} fontSize={16} />
+      <div className="mt-6 flex items-center gap-6">
+        <SafeBox width={560}>
+          <div className="w-full">
+            <div className="text-[13px] text-white/50 mb-1">{os === 'mac' ? '📝 .env — TextEdit' : '📝 .env — Notepad'}</div>
+            {ENV_COMMENTS.map((c) => (
+              <div key={c} className="font-mono text-[13px] text-white/40 whitespace-nowrap">
+                {c}
               </div>
+            ))}
+            <div className="font-mono text-[18px] whitespace-nowrap mt-0.5">
+              <span className="text-white">OPENAI_API_KEY=</span>
+              {/* the example key gets selected, then the real key is pasted over it */}
+              <motion.span
+                className="inline-block align-bottom overflow-hidden whitespace-pre rounded-sm text-white/70"
+                initial={{ width: '16ch', backgroundColor: 'rgba(59,130,246,0)' }}
+                animate={{ width: ['16ch', '16ch', '0ch'], backgroundColor: ['rgba(59,130,246,0)', 'rgba(59,130,246,0.55)', 'rgba(59,130,246,0.55)'] }}
+                transition={{ delay: t + 0.3, duration: 1.2, times: [0, 0.45, 1] }}
+              >
+                sk-your-key-here
+              </motion.span>
+              <motion.span
+                className="inline-block align-bottom overflow-hidden whitespace-pre font-bold"
+                style={{ color: GOLD }}
+                initial={{ width: 0 }}
+                animate={{ width: '17ch' }}
+                transition={{ delay: t + 1.5, duration: 0.25 }}
+              >
+                sk-proj-4fQx…9aZ
+              </motion.span>
             </div>
-          </SafeBox>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: t + 1.3 }} className="mt-5 flex items-center gap-2 text-[14px] text-white/70">
-            <span className="font-mono text-white px-1.5 py-0.5 rounded bg-white/10">.gitignore</span> already says <span className="font-mono text-white">.env</span> → never uploaded
-          </motion.div>
+          </div>
+        </SafeBox>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: t + 2 }} className="w-[220px] text-[14px] text-white/70 leading-snug">
+          <span className="font-mono text-white px-1.5 py-0.5 rounded bg-white/10">.gitignore</span> already lists <span className="font-mono text-white">.env</span>, so it&apos;s never uploaded.
         </motion.div>
       </div>
     </Scene>
@@ -678,10 +688,10 @@ function Postcard({ title, rot, delay, children }: { title: string; rot: number;
       initial={{ opacity: 0, y: 16, rotate: 0 }}
       animate={{ opacity: 1, y: 0, rotate: rot }}
       transition={{ ...spring, delay }}
-      className="relative w-[210px] h-[132px] rounded-md bg-[#fffdf7] text-[#1f2937] shadow-lg p-3"
+      className="relative w-[230px] h-[150px] rounded-md bg-[#fffdf7] text-[#1f2937] shadow-lg p-3"
     >
-      <div className="text-[12px] font-bold uppercase tracking-wide text-black/45">{title}</div>
-      <div className="mt-2 text-[13px]">{children}</div>
+      <div className="text-[14px] font-bold text-black/55">{title}</div>
+      <div className="mt-2 text-[14px] leading-snug">{children}</div>
       <motion.div
         initial={{ opacity: 0, scale: 2 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -700,19 +710,27 @@ function PostcardScene() {
     <Scene>
       <div className="flex items-center gap-12">
         <div className="flex flex-col items-center gap-3">
-          <div className="text-[15px] font-semibold" style={{ color: GREEN }}>✓ In the locked box</div>
-          <SafeBox width={280}>
-            <KeyArt size={220} tag="sk-proj-…" />
+          <div className="text-[15px] font-semibold" style={{ color: GREEN }}>
+            ✓ In the locked box
+          </div>
+          <SafeBox width={300}>
+            <KeyArt size={250} tag="sk-proj-…" />
           </SafeBox>
         </div>
         <div className="flex flex-col items-center gap-3">
-          <div className="text-[15px] font-semibold" style={{ color: '#fca5a5' }}>✗ On a postcard: anyone can read it</div>
+          <div className="text-[15px] font-semibold" style={{ color: '#fca5a5' }}>
+            ✗ On a postcard: anyone can read it
+          </div>
           <div className="flex gap-6 pt-3">
             <Postcard title="📄 in your code" rot={-4} delay={0.3}>
-              <div className="font-mono text-[12px] bg-black/5 rounded px-1.5 py-1">OpenAI(api_key=<br />&quot;sk-proj-4fQx…&quot;)</div>
+              <div className="font-mono text-[13px] bg-black/5 rounded px-1.5 py-1">
+                OpenAI(api_key=
+                <br />
+                &quot;sk-proj-4fQx…&quot;)
+              </div>
             </Postcard>
             <Postcard title="🌍 on GitHub" rot={3} delay={0.5}>
-              public project: bots search for keys all day
+              a public code-sharing website: bots search it for keys all day
             </Postcard>
             <Postcard title="💬 chat or screenshot" rot={-2} delay={0.7}>
               “look, my setup works!” 📸 with the key in the picture
@@ -735,7 +753,7 @@ function CheckScene({ os }: { os: OS }) {
       <div className="flex items-end gap-5">
         <Terminal os={os} lines={lines} width={880} fontSize={17} />
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: t }} className="flex flex-col items-center gap-2 w-[130px]">
-          <Bubble delay={t + 0.2}>All green!</Bubble>
+          <Bubble delay={t + 0.2}>Ready!</Bubble>
           <AgentBot color={SOLO.color} badge={SOLO.badge} name={SOLO.name} size={90} mood="proud" />
         </motion.div>
       </div>
@@ -749,50 +767,81 @@ function FirstRunScene({ os }: { os: OS }) {
   return (
     <Scene>
       <div className="flex items-end gap-6">
-        <Terminal os={os} lines={lines} width={820} fontSize={18} />
+        <Terminal os={os} lines={lines} width={900} fontSize={16} />
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: t }} className="flex flex-col items-center gap-2 w-[150px]">
-          <Bubble delay={t + 0.2} color="#bbf7d0">🎉 It works!</Bubble>
+          <Bubble delay={t + 0.2} color="#bbf7d0">
+            🎉 It works!
+          </Bubble>
           <AgentBot color={SOLO.color} badge={SOLO.badge} name={SOLO.name} size={100} mood="proud" active />
         </motion.div>
       </div>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: t + 0.6 }} className="mt-6 flex items-center gap-3 text-[14px] text-white/65">
-        On every code lesson look for
-        <span className="px-3 py-1 rounded-lg border text-[14px] font-semibold text-white" style={{ borderColor: `${GREEN}80`, backgroundColor: `${GREEN}18` }}>💻 Run it yourself</span>
+        On every code lesson:
+        <span className="px-3 py-1 rounded-lg border text-[14px] font-semibold text-white" style={{ borderColor: `${GREEN}80`, backgroundColor: `${GREEN}18` }}>
+          💻 Run it yourself
+        </span>
       </motion.div>
     </Scene>
   );
 }
 
+interface ErrCard {
+  /** what the student sees (through run.py or check_setup.py) */
+  err: string;
+  /** the same problem when a file is run directly with python */
+  direct?: string;
+  means: string;
+  fix: string;
+}
+
 function ErrorsScene({ os }: { os: OS }) {
-  const cards = [
+  const cards: ErrCard[] = [
     {
-      err: "ModuleNotFoundError: No module named 'openai'",
-      means: "The toolbox is off, or its tools aren't installed.",
-      fix: 'Activate .venv, then pip install -r requirements.txt',
+      err: "The course libraries aren't installed yet, or your toolbox (.venv) isn't switched on.",
+      direct: "ModuleNotFoundError: No module named 'openai'",
+      means: 'The toolbox is off, or pip install never ran in it.',
+      fix: `${CMD.activate(os)}, then pip install -r requirements.txt`,
     },
     {
-      err: 'AuthenticationError: Error code: 401',
-      means: 'OpenAI does not accept your key (typo or deleted key).',
-      fix: 'Check .env: OPENAI_API_KEY=sk-… (no key at all says “api_key … must be set”)',
+      err: 'No API key found.',
+      direct: 'OpenAIError: Missing credentials. Please pass an `api_key`…',
+      means: 'There is no .env file, or no key in it.',
+      fix: 'Copy .env.example to .env and put your key in it.',
     },
     {
-      err: "RateLimitError: 429 … 'insufficient_quota'",
+      err: "AuthenticationError: OpenAI didn't accept your API key.",
+      means: 'Error 401: the key has a typo, or it was deleted.',
+      fix: 'Check the key in .env. Deleted? Make a new one.',
+    },
+    {
+      err: 'RateLimitError: Your OpenAI account has no credit left (insufficient_quota).',
       means: 'Your credit has run out. Trying again won’t help.',
-      fix: 'Add credit on the billing page (and check your limit).',
+      fix: 'Add credit on the Billing page.',
     },
     os === 'mac'
-      ? { err: 'zsh: command not found: python', means: "Your computer can't find Python by that name.", fix: 'Type python3, or activate .venv first (then python works).' }
-      : { err: "'python' is not recognized as an internal or external command", means: "Your computer can't find Python.", fix: 'Reinstall Python with “Add python.exe to PATH” ticked, then open a new terminal.' },
+      ? { err: 'zsh: command not found: python', means: 'Outside the toolbox, a Mac only knows python3.', fix: 'Type python3, or switch on the toolbox first.' }
+      : {
+          err: 'Python was not found; run without arguments to install from the Microsoft Store…',
+          means: "Windows can't find the Python you installed.",
+          fix: 'Try py instead. Or reinstall with “Add python.exe to PATH” ticked, then open a new terminal.',
+        },
   ];
   return (
     <Scene>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3 w-[1090px]">
         {cards.map((c, i) => (
-          <motion.div key={c.err} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.15 + i * 0.15 }} className="w-[520px] rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden">
-            <div className="px-4 py-2.5 font-mono text-[15px] font-semibold" style={{ backgroundColor: 'rgba(248,113,113,0.12)', color: '#fca5a5' }}>
+          <motion.div
+            key={c.err}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...spring, delay: 0.15 + i * 0.15 }}
+            className={`rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden ${i === cards.length - 1 ? 'col-span-2 justify-self-center w-[540px]' : ''}`}
+          >
+            <div className="px-4 py-2 font-mono text-[14px] font-semibold leading-snug" style={{ backgroundColor: 'rgba(248,113,113,0.12)', color: '#fca5a5' }}>
               {c.err}
+              {c.direct && <div className="mt-0.5 text-[13px] font-normal text-white/45">or, running a file directly: {c.direct}</div>}
             </div>
-            <div className="px-4 py-2.5 space-y-1.5 text-[15px]">
+            <div className="px-4 py-2 space-y-1 text-[14px]">
               <div className="text-white/75">
                 <span className="text-white/45">Means: </span>
                 {c.means}
@@ -811,29 +860,39 @@ function ErrorsScene({ os }: { os: OS }) {
 
 function RoutineScene({ os }: { os: OS }) {
   const steps = [
-    { icon: '🚪', title: 'Go to the folder', cmd: os === 'mac' ? 'cd Downloads/ai-course' : 'cd Downloads\\ai-course' },
+    { icon: '🚪', title: 'Go to the folder', cmd: os === 'mac' ? 'cd Downloads/ai-course' : 'cd Downloads\\ai-course-code\\ai-course' },
     { icon: '💡', title: 'Switch on the toolbox', cmd: CMD.activate(os) },
-    { icon: '▶️', title: 'Run a lesson', cmd: 'python run.py part1/basic_api.py' },
+    { icon: '▶️', title: 'Run a lesson', cmd: CMD.run() },
   ];
   return (
     <Scene>
       <div className="text-[14px] font-semibold uppercase tracking-wider text-white/50 mb-4">Every new terminal</div>
-      <div className="flex items-stretch gap-3">
+      <div className="flex flex-col items-stretch gap-2 w-[760px]">
         {steps.map((s, i) => (
-          <div key={s.title} className="flex items-center gap-3">
-            {i > 0 && <Arrow delay={0.3 + i * 0.3} size="text-2xl" />}
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.2 + i * 0.3 }} className="w-[320px] rounded-2xl border-2 px-4 py-4 flex flex-col items-center gap-2" style={{ borderColor: `${CYAN}55`, backgroundColor: `${CYAN}0c` }}>
-              <div className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-full flex items-center justify-center text-[14px] font-bold" style={{ color: CYAN, border: `1px solid ${CYAN}80` }}>{i + 1}</span>
-                <span className="text-[17px] font-bold text-white">{s.title}</span>
-              </div>
-              <div className="text-4xl">{s.icon}</div>
-              <div className="w-full rounded-lg bg-black/50 border border-white/10 px-2 py-1.5 font-mono text-[14px] text-white text-center whitespace-nowrap">{s.cmd}</div>
+          <div key={s.title} className="flex flex-col items-center gap-2">
+            {i > 0 && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 + i * 0.3 }} className="text-2xl leading-none" style={{ color: CYAN }}>
+                ↓
+              </motion.div>
+            )}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...spring, delay: 0.2 + i * 0.3 }}
+              className="w-full rounded-2xl border-2 px-5 py-3 flex items-center gap-4"
+              style={{ borderColor: `${CYAN}55`, backgroundColor: `${CYAN}0c` }}
+            >
+              <span className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-[15px] font-bold" style={{ color: CYAN, border: `1px solid ${CYAN}80` }}>
+                {i + 1}
+              </span>
+              <span className="text-3xl">{s.icon}</span>
+              <span className="w-[210px] shrink-0 text-[17px] font-bold text-white">{s.title}</span>
+              <span className="flex-1 rounded-lg bg-black/50 border border-white/10 px-3 py-1.5 font-mono text-[16px] text-white whitespace-nowrap">{s.cmd}</span>
             </motion.div>
           </div>
         ))}
       </div>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }} className="mt-8 text-[15px] text-white/65">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }} className="mt-6 text-[15px] text-white/65">
         Setup (Python, kit, pip install, key) happens only once. ✓
       </motion.div>
     </Scene>
@@ -844,7 +903,7 @@ function TakeawaysScene() {
   const items = [
     { text: 'Python + the code kit + a toolbox (.venv with pip) let your computer run every lesson.', color: GREEN },
     { text: 'Your API key lives in .env only. Never in code, chats, screenshots or GitHub.', color: GOLD },
-    { text: 'You pay per token (in and out). gpt-4o-mini is cheap, and a budget limit keeps you safe.', color: CYAN },
+    { text: 'You pay per token (in and out). gpt-4o-mini is cheap, and prepaid credit with auto-recharge off caps your spending.', color: CYAN },
   ];
   return (
     <Scene>
@@ -853,7 +912,9 @@ function TakeawaysScene() {
         <div className="flex flex-col gap-3 w-[680px]">
           {items.map((it, i) => (
             <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ ...spring, delay: i * 0.15 }} className="flex items-center gap-4 px-5 py-3 rounded-xl border bg-white/[0.02]" style={{ borderColor: `${it.color}40` }}>
-              <span className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 border" style={{ color: it.color, borderColor: `${it.color}60`, backgroundColor: `${it.color}15` }}>{i + 1}</span>
+              <span className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 border" style={{ color: it.color, borderColor: `${it.color}60`, backgroundColor: `${it.color}15` }}>
+                {i + 1}
+              </span>
               <span className="text-[16px] text-white/85">{it.text}</span>
             </motion.div>
           ))}
@@ -878,10 +939,10 @@ interface Meta {
 }
 
 const META: Record<string, Meta> = {
-  terminal: { station: { current: 0, done: 0 }, os: true },
+  terminal: { os: true },
   python: { station: { current: 0, done: 0 }, os: true },
   pythonCheck: { station: { current: 0, done: 0, flip: true }, os: true },
-  kit: { station: { current: 1, done: 1 } },
+  kit: { station: { current: 1, done: 1 }, os: true },
   openFolder: { station: { current: 1, done: 1, flip: true }, os: true },
   venv: { station: { current: 2, done: 2 }, os: true },
   activate: { station: { current: 2, done: 2 }, os: true },
@@ -933,7 +994,7 @@ export default function SetupAnim() {
       scene = <PythonCheckScene os={os} />;
       break;
     case 'kit':
-      scene = <KitScene />;
+      scene = <KitScene os={os} />;
       break;
     case 'openFolder':
       scene = <OpenFolderScene os={os} />;
@@ -989,18 +1050,20 @@ export default function SetupAnim() {
 
   const meta = META[trigger] ?? {};
   const showBar = !!meta.station || !!meta.os;
+  // The simulator keeps its own progress for each computer type, so switching doesn't restart it.
+  const sceneKey = trigger === 'playground' ? trigger : `${trigger}-${os}`;
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-navy-900/40 flex flex-col">
       {showBar && (
-        <div className="shrink-0 h-12 px-5 flex items-center justify-between border-b border-white/5">
-          <div key={`${trigger}-${os}`}>
+        <div className="shrink-0 h-12 px-5 flex items-center justify-between gap-4 border-b border-white/5">
+          <div key={`${trigger}-${os}`} className="min-w-0">
             {meta.station && <StationStrip current={meta.station.current} done={meta.station.done} flipAt={meta.station.flip ? flipTime(trigger, os) : undefined} />}
           </div>
           {meta.os && <OsToggle os={os} setOs={setOs} />}
         </div>
       )}
-      <div key={`${trigger}-${os}`} className="relative flex-1 min-h-0">
+      <div key={sceneKey} className="relative flex-1 min-h-0">
         {scene}
       </div>
     </div>

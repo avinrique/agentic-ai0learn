@@ -31,7 +31,8 @@ function readme(): string {
 
 Every program from the course, ready to run on your own computer.
 Each file is the program you watched in a lesson. (A few are longer: where a lesson
-shortened a tool list to \`{...}\`, the file here has the full, runnable version.)
+shortened parts of its tools list to \`...\` to fit on screen, the file here has the full,
+runnable version.)
 
 **First time?** Do the "Get Set Up" lesson first (Part 1). It walks through every step below.
 

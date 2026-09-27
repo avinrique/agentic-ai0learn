@@ -1,11 +1,13 @@
 'use client';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { KeyboardEvent, useState } from 'react';
 import AgentBot, { TEAM } from '@/components/animations/characters/AgentBot';
-import { CHECK_OUT, CMD, CYAN, GOLD, GREEN, OS, OsToggle, PIP_OUT, PY_VERSION, RED, RUN_OUT, Terminal, TermLine, spring } from './SetupParts';
+import { CMD, CYAN, GOLD, GREEN, OS, OsToggle, RED, Terminal, TermLine, spring } from './SetupParts';
+import { CHECK_OUT, COPIED_WIN, PIP_OUT, PY_VERSION, RUN_NO_KEY, RUN_NO_LIBS, RUN_OUT, checkSetupOut } from './realOutput';
 
 // A pretend terminal: the student picks the next command. Everything is scripted,
-// nothing is installed and no API is called.
+// nothing is installed and no API is called. The error messages are the ones the
+// real kit (run.py, check_setup.py) and the real Mac / Windows terminals print.
 
 type CmdId = 'version' | 'venv' | 'activate' | 'pip' | 'env' | 'check' | 'run';
 
@@ -19,14 +21,30 @@ interface SimState {
 }
 
 interface Outcome {
-  lines: TermLine[];
+  /** what the terminal prints; null = the command never ran (Solo Bot stopped it) */
+  lines: TermLine[] | null;
   kind: 'ok' | 'err' | 'warn';
   hint: string;
   fix?: string;
   next: Partial<SimState>;
 }
 
+interface Entry {
+  cmd: string;
+  venv: boolean;
+  lines: TermLine[];
+}
+
+/** One computer's progress. Mac and Windows each keep their own. */
+interface Run {
+  s: SimState;
+  history: Entry[];
+  last: Outcome | null;
+  mistakes: number;
+}
+
 const START: SimState = { venv: false, active: false, installed: false, env: false, checked: false, done: [] };
+const FRESH: Run = { s: START, history: [], last: null, mistakes: 0 };
 
 // scrambled on purpose, so the order is the student's job
 const CHIP_ORDER: CmdId[] = ['check', 'venv', 'run', 'pip', 'version', 'env', 'activate'];
@@ -50,13 +68,7 @@ function cmdText(id: CmdId, os: OS) {
   }
 }
 
-const CHIP_NOTE: Partial<Record<CmdId, string>> = { env: 'then paste your key into .env' };
-
-const traceback = (file: string, line: number, code: string): TermLine[] => [
-  { t: 'out', text: 'Traceback (most recent call last):', tone: 'plain' },
-  { t: 'out', text: `  File "${file}", line ${line}, in <module>`, tone: 'dim' },
-  { t: 'out', text: `    ${code}`, tone: 'dim' },
-];
+const CHIP_NOTE: Partial<Record<CmdId, string>> = { env: 'then put your key in .env' };
 
 function toolboxFix(s: SimState, os: OS) {
   return s.venv ? `Switch the toolbox on first: ${CMD.activate(os)}` : `Make the toolbox (${CMD.venv(os)}), then switch it on.`;
@@ -70,6 +82,8 @@ function run(id: CmdId, s: SimState, os: OS): Outcome {
     fix: toolboxFix(s, os),
     next: {},
   };
+  // The libraries count only if they're in the Python that runs: the toolbox's one.
+  const kit = { venvOn: s.active, installed: s.active && s.installed, envFile: s.env };
   switch (id) {
     case 'version':
       return { lines: [{ t: 'out', text: PY_VERSION, tone: 'ok' }], kind: 'ok', hint: 'Python is installed. Good start!', next: {} };
@@ -98,9 +112,9 @@ function run(id: CmdId, s: SimState, os: OS): Outcome {
           };
         }
         return {
-          lines: [{ t: 'out', text: '(stopped before it ran)', tone: 'dim' }],
+          lines: null,
           kind: 'warn',
-          hint: 'Wait! No (.venv) at the start of the line, so pip would install into your whole computer, not your project toolbox.',
+          hint: 'Wait! No (.venv) at the start of the line, so pip would fill your whole computer, not the project toolbox. I stopped it before Enter.',
           fix: toolboxFix(s, os),
           next: {},
         };
@@ -108,66 +122,49 @@ function run(id: CmdId, s: SimState, os: OS): Outcome {
       return { lines: PIP_OUT, kind: 'ok', hint: 'The toolbox now has openai, python-dotenv and tiktoken.', next: { installed: true } };
     case 'env':
       return {
-        lines: [
-          ...(os === 'win' ? [{ t: 'out' as const, text: '        1 file(s) copied.', tone: 'plain' as const }] : []),
-          { t: 'out', text: '📝 You open .env and paste: OPENAI_API_KEY=sk-proj-…', tone: 'note' },
-        ],
+        lines: os === 'win' ? [COPIED_WIN] : [],
         kind: 'ok',
-        hint: 'Your key is locked in the safe (.env).',
+        hint: 'You made .env, then pasted your key over sk-your-key-here. It’s in the safe now.',
         next: { env: true },
       };
     case 'check':
       if (os === 'mac' && !s.active) return macNoPython;
-      if (!s.active || !s.installed) {
+      if (!kit.installed) {
         return {
-          lines: [
-            { t: 'out', text: 'Checking your setup...', tone: 'dim' },
-            { t: 'out', text: `✓ ${PY_VERSION}`, tone: 'ok' },
-            { t: 'out', text: '✗ openai is not installed', tone: 'err' },
-            { t: 'out', text: '  Fix: switch on the toolbox, then run pip install -r requirements.txt', tone: 'warn' },
-          ],
+          lines: checkSetupOut(kit, os),
           kind: 'err',
-          hint: 'The checker found a missing piece: the openai tools.',
-          fix: s.active ? 'Run: pip install -r requirements.txt' : `${toolboxFix(s, os)} Then pip install.`,
+          hint: 'The checker stops at the first missing piece: the openai library.',
+          fix: s.active ? CMD.pip() : `${toolboxFix(s, os)} Then pip install.`,
           next: {},
         };
       }
       if (!s.env) {
         return {
-          lines: [
-            { t: 'out', text: 'Checking your setup...', tone: 'dim' },
-            { t: 'out', text: `✓ ${PY_VERSION}`, tone: 'ok' },
-            { t: 'out', text: '✓ openai is installed', tone: 'ok' },
-            { t: 'out', text: '✗ No .env file with OPENAI_API_KEY', tone: 'err' },
-            { t: 'out', text: '  Fix: copy .env.example to .env and paste your key', tone: 'warn' },
-          ],
+          lines: checkSetupOut(kit, os),
           kind: 'err',
           hint: 'Everything is ready except the key.',
-          fix: `Run ${CMD.copyEnv(os)}, then paste your key into .env.`,
+          fix: `${CMD.copyEnv(os)}, then put your key in .env.`,
           next: {},
         };
       }
       return { lines: CHECK_OUT, kind: 'ok', hint: 'All green! Now run a lesson.', next: { checked: true } };
     case 'run':
       if (os === 'mac' && !s.active) return macNoPython;
-      if (!s.active || !s.installed) {
+      if (!kit.installed) {
         return {
-          lines: [...traceback('part1/basic_api.py', 2, 'from openai import OpenAI'), { t: 'out', text: "ModuleNotFoundError: No module named 'openai'", tone: 'err' }],
+          lines: RUN_NO_LIBS,
           kind: 'err',
-          hint: "ModuleNotFoundError: Python can't find the openai tools.",
-          fix: s.active ? 'Run: pip install -r requirements.txt' : `${toolboxFix(s, os)} Then pip install.`,
+          hint: 'run.py can’t find the course libraries.',
+          fix: s.active ? CMD.pip() : `${toolboxFix(s, os)} Then pip install.`,
           next: {},
         };
       }
       if (!s.env) {
         return {
-          lines: [
-            ...traceback('part1/basic_api.py', 3, 'client = OpenAI()'),
-            { t: 'out', text: 'openai.OpenAIError: The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable', tone: 'err' },
-          ],
+          lines: RUN_NO_KEY,
           kind: 'err',
-          hint: "No key found, so OpenAI() can't start.",
-          fix: `Run ${CMD.copyEnv(os)}, then paste your key into .env.`,
+          hint: 'run.py looked for your key and found none.',
+          fix: `${CMD.copyEnv(os)}, then put your key in .env.`,
           next: {},
         };
       }
@@ -180,32 +177,27 @@ function run(id: CmdId, s: SimState, os: OS): Outcome {
   }
 }
 
-interface Entry {
-  cmd: string;
-  venv: boolean;
-  lines: TermLine[];
+/** The lesson uses Space for play/pause. On a focused button, Space should press the button instead. */
+function keepSpaceForButtons(e: KeyboardEvent) {
+  if (e.key === ' ' && (e.target as HTMLElement).closest('button')) e.stopPropagation();
 }
 
 export default function SetupSimulator({ os, setOs }: { os: OS; setOs: (o: OS) => void }) {
-  const [s, setS] = useState<SimState>(START);
-  const [history, setHistory] = useState<Entry[]>([]);
-  const [last, setLast] = useState<Outcome | null>(null);
-  const [mistakes, setMistakes] = useState(0);
+  const [runs, setRuns] = useState<Record<OS, Run>>({ mac: FRESH, win: FRESH });
+  const { s, history, last, mistakes } = runs[os];
   const finished = s.done.includes('run');
+  const update = (fn: (r: Run) => Run) => setRuns((all) => ({ ...all, [os]: fn(all[os]) }));
 
   const pick = (id: CmdId) => {
     const out = run(id, s, os);
-    setHistory((h) => [...h, { cmd: cmdText(id, os), venv: s.active, lines: out.lines }]);
-    setLast(out);
-    if (out.kind === 'ok') setS((cur) => ({ ...cur, ...out.next, done: [...cur.done, id] }));
-    else setMistakes((m) => m + 1);
+    update((r) => ({
+      s: out.kind === 'ok' ? { ...r.s, ...out.next, done: [...r.s.done, id] } : r.s,
+      history: out.lines ? [...r.history, { cmd: cmdText(id, os), venv: r.s.active, lines: out.lines }] : r.history,
+      last: out,
+      mistakes: out.kind === 'ok' ? r.mistakes : r.mistakes + 1,
+    }));
   };
-  const reset = () => {
-    setS(START);
-    setHistory([]);
-    setLast(null);
-    setMistakes(0);
-  };
+  const reset = () => update(() => FRESH);
 
   const lines: TermLine[] = [
     { t: 'out', text: "(You're in the ai-course folder. Python is installed and your key is copied.)", tone: 'dim' },
@@ -213,16 +205,20 @@ export default function SetupSimulator({ os, setOs }: { os: OS; setOs: (o: OS) =
     ...(finished ? [] : [{ t: 'idle' as const, venv: s.active }]),
   ];
 
-  const hintColor = !last ? 'rgba(255,255,255,0.15)' : last.kind === 'ok' ? GREEN : last.kind === 'warn' ? GOLD : RED;
+  const hintColor = !last ? '#ffffff' : last.kind === 'ok' ? GREEN : last.kind === 'warn' ? GOLD : RED;
 
   return (
-    <div className="absolute inset-0 flex gap-4 p-4 text-white">
+    <div className="absolute inset-0 flex gap-4 p-4 text-white" onKeyDown={keepSpaceForButtons}>
       {/* ---------- controls ---------- */}
-      <div className="w-[330px] shrink-0 flex flex-col gap-3">
-        <div className="text-[13px] font-bold uppercase tracking-wide" style={{ color: CYAN }}>🧪 Try it yourself · Setup simulator</div>
-        <OsToggle os={os} setOs={setOs} />
-        <div className="text-[13px] text-white/60">Pick the next command:</div>
-        <div className="flex flex-col gap-1.5">
+      <div className="w-[330px] shrink-0 min-h-0 flex flex-col gap-2.5">
+        <div className="text-[13px] font-bold uppercase tracking-wide" style={{ color: CYAN }}>
+          🧪 Try it yourself
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[13px] text-white/60">Pick the next command:</span>
+          <OsToggle os={os} setOs={setOs} />
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1.5 pr-1" style={{ scrollbarWidth: 'thin' }}>
           {CHIP_ORDER.map((id) => {
             const isDone = s.done.includes(id);
             return (
@@ -230,7 +226,7 @@ export default function SetupSimulator({ os, setOs }: { os: OS; setOs: (o: OS) =
                 key={id}
                 onClick={() => pick(id)}
                 disabled={isDone || finished}
-                className="text-left rounded-lg border px-3 py-1.5 transition-colors disabled:cursor-default hover:bg-white/[0.08]"
+                className="shrink-0 text-left rounded-lg border px-3 py-1.5 transition-colors disabled:cursor-default hover:bg-white/[0.08]"
                 style={
                   isDone
                     ? { borderColor: `${GREEN}50`, backgroundColor: `${GREEN}10` }
@@ -241,13 +237,12 @@ export default function SetupSimulator({ os, setOs }: { os: OS; setOs: (o: OS) =
                   <span className="w-4 shrink-0 text-center">{isDone ? '✓' : '›'}</span>
                   {cmdText(id, os)}
                 </div>
-                {CHIP_NOTE[id] && <div className="text-[12px] text-white/50 pl-6">{CHIP_NOTE[id]}</div>}
+                {CHIP_NOTE[id] && <div className="text-[13px] text-white/50 pl-6">{CHIP_NOTE[id]}</div>}
               </button>
             );
           })}
         </div>
-        <div className="flex-1" />
-        <div className="flex items-center justify-between text-[13px] text-white/55">
+        <div className="shrink-0 flex items-center justify-between text-[13px] text-white/55">
           <span>
             Steps done: <span className="text-white font-semibold">{s.done.length}/7</span> · Oops: <span className="text-white font-semibold">{mistakes}</span>
           </span>
@@ -260,15 +255,15 @@ export default function SetupSimulator({ os, setOs }: { os: OS; setOs: (o: OS) =
       {/* ---------- terminal + helper ---------- */}
       <div className="flex-1 min-w-0 flex flex-col gap-3">
         <div className="flex-1 min-h-0">
-          <Terminal os={os} lines={lines} instant width="100%" fontSize={15} height="100%" />
+          <Terminal os={os} lines={lines} instant scroll width="100%" fontSize={15} height="100%" />
         </div>
         <motion.div
-          key={history.length}
+          key={`${os}-${history.length}-${mistakes}`}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={spring}
           className="shrink-0 rounded-xl border-2 px-4 py-2.5 flex items-center gap-4 min-h-[92px]"
-          style={{ borderColor: `${hintColor}90`, backgroundColor: last ? `${hintColor}12` : 'transparent' }}
+          style={{ borderColor: `${hintColor}${last ? '90' : '26'}`, backgroundColor: last ? `${hintColor}12` : 'transparent' }}
         >
           <div className="shrink-0">
             <AgentBot color={TEAM.solo.color} badge={TEAM.solo.badge} size={54} mood={!last ? 'happy' : last.kind === 'ok' ? (finished ? 'proud' : 'happy') : 'confused'} active={finished} />

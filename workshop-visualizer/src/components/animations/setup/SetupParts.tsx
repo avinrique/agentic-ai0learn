@@ -1,6 +1,6 @@
 'use client';
 import { motion } from 'framer-motion';
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 // Shared pieces for the "Get Set Up" lesson: fake terminals, the station checklist,
 // the Mac/Windows switch, and a few drawings (key, safe, cost meter).
@@ -46,9 +46,9 @@ function StationChip({ icon, name, state, flipAt }: { icon: string; name: string
       transition={{ duration: 0.45 }}
       className="rounded-full border px-2.5 py-1 text-[13px] whitespace-nowrap transition-colors duration-300"
       style={stationStyle(shown)}
+      title={name}
     >
-      {shown === 'done' ? '✓ ' : `${icon} `}
-      {name}
+      {shown === 'done' ? `✓ ${name}` : shown === 'current' ? `${icon} ${name}` : icon}
     </motion.div>
   );
 }
@@ -56,7 +56,7 @@ function StationChip({ icon, name, state, flipAt }: { icon: string; name: string
 /** Slim checklist row: finished stations shrink to "✓" chips, the current one is highlighted. */
 export function StationStrip({ current, done, flipAt }: { current: number; done: number; flipAt?: number }) {
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5 whitespace-nowrap">
       <span className="text-[13px] font-semibold uppercase tracking-wider text-white/40 mr-1">Workshop</span>
       {STATIONS.map((s, i) => {
         const state = i < done ? 'done' : i === current ? 'current' : 'todo';
@@ -76,16 +76,16 @@ export function StationStrip({ current, done, flipAt }: { current: number; done:
 export function OsToggle({ os, setOs }: { os: OS; setOs: (o: OS) => void }) {
   const opts: { id: OS; label: string }[] = [
     { id: 'win', label: '🪟 Windows' },
-    { id: 'mac', label: '🍎 Mac / Linux' },
+    { id: 'mac', label: '🍎 Mac' },
   ];
   return (
-    <div className="flex rounded-full border border-white/15 bg-white/[0.04] p-0.5" role="group" aria-label="Choose your computer">
+    <div className="shrink-0 flex rounded-full border border-white/15 bg-white/[0.04] p-0.5" role="group" aria-label="Choose your computer">
       {opts.map((o) => (
         <button
           key={o.id}
           onClick={() => setOs(o.id)}
           aria-pressed={os === o.id}
-          className="px-3 py-1 rounded-full text-[13px] transition-colors"
+          className="px-3 py-1 rounded-full text-[13px] whitespace-nowrap transition-colors"
           style={os === o.id ? { backgroundColor: `${CYAN}30`, color: '#e0fbff', fontWeight: 600 } : { color: 'rgba(255,255,255,0.55)' }}
         >
           {o.label}
@@ -101,15 +101,16 @@ export type Where = 'home' | 'kit';
 
 export function promptText(os: OS, where: Where): string {
   if (os === 'mac') return `sam@MacBook ${where === 'kit' ? 'ai-course' : '~'} %`;
-  return where === 'kit' ? 'C:\\Users\\sam\\Downloads\\ai-course>' : 'C:\\Users\\sam>';
+  // Windows' "Extract All" puts the ai-course folder inside a new ai-course-code folder.
+  return where === 'kit' ? 'C:\\Users\\sam\\Downloads\\ai-course-code\\ai-course>' : 'C:\\Users\\sam>';
 }
 
 export type Tone = 'plain' | 'ok' | 'err' | 'dim' | 'warn' | 'ai' | 'note';
 
 export type TermLine =
   | { t: 'cmd'; cmd: string; where?: Where; venv?: boolean; hlVenv?: boolean; hlFolder?: boolean }
-  /** `typed` = what the student types after a question, like the "y" after [y/N]. */
-  | { t: 'out'; text: string; tone?: Tone; typed?: string }
+  /** `typed` = what the student types after a question, like the "y" after [y/N]. `wait` = extra pause (seconds) before it appears. */
+  | { t: 'out'; text: string; tone?: Tone; typed?: string; wait?: number }
   | { t: 'idle'; where?: Where; venv?: boolean; hlVenv?: boolean; hlFolder?: boolean };
 
 const TONE: Record<Tone, string> = {
@@ -316,7 +317,7 @@ export const CMD = {
   editEnv: (os: OS) => (os === 'mac' ? 'open -e .env' : 'notepad .env'),
   check: () => 'python check_setup.py',
   run: () => 'python run.py part1/basic_api.py',
-  cd: (os: OS) => (os === 'mac' ? 'cd /Users/sam/Downloads/ai-course' : 'cd C:\\Users\\sam\\Downloads\\ai-course'),
+  cd: (os: OS) => (os === 'mac' ? 'cd /Users/sam/Downloads/ai-course' : 'cd C:\\Users\\sam\\Downloads\\ai-course-code\\ai-course'),
 };
 
 // ---------- drawings ----------
@@ -324,7 +325,7 @@ export const CMD = {
 /** A gold key with a paper tag, the lesson's picture of an API key. */
 export function KeyArt({ size = 220, tag = 'sk-proj-…', glow = false }: { size?: number; tag?: string; glow?: boolean }) {
   // The paper tag grows with its text, so the key's name never spills out.
-  const tagW = Math.round(26 + tag.length * 8);
+  const tagW = Math.round(30 + tag.length * 10.4);
   const W = 172 + tagW;
   return (
     <svg viewBox={`0 0 ${W} 110`} width={size} height={(size * 110) / W} aria-hidden className="overflow-visible">
@@ -340,7 +341,7 @@ export function KeyArt({ size = 220, tag = 'sk-proj-…', glow = false }: { size
       <g transform={`rotate(-3 ${172 + tagW / 2} 22)`}>
         <rect x="170" y="6" width={tagW} height="30" rx="4" fill="#fffdf7" stroke="#d6d3d1" />
         <circle cx="179" cy="21" r="3" fill="#0f0f2a" />
-        <text x="188" y="26" fontSize="13" fontFamily="JetBrains Mono, monospace" fill="#1f2937">{tag}</text>
+        <text x="188" y="27" fontSize="17" fontFamily="JetBrains Mono, monospace" fill="#1f2937">{tag}</text>
       </g>
     </svg>
   );
@@ -376,5 +377,42 @@ export function FileRow({ icon, name, label, hl, delay = 0, color = CYAN }: { ic
       <span className="font-mono text-[16px] text-white w-[180px]">{name}</span>
       {label && <span className="text-[14px] text-white/55">{label}</span>}
     </motion.div>
+  );
+}
+
+// ---------- fit to the panel ----------
+
+// useLayoutEffect warns during server rendering, so use it only in the browser.
+const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
+/**
+ * Centers its content and shrinks it (never grows it) so it always fits the space it's given,
+ * e.g. on a small laptop screen with the sidebar open. At full size nothing changes.
+ */
+export function FitBox({ children, className = '' }: { children: ReactNode; className?: string }) {
+  const outer = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  useIsoLayoutEffect(() => {
+    const o = outer.current;
+    const i = inner.current;
+    if (!o || !i) return;
+    const fit = () => {
+      if (!i.offsetWidth || !i.offsetHeight) return;
+      const s = Math.min(1, o.clientWidth / i.offsetWidth, o.clientHeight / i.offsetHeight);
+      setScale(Math.floor(s * 1000) / 1000);
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(o);
+    ro.observe(i);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div ref={outer} className={`relative w-full h-full min-w-0 min-h-0 flex items-center justify-center ${className}`}>
+      <div ref={inner} data-fit-scale={scale} className="shrink-0 flex flex-col items-center" style={{ transform: scale < 1 ? `scale(${scale})` : undefined }}>
+        {children}
+      </div>
+    </div>
   );
 }

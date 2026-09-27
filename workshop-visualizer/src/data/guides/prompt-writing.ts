@@ -1,7 +1,7 @@
 import type { LessonGuide } from '@/data/lessonGuides';
 
 export const guide: LessonGuide = {
-  lastTime: 'The system prompt, messages[0], briefs the AI on its role and rules before every chat.',
+  lastTime: 'The system prompt, messages[0], sets who the AI should be and its rules, re-sent every call.',
   today: 'We turn vague requests into clear prompts with six ingredients, fences and step-by-step thinking.',
   quiz: [
     {
@@ -23,7 +23,7 @@ export const guide: LessonGuide = {
         'It shows exactly where the pasted text starts and ends',
       ],
       answer: 2,
-      why: 'Like a fence, the marks keep your instructions apart from the pasted text, so a line inside the story is not mistaken for an instruction.',
+      why: 'Like a fence, the marks keep your instructions apart from the pasted text, so the AI is much less likely to mistake a story line for an instruction.',
     },
     {
       q: 'Which instruction gives the AI the clearest target?',

@@ -4,7 +4,7 @@ import { ReactNode } from 'react';
 import { useConceptStore } from '@/stores/conceptStore';
 import AgentBot, { TEAM, type BotMood } from '@/components/animations/characters/AgentBot';
 import PromptFixerPlayground from './PromptFixerPlayground';
-import { ING, IngId, RECIPE, ClarityMeter, Rich, Seg, IngTag, Mia, Scene, Bubble, spring } from './shared';
+import { ING, IngId, RECIPE, ClarityMeter, Rich, Seg, IngTag, Mia, Scene, Bubble, spring, clarityLook } from './shared';
 
 const SOLO = TEAM.solo;
 const BLUE = '#4a9eff';
@@ -67,7 +67,7 @@ function IntroScene() {
           ))}
         </div>
         <div className="flex flex-col items-center gap-4">
-          <AgentBot color={SOLO.color} badge={SOLO.badge} name={SOLO.name} role="the AI" size={96} mood="happy" />
+          <AgentBot color={SOLO.color} badge={SOLO.badge} name={SOLO.name} size={96} mood="happy" />
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.8 }} className="font-mono text-[13px] rounded-lg bg-black/40 border border-white/10 px-3 py-2 leading-relaxed">
             <div className="text-white/40">messages = [</div>
             <div className="pl-4 text-white/40">
@@ -99,7 +99,7 @@ function VagueScene() {
       <div className="flex items-center gap-8">
         <div className="flex flex-col items-center gap-2">
           <div className="text-[13px] text-white/50">You type:</div>
-          <motion.div {...{ initial: { opacity: 0, scale: 0.8 }, animate: { opacity: 1, scale: 1 } }} transition={spring} className="rounded-2xl rounded-br-sm bg-accent-blue px-5 py-3 text-[22px] font-semibold text-white shadow-lg">
+          <motion.div {...{ initial: { opacity: 0, scale: 0.8 }, animate: { opacity: 1, scale: 1 } }} transition={spring} className="rounded-2xl rounded-br-sm bg-accent-blue px-5 py-3 text-[22px] font-semibold text-white shadow-lg whitespace-nowrap">
             Write about dogs
           </motion.div>
         </div>
@@ -118,11 +118,10 @@ function VagueScene() {
           ))}
           <AgentBot color={SOLO.color} badge={SOLO.badge} name={SOLO.name} size={116} mood="confused" active />
         </div>
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ ...spring, delay: 1.4 }} className="flex flex-col gap-2">
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ ...spring, delay: 1.4 }}>
           <Paper title="Solo Bot's answer" width={300}>
             <div className="text-black/70">{DOG_GENERIC}</div>
           </Paper>
-          <Verdict ok={false} delay={1.8}>😐 Safe, average, not useful</Verdict>
         </motion.div>
       </div>
     </Scene>
@@ -237,7 +236,7 @@ const F_BOX = (text: string, hl = false): PLine => ({ id: 'f', kind: 'box', labe
 const F_AUXIN = 'All 6 stems bent toward the window. A plant chemical called auxin made the shady side grow faster.';
 const F_SIMPLE = 'All 6 stems bent toward the window. The shady side of each stem grew faster, so it leaned toward the light.';
 const TITLE_1 = 'How My Beans Chased the Light 🌱';
-const TITLE_2 = 'Do Beans Chase the Sun? ☀️🌱';
+const TITLE_2 = 'Do Beans Chase the Sun? ☀️';
 const FUN: PLine = { id: 'fun', kind: 'fun', text: '⭐ Fun fact: young sunflowers turn to follow the sun across the sky!' };
 
 // Prepared answers (made up for the lesson, like what a model might write).
@@ -265,8 +264,8 @@ const POSTER_ANSWERS: PLine[][] = [
   [{ id: 't', kind: 'title', text: TITLE_2, hl: true }, Q_BOX, D_BOX, F_BOX(F_AUXIN)],
   [{ id: 't', kind: 'title', text: TITLE_2 }, Q_BOX, D_BOX, F_BOX(F_AUXIN.replace('auxin', '~~auxin~~')), { ...FUN, hl: true }],
 ];
-const POSTER_CLARITY = [8, 30, 42, 60, 75, 85, 92, 100];
-const POSTER_TAGS = ['🤷 Has to ask first', '📏 Right topic, too long and hard', '🙂 Friendlier, still general', "🌱 About Mia's own beans", '🪧 Poster-shaped', '✨ Catchy title', '⭐ Fun fact added'];
+// Pretend clarity scores for Mia's drafts (v1-v7 here, v8 = the "say what TO do" fix).
+const POSTER_CLARITY = [8, 30, 42, 58, 70, 78, 84, 100];
 const POSTER_MOODS: BotMood[] = ['confused', 'thinking', 'thinking', 'happy', 'happy', 'proud', 'proud'];
 
 function AnswerLine({ line, hl }: { line: PLine; hl: string | null }) {
@@ -320,8 +319,8 @@ function BuildScene({ stage }: { stage: number }) {
         {/* Mia's prompt, the recipe card */}
         <div className="flex flex-col items-center gap-2">
           <div className="rounded-xl bg-[#fffdf7] text-[#1f2937] shadow-lg border-2 border-[#f9a8d4]/70 w-[500px]">
-            <div className="flex items-center gap-2 px-3 py-1.5 border-b border-black/10">
-              <Mia size={30} label={false} />
+            <div className="flex items-center gap-2 px-3 py-1.5 border-b border-black/10 min-h-[43px]">
+              {stage > 0 && <Mia size={30} label={false} />}
               <span className="text-[13px] font-bold uppercase tracking-wide text-black/50">Mia&apos;s prompt</span>
               <span className="ml-auto text-[13px] font-mono text-black/40">draft {stage + 1}</span>
             </div>
@@ -347,7 +346,12 @@ function BuildScene({ stage }: { stage: number }) {
               })}
             </div>
             <div className="px-3 py-3 space-y-1.5 text-[15px] leading-snug min-h-[110px]">
-              {stage === 0 && <div className="text-[22px] font-medium text-black/75 py-3">help with my poster</div>}
+              {stage === 0 && (
+                <div className="flex items-center gap-4 py-1">
+                  <Mia size={52} dark />
+                  <div className="rounded-2xl rounded-bl-sm bg-black/[0.05] px-4 py-2 text-[22px] font-medium text-black/75">help with my poster</div>
+                </div>
+              )}
               {stage === 1 && (
                 <motion.div initial={{ opacity: 1 }} animate={{ opacity: 0.55 }} transition={{ delay: 0.3 }} className="text-[14px] text-black/45 line-through">
                   help with my poster
@@ -368,11 +372,8 @@ function BuildScene({ stage }: { stage: number }) {
         <div className="flex flex-col gap-2 w-[540px]">
           <div className="flex items-end gap-3">
             <AgentBot color={SOLO.color} badge={SOLO.badge} size={66} mood={POSTER_MOODS[stage]} />
-            <div className="flex-1 pb-2 flex flex-col gap-2">
-              <ClarityMeter value={POSTER_CLARITY[stage]} width={440} />
-              <motion.div key={stage} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }} className="text-[14px] font-semibold" style={{ color: hl ?? '#f87171' }}>
-                {POSTER_TAGS[stage]}
-              </motion.div>
+            <div className="flex-1 pb-2">
+              <ClarityMeter value={POSTER_CLARITY[stage]} width={440} pretend />
             </div>
           </div>
           <div className="rounded-xl bg-white text-[#1f2937] shadow-lg border-2" style={{ borderColor: hl ? `${hl}aa` : 'rgba(0,0,0,0.1)' }}>
@@ -392,10 +393,6 @@ function BuildScene({ stage }: { stage: number }) {
 // ---------- step 11: say what TO do ----------
 
 function SayDoScene() {
-  const more = [
-    { no: "Don't make it long.", yes: 'Max 2 sentences per box.' },
-    { no: "Don't be boring.", yes: 'Start with a surprising question.' },
-  ];
   const lim = ING.limits.color;
   return (
     <Scene id="sayDo">
@@ -411,7 +408,6 @@ function SayDoScene() {
               <Rich text={F_AUXIN.replace('auxin', '~~auxin~~')} />
             </div>
           </Paper>
-          <Verdict ok={false} delay={0.4}>🤔 Which words count as hard?</Verdict>
         </div>
 
         <motion.div initial={{ opacity: 0, scaleX: 0 }} animate={{ opacity: 1, scaleX: 1 }} transition={{ delay: 0.5 }} className="text-5xl" style={{ color: lim, originX: 0 }}>
@@ -431,19 +427,8 @@ function SayDoScene() {
               {F_SIMPLE}
             </motion.div>
           </Paper>
-          <Verdict ok delay={1.2}>🎯 A clear target: &apos;auxin&apos; is gone</Verdict>
         </motion.div>
       </div>
-
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }} className="mt-6 flex gap-4">
-        {more.map((m) => (
-          <div key={m.no} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[14px]">
-            <span className="text-red-300 line-through decoration-red-400/70">{m.no}</span>
-            <span className="text-white/40">➜</span>
-            <span className="text-emerald-300">{m.yes}</span>
-          </div>
-        ))}
-      </motion.div>
     </Scene>
   );
 }
@@ -473,7 +458,7 @@ function DelimitersScene() {
       <div className="flex gap-8 items-start">
         {/* without */}
         <div className="flex flex-col gap-2 w-[440px]">
-          <div className="text-[14px] font-bold uppercase tracking-wide text-red-300">No fence</div>
+          <div className="text-[14px] font-bold uppercase tracking-wide text-red-300">✗ No fence</div>
           <PromptPaper title="Mia's prompt" width={440} border="rgba(0,0,0,0.1)" dim>
             <div className="font-semibold">Summarise my notes in 2 sentences:</div>
             <div className="text-[14px] text-black/70 space-y-0.5">
@@ -487,12 +472,11 @@ function DelimitersScene() {
             <div>All 6 bean plants leaned toward the window in 14 days.</div>
             <div className="rounded px-1 bg-red-100">Funny title: “Bean There, Grown That!” 😄</div>
           </Paper>
-          <Verdict ok={false} delay={0.5}>✗ It obeyed a line inside the notes</Verdict>
         </div>
 
         {/* with */}
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ ...spring, delay: 0.4 }} className="flex flex-col gap-2 w-[500px]">
-          <div className="text-[14px] font-bold uppercase tracking-wide text-emerald-300">With a fence</div>
+          <div className="text-[14px] font-bold uppercase tracking-wide text-emerald-300">✓ With a fence</div>
           <PromptPaper title="Mia's prompt" width={500} border="#94a3b8">
             <div className="font-semibold">
               Summarise the notes between the <span className="font-mono bg-slate-200 rounded px-1">&quot;&quot;&quot;</span> marks in 2 sentences.
@@ -510,7 +494,6 @@ function DelimitersScene() {
           <Paper title="Answer" width={500} border="#4ade80">
             <div>Over 14 days, all 6 bean plants slowly leaned toward the window. The notes also say a funny title is still to do.</div>
           </Paper>
-          <Verdict ok delay={1.4}>✓ Notes treated as notes</Verdict>
         </motion.div>
       </div>
     </Scene>
@@ -521,17 +504,17 @@ function DelimitersScene() {
 
 function StepByStepScene() {
   const steps = [
-    { t: 'Add them up: 3 + 5 + 4 + 6 + 2 + 4 = 24 cm', n: 'Step 1' },
-    { t: 'Count the plants: 6', n: 'Step 2' },
-    { t: 'Divide: 24 ÷ 6 = 4', n: 'Step 3' },
+    { t: 'First 5 days: 5 × 2 = 10 cm', n: 'Step 1' },
+    { t: 'Half as fast is 1 cm a day: 4 × 1 = 4 cm', n: 'Step 2' },
+    { t: 'Total: 3 + 10 + 4 = 17 cm', n: 'Step 3' },
   ];
   const cyan = ING.step.color;
   return (
     <Scene id="stepByStep">
       <motion.div {...{ initial: { opacity: 0, y: -8 }, animate: { opacity: 1, y: 0 } }} transition={spring} className="flex items-center gap-3 mb-5">
         <Mia size={40} label={false} />
-        <div className="rounded-2xl rounded-bl-sm bg-accent-blue px-4 py-2 text-[18px] font-medium text-white shadow">
-          My 6 beans grew 3, 5, 4, 6, 2 and 4 cm. What&apos;s the average growth?
+        <div className="max-w-[620px] rounded-2xl rounded-bl-sm bg-accent-blue px-4 py-2 text-[18px] font-medium text-white shadow">
+          My bean was 3 cm tall. It grew 2 cm a day for 5 days, then half as fast for 4 more days. How tall is it now?
         </div>
       </motion.div>
       <div className="flex gap-8 items-start">
@@ -542,11 +525,11 @@ function StepByStepScene() {
             <AgentBot color={SOLO.color} badge={SOLO.badge} size={60} mood="working" dimmed />
             <Paper title="Answer" width={280} border="#f87171" dim>
               <div className="text-[18px] font-semibold">
-                The average is <span className="text-red-600 line-through decoration-2">4.5 cm</span>.
+                It is now <span className="text-red-600 line-through decoration-2">21 cm</span> tall.
               </div>
             </Paper>
           </div>
-          <Verdict ok={false} delay={0.4}>✗ Rushed and wrong (example)</Verdict>
+          <Verdict ok={false} delay={0.4}>✗ Rushed and wrong (made-up example)</Verdict>
         </div>
 
         {/* step by step */}
@@ -574,7 +557,7 @@ function StepByStepScene() {
               </motion.div>
             ))}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }} className="text-[18px] font-bold leading-[30px]">
-              Average: 4 cm ✅
+              Height: 17 cm ✅
             </motion.div>
           </div>
         </motion.div>
@@ -633,6 +616,7 @@ function IterateScene() {
           <div className="flex items-center gap-2 mb-2">
             <Mia size={30} label={false} />
             <span className="text-[14px] font-bold uppercase tracking-wide text-white/60">Mia&apos;s drafts</span>
+            <span className="ml-auto text-[14px] font-semibold text-white/60">🔍 Clarity</span>
           </div>
           <div className="space-y-1.5">
             {DRAFTS.map((d, i) => (
@@ -645,13 +629,12 @@ function IterateScene() {
                     initial={{ width: 0 }}
                     animate={{ width: `${d.value}%` }}
                     transition={{ duration: 0.6, delay: 0.6 + i * 0.12 }}
-                    style={{ backgroundColor: d.value < 30 ? '#f87171' : d.value < 60 ? '#fb923c' : d.value < 85 ? '#fbbf24' : '#4ade80' }}
+                    style={{ backgroundColor: clarityLook(d.value).color }}
                   />
                 </div>
               </motion.div>
             ))}
           </div>
-          <div className="mt-2 text-right text-[13px] text-white/45">bars = clarity meter</div>
         </div>
       </div>
     </Scene>
@@ -662,9 +645,9 @@ function IterateScene() {
 
 function MistakesScene() {
   const cards: { icon: string; title: string; prompt: string; bubble: string; mood: BotMood; fix: string }[] = [
-    { icon: '🌫️', title: 'Too vague', prompt: 'Make it better.', bubble: 'Better how? 🤔', mood: 'confused', fix: 'Make the title shorter and funnier.' },
+    { icon: '🤷', title: 'Too vague', prompt: 'Make it better.', bubble: 'Better how? 🤔', mood: 'confused', fix: 'Make the title shorter and funnier.' },
     { icon: '🤹', title: 'Too many tasks', prompt: 'Write my poster, check my maths, plan my party and explain black holes.', bubble: 'Where do I start?!', mood: 'tired', fix: 'One task per prompt, or a numbered list of steps.' },
-    { icon: '⚔️', title: 'Rules that fight', prompt: 'Explain every detail. Keep it under 20 words.', bubble: 'Both?! 😵', mood: 'confused', fix: 'Explain the main idea in under 20 words.' },
+    { icon: '⚔️', title: 'Rules that fight', prompt: 'Use only emojis. Explain in full sentences.', bubble: 'Both?! 😵', mood: 'confused', fix: 'Explain in full sentences, with one emoji each.' },
   ];
   return (
     <Scene id="mistakes">
@@ -763,7 +746,7 @@ export default function PromptWritingAnim() {
         break;
       case 'playground':
         scene = (
-          <Scene id="playground" className="!p-0">
+          <Scene id="playground" className="!p-0" fit={false}>
             <PromptFixerPlayground />
           </Scene>
         );

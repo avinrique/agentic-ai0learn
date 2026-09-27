@@ -1,6 +1,6 @@
 'use client';
 import { motion } from 'framer-motion';
-import { ReactNode } from 'react';
+import { ReactNode, useLayoutEffect, useRef, useState } from 'react';
 
 export const spring = { type: 'spring' as const, stiffness: 240, damping: 24 };
 
@@ -10,7 +10,7 @@ export type IngId = 'task' | 'role' | 'context' | 'format' | 'example' | 'limits
 
 export const ING: Record<IngId, { label: string; icon: string; color: string; question: string }> = {
   task: { label: 'Task', icon: '🎯', color: '#4a9eff', question: 'What should it do?' },
-  role: { label: 'Role', icon: '🎭', color: '#a78bfa', question: 'Who should it be?' },
+  role: { label: 'Role', icon: '🎭', color: '#a78bfa', question: 'Who should it be? (persona)' },
   context: { label: 'Context', icon: '🧭', color: '#4ade80', question: 'Who is it for, and why?' },
   format: { label: 'Format', icon: '📐', color: '#fbbf24', question: 'What shape and length?' },
   example: { label: 'Example', icon: '💡', color: '#f472b6', question: 'What does good look like?' },
@@ -24,19 +24,23 @@ export const RECIPE: IngId[] = ['task', 'role', 'context', 'format', 'example', 
 
 // ---------- clarity meter ----------
 
+// 'Crystal clear' only at 100, when nothing useful is missing (so it never fights a "next ingredient" tip).
 export function clarityLook(value: number) {
   if (value < 30) return { word: 'Vague', color: '#f87171' };
   if (value < 60) return { word: 'Getting there', color: '#fb923c' };
   if (value < 85) return { word: 'Clear', color: '#fbbf24' };
+  if (value < 100) return { word: 'Very clear', color: '#a3e635' };
   return { word: 'Crystal clear', color: '#4ade80' };
 }
 
-export function ClarityMeter({ value, width = 300 }: { value: number; width?: number }) {
+export function ClarityMeter({ value, width = 300, pretend = false }: { value: number; width?: number; pretend?: boolean }) {
   const look = clarityLook(value);
   return (
     <div style={{ width }}>
       <div className="flex items-baseline justify-between text-[13px] mb-1">
-        <span className="font-semibold text-white/70">🔍 Clarity meter</span>
+        <span className="font-semibold text-white/70">
+          🔍 Clarity meter {pretend && <span className="font-normal text-white/50">(pretend)</span>}
+        </span>
         <motion.span key={look.word} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="font-bold" style={{ color: look.color }}>
           {look.word}
         </motion.span>
@@ -66,12 +70,12 @@ export function Rich({ text }: { text: string }) {
   let k = 0;
   while ((m = re.exec(text))) {
     if (m.index > last) parts.push(text.slice(last, m.index));
-    if (m[1]) parts.push(<strong key={k++}>{m[1]}</strong>);
+    if (m[1]) parts.push(<strong key={k++}><Rich text={m[1]} /></strong>);
     else if (m[2]) {
       const c = ING[m[2] as IngId]?.color ?? '#94a3b8';
       parts.push(
         <span key={k++} className="rounded px-0.5" style={{ backgroundColor: `${c}40`, boxShadow: `inset 0 -2px 0 ${c}` }}>
-          {m[3]}
+          <Rich text={m[3]} />
         </span>,
       );
     } else if (m[4]) {
@@ -129,7 +133,7 @@ export function IngTag({ id, small = false }: { id: IngId; small?: boolean }) {
 
 // ---------- people and props ----------
 
-export function Mia({ size = 44, label = true }: { size?: number; label?: boolean }) {
+export function Mia({ size = 44, label = true, dark = false }: { size?: number; label?: boolean; dark?: boolean }) {
   return (
     <div className="flex flex-col items-center">
       <div
@@ -138,22 +142,87 @@ export function Mia({ size = 44, label = true }: { size?: number; label?: boolea
       >
         👧
       </div>
-      {label && <div className="text-[13px] font-semibold text-white mt-0.5">Mia</div>}
+      {label && <div className={`text-[14px] font-semibold mt-0.5 ${dark ? 'text-[#1f2937]' : 'text-white'}`}>Mia</div>}
     </div>
   );
 }
 
-export function Scene({ id, children, className = '' }: { id: string; children: ReactNode; className?: string }) {
+/**
+ * One step's scene, centred in the panel. The scenes are designed for the ~1150x650 panel of a 1440x900 screen;
+ * on a smaller panel (school laptops, projectors) the whole scene shrinks to fit instead of being cut off.
+ */
+export function Scene({ id, children, className = '', fit = true }: { id: string; children: ReactNode; className?: string; fit?: boolean }) {
+  const outer = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  useLayoutEffect(() => {
+    const o = outer.current;
+    const i = inner.current;
+    if (!fit || !o || !i) return;
+    const measure = () => {
+      const cs = getComputedStyle(o);
+      const aw = o.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const ah = o.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      if (!i.offsetWidth || !i.offsetHeight || aw <= 0 || ah <= 0) return;
+      setScale(Math.min(1, aw / i.offsetWidth, ah / i.offsetHeight));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(o);
+    ro.observe(i);
+    return () => ro.disconnect();
+  }, [fit]);
   return (
     <motion.div
       key={id}
+      ref={outer}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
       className={`absolute inset-0 flex flex-col items-center justify-center px-6 py-4 ${className}`}
     >
-      {children}
+      {fit ? (
+        <div ref={inner} data-fit={scale.toFixed(3)} className="shrink-0 flex flex-col items-center" style={scale < 1 ? { transform: `scale(${scale})` } : undefined}>
+          {children}
+        </div>
+      ) : (
+        children
+      )}
     </motion.div>
+  );
+}
+
+/**
+ * Fills its (absolutely positioned) parent. Below minW x minH it lays the children out at a bigger virtual size
+ * and scales them down, so a flexible layout never has to squeeze under its minimum.
+ */
+export function FitFill({ minW, minH, children }: { minW: number; minH: number; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState<{ w: number; h: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setBox({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const s = box && box.w > 0 && box.h > 0 ? Math.min(1, box.w / minW, box.h / minH) : 1;
+  return (
+    <div ref={ref} className="absolute inset-0 overflow-hidden">
+      <div
+        data-fit={s.toFixed(3)}
+        style={{
+          width: box && s < 1 ? box.w / s : '100%',
+          height: box && s < 1 ? box.h / s : '100%',
+          transform: s < 1 ? `scale(${s})` : undefined,
+          transformOrigin: '0 0',
+        }}
+      >
+        {children}
+      </div>
+    </div>
   );
 }
 

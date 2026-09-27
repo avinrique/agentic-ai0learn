@@ -8,8 +8,8 @@ export const runInfo: RunInfo = {
   expect:
     'You see JSON: 3 Python interview questions, each with a "question" and a "difficulty". The exact questions change every run.',
   tryThis: [
-    "Ask for the ingredients of pancakes, with the keys 'item' and 'amount'.",
-    "Ask for 3 big cities, with the keys 'city' and 'population'.",
-    'Ask for 5 questions instead of 3.',
+    "Change user_prompt to ask for the ingredients of pancakes, with the keys 'item' and 'amount'.",
+    "Change user_prompt to ask for 3 big cities, with the keys 'city' and 'population'.",
+    'Change the 3 in user_prompt to 5 to get 5 questions.',
   ],
 };

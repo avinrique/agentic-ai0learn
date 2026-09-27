@@ -33,8 +33,8 @@ export const runInfo: RunInfo = {
   expect:
     '"Tool result: 100.0" (the simple_interest tool did the maths), then StudyBuddy Pro explains the answer.',
   tryThis: [
-    'Ask "What percent is 45 out of 60?" to use the percentage tool.',
-    'Ask "What is RAG?" to use the lookup tool.',
+    'Change user_query to "What percent is 45 out of 60?" to use the percentage tool.',
+    'Change user_query to "What is RAG?" to use the lookup tool.',
     'Stretch: add an 8th tool, power(a, b), to the functions, the tools list and available_functions.',
   ],
 };

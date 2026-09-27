@@ -5,22 +5,22 @@ export const guide: LessonGuide = {
   today: 'Set up your computer: Python, the code kit, a secret API key, and your first run.',
   quiz: [
     {
-      q: 'Where should your OpenAI API key live?',
+      q: 'Oops: your API key ended up in a public GitHub project. What should you do?',
       options: [
-        'In a .env file on your computer',
-        'Pasted at the top of your Python code',
-        "On GitHub, so you don't lose it",
-        'In the class group chat for safekeeping',
+        'Rename the file so nobody finds it',
+        'Nothing: keys stop working by themselves',
+        'Change your ChatGPT password',
+        'Delete the key on the website and make a new one',
       ],
-      answer: 0,
-      why: 'The .env file stays on your computer, and .gitignore stops it from being uploaded. Anyone who sees your key can spend your credit.',
+      answer: 3,
+      why: 'Bots search GitHub for keys, so assume it was copied. Deleting it makes the copied key useless. Put the new key in .env, which .gitignore keeps off GitHub.',
     },
     {
-      q: "You run a lesson and see ModuleNotFoundError: No module named 'openai'. What's the likely fix?",
+      q: "run.py says: “The course libraries aren't installed yet”. What's the likely fix?",
       options: [
         'Make a brand-new API key',
         'Buy more API credit',
-        'Activate .venv, then run pip install -r requirements.txt',
+        'Switch on .venv, then run pip install -r requirements.txt',
         'Restart your web browser',
       ],
       answer: 2,
@@ -34,7 +34,7 @@ export const guide: LessonGuide = {
         'Yes, but only for gpt-4o-mini',
       ],
       answer: 1,
-      why: 'The ChatGPT app and the API are billed separately. For the API you add a little credit, pay per token, and set a budget limit.',
+      why: 'The ChatGPT app and the API are billed separately. For the API you add a little prepaid credit (auto-recharge off) and pay per token.',
     },
   ],
 };

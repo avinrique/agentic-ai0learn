@@ -8,6 +8,9 @@ import { streamingCode } from '@/data/code-snippets/streaming';
 // substring of the code) and the streamed pieces change. Steps name a unique
 // piece of code (`at`) instead of a raw line number, and variables carry forward.
 // The first two loop rounds are walked slowly, then the rest is fast-forwarded.
+// Chunks are named by what they carry, not by number: a real stream first sends one
+// chunk with role "assistant" and content "" (the check1 step says so), then the text
+// chunks, then a last chunk whose content is None and finish_reason is "stop".
 // ─────────────────────────────────────────────────────────────────────────────
 interface StepDef {
   at: string; // a substring that appears on exactly one line of the code
@@ -48,11 +51,13 @@ function buildTrace(defs: StepDef[]): TraceStep[] {
 
 /** Python-style string value for the Variables panel. */
 const str = (s: string) => JSON.stringify(s);
-/** The Variables-panel value of the n-th chunk. */
-export const chunkLabel = (n: number) => `<ChatCompletionChunk #${n}>`;
+/** The Variables-panel value of a chunk: what its delta.content holds. */
+export const chunkLabel = (piece: string | null) =>
+  `<ChatCompletionChunk, content=${piece === null ? 'None' : str(piece)}>`;
 
 export const STATUS_LINE = 'Asking the AI to write (streaming)...';
-export const doneLine = (chars: number) => `\n\nDone! The answer has ${chars} characters.`;
+/** What the last print shows: a blank line (the story's line already ended), then the count. */
+export const doneLine = (chars: number) => `\nDone! ${chars} characters in total.`;
 
 const L = {
   file: '# part1/streaming.py',
@@ -148,7 +153,7 @@ function streamingSteps(ex: StreamExample): TraceStep[] {
       at: L.status,
       trig: 'status',
       out: STATUS_LINE,
-      exp: 'A status line, so we know the program has started. Look at the terminal.',
+      exp: 'A status line, so we know the program has started. Look at the terminal in the laptop box.',
     },
     {
       at: L.create,
@@ -175,13 +180,13 @@ function streamingSteps(ex: StreamExample): TraceStep[] {
       at: L.init,
       trig: 'init',
       set: { full_story: str('') },
-      exp: "full_story starts as an empty string, like an empty jar. We'll drop every piece into it to rebuild the whole answer.",
+      exp: "full_story starts as an empty string, like an empty jar. We'll drop every piece in, so at the end we have the whole answer as one string to save or reuse.",
     },
     {
       at: L.forLine,
       trig: 'chunk1',
-      set: { chunk: chunkLabel(1) },
-      exp: 'for chunk in stream: waits for the next chunk. The AI writes one token at a time (remember Lesson 1), and each one is sent to us right away.',
+      set: { chunk: chunkLabel(p1) },
+      exp: 'for chunk in stream: waits for the next chunk, a small parcel with the next bit of text. The AI writes one token at a time (Lesson 1); OpenAI sends each right away.',
     },
     {
       at: L.piece,
@@ -192,12 +197,12 @@ function streamingSteps(ex: StreamExample): TraceStep[] {
     {
       at: L.check,
       trig: 'check1',
-      exp: `if piece: checks that the piece has some text. "${p1}" does, so we go inside.`,
+      exp: `if piece: checks that the piece has some text. "${p1}" does, so we go inside. (The very first chunk only carries role "assistant", with content "", so it gets skipped.)`,
     },
     {
       at: L.print,
       trig: 'print1',
-      exp: `print shows "${p1}" in the terminal. flush=True means "show it right now", so it doesn't sit waiting for more text first.`,
+      exp: `Look at the laptop terminal: print shows "${p1}". flush=True means "show it right now", so it doesn't sit waiting for more text first.`,
     },
     {
       at: L.add,
@@ -208,13 +213,13 @@ function streamingSteps(ex: StreamExample): TraceStep[] {
     {
       at: L.piece,
       trig: 'piece2',
-      set: { chunk: chunkLabel(2), piece: str(p2) },
-      exp: `Back to the top of the loop: chunk 2 arrives. ${spaceNote}`,
+      set: { chunk: chunkLabel(p2), piece: str(p2) },
+      exp: `Round 2: the loop hands us the next chunk. ${spaceNote}`,
     },
     {
       at: L.print,
       trig: 'print2',
-      exp: `"${p2.trim()}" lands right beside "${p1}" on the same line. That's end="": print adds no new line after each piece.`,
+      exp: `In the laptop terminal, "${p2.trim()}" lands right beside "${p1}" on the same line. That's end="": print adds no new line after each piece.`,
     },
     {
       at: L.add,
@@ -225,15 +230,17 @@ function streamingSteps(ex: StreamExample): TraceStep[] {
     {
       at: L.forLine,
       trig: 'fast',
-      set: { chunk: chunkLabel(n), piece: str(ex.pieces[n - 1]), full_story: str(full) },
-      out: full,
+      set: { chunk: chunkLabel(ex.pieces[n - 1]), piece: str(ex.pieces[n - 1]), full_story: str(full) },
       exp: `The loop repeats for every chunk (${n} with text in this answer). Watch them flow down the pipe, type out, and fill up full_story.`,
     },
     {
       at: L.check,
       trig: 'last',
-      set: { chunk: chunkLabel(n + 1), piece: 'None' },
-      exp: 'The last chunk has no text: content is None, meaning "finished". if piece: is False, so we skip it. Without the check, full_story += None would crash.',
+      set: { chunk: chunkLabel(null), piece: 'None' },
+      // By now every piece has been printed, so the Output tab gets the whole answer here
+      // (it shows each output on its own line, so it can't show pieces joining one line).
+      out: full,
+      exp: 'The last chunk has no text (content is None); its finish_reason "stop" says the answer is done. if piece: is False, so we skip it. Without the check, full_story += None would crash.',
     },
     {
       at: L.done,
@@ -244,7 +251,7 @@ function streamingSteps(ex: StreamExample): TraceStep[] {
     {
       at: L.done,
       trig: 'recap',
-      exp: "What you learned: 1) stream=True sends the answer in small chunks as it's written. 2) Each chunk's new text is chunk.choices[0].delta.content (it may be None). 3) print(piece, end=\"\", flush=True) types it out.",
+      exp: "What you learned: 1) stream=True sends the answer in small chunks as it's written. 2) Each chunk's new text is chunk.choices[0].delta.content (it may be empty or None). 3) print(piece, end=\"\", flush=True) types it out.",
     },
   ]);
 }

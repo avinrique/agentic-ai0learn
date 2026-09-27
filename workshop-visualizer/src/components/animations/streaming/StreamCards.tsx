@@ -21,9 +21,14 @@ import {
 // right of the pipe (or, for the timer comparison, across the whole panel).
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Pop({ children, k }: { children: ReactNode; k: string }) {
+function Pop({ children, k, delay = 0 }: { children: ReactNode; k: string; delay?: number }) {
   return (
-    <motion.div key={k} initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={spring}>
+    <motion.div
+      key={k}
+      initial={{ opacity: 0, scale: 0.92 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ ...spring, delay }}
+    >
       {children}
     </motion.div>
   );
@@ -38,12 +43,12 @@ export function SetupCard({ showClient }: { showClient: boolean }) {
       className="flex flex-col items-center gap-2"
     >
       <div
-        className="rounded-xl border-2 px-5 py-3 flex items-center gap-2.5 font-mono text-[20px] font-bold"
+        className="rounded-xl border-2 px-5 py-3 flex items-center gap-2.5 whitespace-nowrap font-mono text-[20px] font-bold"
         style={{ borderColor: on ? color : 'rgba(255,255,255,0.15)', background: `${color}14`, color }}
       >
         {body}
       </div>
-      <span className="text-[14px] text-white/55">{label}</span>
+      <span className="whitespace-nowrap text-[14px] text-white/55">{label}</span>
     </motion.div>
   );
   return (
@@ -55,7 +60,7 @@ export function SetupCard({ showClient }: { showClient: boolean }) {
           BLUE,
           <>
             📞 client
-            <span className="ml-2 flex items-center gap-1.5 rounded-md bg-accent-gold/10 px-2 py-0.5 text-[14px] font-normal text-white/70">
+            <span className="ml-2 flex shrink-0 items-center gap-1.5 rounded-md bg-accent-gold/10 px-2 py-0.5 text-[14px] font-normal text-white/70">
               <KeyIcon color={GOLD} /> sk-••••
             </span>
           </>,
@@ -118,14 +123,6 @@ export function RequestCard({ prompt, showStream }: { prompt: string; showStream
           >
             True
           </motion.span>
-          <motion.span
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.9 }}
-            className="ml-auto text-[14px] text-white/60"
-          >
-            send it in pieces
-          </motion.span>
         </motion.div>
       )}
     </motion.div>
@@ -148,67 +145,54 @@ function PieceValue({ piece, showSpace }: { piece: string; showSpace: boolean })
   );
 }
 
-/** One chunk object, opened up: chunk → choices[0] → delta → content. */
-export function ChunkCard({
-  n,
-  piece,
-  kind,
-}: {
-  n: number;
-  piece: string | null;
-  kind: 'first' | 'next' | 'last';
-}) {
+/**
+ * One chunk object, opened up: chunk → choices[0] → delta → content. Named after the loop
+ * variable (not numbered): a real stream also sends an empty first chunk, so text chunk
+ * counts would be off by one.
+ */
+export function ChunkCard({ piece, kind }: { piece: string | null; kind: 'first' | 'next' | 'last' }) {
   const last = kind === 'last';
-  return (
-    <Pop k={`chunk-${n}-${kind}`}>
-      <div className="w-[470px] max-w-full flex flex-col gap-2.5">
-        {kind === 'first' && (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-baseline gap-3">
-              <span className="w-[92px] text-[13px] text-white/40">last lesson</span>
-              <Path segs={['response', '.choices[0]', '.message', '.content']} hot=".message" dim />
-            </div>
-            <div className="flex items-baseline gap-3">
-              <span className="w-[92px] text-[13px] text-accent-green">now</span>
-              <Path segs={['chunk', '.choices[0]', '.delta', '.content']} hot=".delta" />
-            </div>
-          </div>
-        )}
-        <Layer name={`chunk #${n}`} lit color={PURPLE}>
-          <Layer name="choices[0]" lit color={PURPLE} delay={0.15}>
-            <Layer name="delta" lit color={GOLD} delay={0.3}>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.45 }}
-                className={`flex items-center gap-3 ${kind === 'next' ? 'pb-5' : ''}`}
-              >
-                <span className="font-mono text-[15px] font-bold" style={{ color: last ? 'rgba(255,255,255,0.5)' : GREEN }}>
-                  content
-                </span>
-                {piece === null ? <Tile piece={null} big /> : <PieceValue piece={piece} showSpace={kind === 'next'} />}
-                {piece === null && <span className="text-[14px] text-white/50">no text</span>}
-              </motion.div>
-            </Layer>
-            {last && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className="font-mono text-[15px]"
-              >
-                <span className="text-white/55">finish_reason </span>
-                <span className="text-accent-gold">&quot;stop&quot;</span>
-              </motion.div>
-            )}
-          </Layer>
+  const layers = (
+    <Layer name="chunk" lit color={PURPLE}>
+      <Layer name="choices[0]" lit color={PURPLE} delay={0.15}>
+        <Layer name="delta" lit color={GOLD} delay={0.3}>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.45 }}
+            className={`flex items-center gap-3 whitespace-nowrap ${kind === 'next' ? 'pb-5' : ''}`}
+          >
+            <span className="font-mono text-[15px] font-bold" style={{ color: last ? 'rgba(255,255,255,0.5)' : GREEN }}>
+              content
+            </span>
+            {piece === null ? <Tile piece={null} big /> : <PieceValue piece={piece} showSpace={kind === 'next'} />}
+          </motion.div>
         </Layer>
         {last && (
           <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="whitespace-nowrap font-mono text-[15px]"
+          >
+            <span className="text-white/55">finish_reason </span>
+            <span className="text-accent-gold">&quot;stop&quot;</span>
+          </motion.div>
+        )}
+      </Layer>
+    </Layer>
+  );
+  if (last) {
+    // The verdict sits beside the chunk (not under it), so the card stays short on small screens.
+    return (
+      <Pop k={`chunk-${kind}-${piece}`}>
+        <div className="w-[470px] flex items-center gap-4">
+          <div className="flex-1 min-w-0">{layers}</div>
+          <motion.div
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
             transition={{ ...spring, delay: 0.9 }}
-            className="flex items-center gap-3 self-start rounded-xl border-2 px-3 py-2"
+            className="shrink-0 flex flex-col items-center gap-1 whitespace-nowrap rounded-xl border-2 px-3 py-2"
             style={{ borderColor: RED, background: `${RED}14` }}
           >
             <span className="font-mono text-[17px] font-bold text-white/85">if piece:</span>
@@ -216,17 +200,36 @@ export function ChunkCard({
               ✗ skip
             </span>
           </motion.div>
+        </div>
+      </Pop>
+    );
+  }
+  return (
+    <Pop k={`chunk-${kind}-${piece}`}>
+      <div className="w-[470px] flex flex-col gap-2.5">
+        {kind === 'first' && (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-baseline gap-3">
+              <span className="w-[92px] shrink-0 text-[13px] text-white/60">last lesson</span>
+              <Path segs={['response', '.choices[0]', '.message', '.content']} hot=".message" dim />
+            </div>
+            <div className="flex items-baseline gap-3">
+              <span className="w-[92px] shrink-0 text-[13px] text-accent-green">now</span>
+              <Path segs={['chunk', '.choices[0]', '.delta', '.content']} hot=".delta" />
+            </div>
+          </div>
         )}
+        {layers}
       </div>
     </Pop>
   );
 }
 
-/** if piece: → the piece has text → go inside. */
+/** if piece: → the piece has text → go inside (and, quietly, the empty first chunk that was skipped). */
 export function CheckCard({ piece }: { piece: string }) {
   return (
     <Pop k={`check-${piece}`}>
-      <div className="flex flex-col items-center gap-4 rounded-2xl border-2 border-accent-green/60 bg-accent-green/5 px-7 py-5">
+      <div className="flex flex-col items-center gap-4 whitespace-nowrap rounded-2xl border-2 border-accent-green/60 bg-accent-green/5 px-7 py-5">
         <span className="font-mono text-[22px] font-bold text-white/90">if piece:</span>
         <div className="flex items-center gap-3">
           <Tile piece={piece} big />
@@ -249,15 +252,38 @@ export function CheckCard({ piece }: { piece: string }) {
             go inside
           </motion.span>
         </div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2 }}
+          className="flex items-center gap-3 self-stretch border-t border-white/10 pt-3 text-[14px] text-white/55"
+        >
+          <span>first chunk</span>
+          <Tile piece="" />
+          <span className="text-white/35">→</span>
+          <span style={{ color: RED }}>✗ skipped</span>
+        </motion.div>
       </div>
     </Pop>
   );
 }
 
 /** A big short label next to the pipe, for steps where the pipe itself is the focus. */
-export function Caption({ big, small, color, mono = true }: { big: string; small?: string; color: string; mono?: boolean }) {
+export function Caption({
+  big,
+  small,
+  color,
+  mono = true,
+  delay = 0,
+}: {
+  big: string;
+  small?: string;
+  color: string;
+  mono?: boolean;
+  delay?: number;
+}) {
   return (
-    <Pop k={`cap-${big}`}>
+    <Pop k={`cap-${big}`} delay={delay}>
       <div className="flex flex-col items-start gap-1">
         <span className={`${mono ? 'font-mono' : ''} text-[26px] font-bold leading-tight`} style={{ color }}>
           {big}
@@ -272,7 +298,7 @@ export function Caption({ big, small, color, mono = true }: { big: string; small
 export function RecapCard() {
   const rows = [
     { code: 'stream=True', label: 'answer comes in chunks', color: GREEN },
-    { code: 'chunk.choices[0].delta.content', label: 'new text, or None', color: PURPLE },
+    { code: 'chunk.choices[0].delta.content', label: 'new text (or none)', color: PURPLE },
     { code: 'end="", flush=True', label: 'type it out', color: GOLD },
   ];
   return (
@@ -283,7 +309,7 @@ export function RecapCard() {
           initial={{ opacity: 0, x: 14 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ ...spring, delay: 0.15 + i * 0.2 }}
-          className="flex items-center gap-3"
+          className="flex items-center gap-3 whitespace-nowrap"
         >
           <span
             className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[14px] font-bold text-navy-900"
