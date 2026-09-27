@@ -408,7 +408,12 @@ export default function StreamingAnim() {
                   </motion.span>
                 )}
               </div>
-              <div className="flex-1 min-h-0 px-4 pb-3 font-mono text-[15px] leading-[1.5] overflow-hidden flex flex-col justify-end">
+              <div
+                ref={termOuter}
+                className="flex-1 min-h-0 px-4 pb-3 font-mono text-[15px] leading-[1.5] overflow-hidden flex flex-col justify-end"
+                style={termSpills ? { maskImage: TOP_FADE, WebkitMaskImage: TOP_FADE } : undefined}
+              >
+               <div ref={termInner}>
                 <div className="text-white/40">$ python run.py part1/streaming.py</div>
                 {showStatus && (
                   <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="text-white/75">
@@ -428,6 +433,7 @@ export default function StreamingAnim() {
                 )}
                 {rank >= RANK.done && <div className="text-white/40">$ ▌</div>}
                 {rank < RANK.status && trig !== 'intro' && <span className="inline-block h-4 w-2 bg-white/40 animate-pulse" />}
+               </div>
               </div>
             </motion.div>
 

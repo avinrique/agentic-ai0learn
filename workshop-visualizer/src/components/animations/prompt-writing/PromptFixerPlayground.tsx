@@ -137,7 +137,7 @@ export default function PromptFixerPlayground() {
             );
           })}
 
-          <div className="mt-auto flex flex-col gap-2">
+          <div className="mt-3 flex flex-col gap-2">
             <ClarityMeter value={score} width={262} />
             <motion.div
               key={`${s.id}-${tip}`}

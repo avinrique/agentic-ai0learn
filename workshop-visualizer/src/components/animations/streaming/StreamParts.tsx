@@ -48,6 +48,28 @@ export function useHeight<T extends HTMLElement>() {
   return [ref, h] as const;
 }
 
+/**
+ * True when the inner element (pinned to the bottom of the outer one) spills out over its
+ * top edge, so the caller can fade that edge instead of cutting a line in half.
+ */
+export function useSpillsOver<O extends HTMLElement, I extends HTMLElement>() {
+  const outer = useRef<O>(null);
+  const inner = useRef<I>(null);
+  const [over, setOver] = useState(false);
+  useEffect(() => {
+    const o = outer.current;
+    const i = inner.current;
+    if (!o || !i) return;
+    const check = () => setOver(i.getBoundingClientRect().top < o.getBoundingClientRect().top - 1);
+    const ro = new ResizeObserver(check);
+    ro.observe(o);
+    ro.observe(i);
+    check();
+    return () => ro.disconnect();
+  }, []);
+  return [outer, inner, over] as const;
+}
+
 /** A piece as code would write it: quoted, with new lines shown as ↵ so spaces and line breaks are visible. */
 export function quoted(p: string) {
   return `"${p.replace(/\n/g, '↵')}"`;
