@@ -268,6 +268,39 @@ export function Caption({ big, small, color, mono = true }: { big: string; small
   );
 }
 
+/** The three things to remember, as short code chips (last step). */
+export function RecapCard() {
+  const rows = [
+    { code: 'stream=True', label: 'answer comes in chunks', color: GREEN },
+    { code: 'chunk.choices[0].delta.content', label: 'new text, or None', color: PURPLE },
+    { code: 'end="", flush=True', label: 'type it out', color: GOLD },
+  ];
+  return (
+    <div className="flex flex-col gap-3.5">
+      {rows.map((r, i) => (
+        <motion.div
+          key={r.code}
+          initial={{ opacity: 0, x: 14 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ ...spring, delay: 0.15 + i * 0.2 }}
+          className="flex items-center gap-3"
+        >
+          <span
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[14px] font-bold text-navy-900"
+            style={{ background: r.color }}
+          >
+            {i + 1}
+          </span>
+          <span className="font-mono text-[17px] font-bold" style={{ color: r.color }}>
+            {r.code}
+          </span>
+          <span className="text-[15px] text-white/60">{r.label}</span>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
 // ── Side-by-side: wait for everything vs stream ─────────────────────────────
 const SIM_TOTAL = 3200; // illustrative: the whole answer takes 3.2 s to write
 const SIM_FIRST = 400; // illustrative: the first piece arrives after 0.4 s

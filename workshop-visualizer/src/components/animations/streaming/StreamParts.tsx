@@ -53,12 +53,11 @@ export function useHeight<T extends HTMLElement>() {
  * top edge, so the caller can fade that edge instead of cutting a line in half.
  */
 export function useSpillsOver<O extends HTMLElement, I extends HTMLElement>() {
-  const outer = useRef<O>(null);
-  const inner = useRef<I>(null);
+  // Callback refs (kept in state) so the observer re-attaches when the elements remount.
+  const [o, outer] = useState<O | null>(null);
+  const [i, inner] = useState<I | null>(null);
   const [over, setOver] = useState(false);
   useEffect(() => {
-    const o = outer.current;
-    const i = inner.current;
     if (!o || !i) return;
     const check = () => setOver(i.getBoundingClientRect().top < o.getBoundingClientRect().top - 1);
     const ro = new ResizeObserver(check);
@@ -66,7 +65,7 @@ export function useSpillsOver<O extends HTMLElement, I extends HTMLElement>() {
     ro.observe(i);
     check();
     return () => ro.disconnect();
-  }, []);
+  }, [o, i]);
   return [outer, inner, over] as const;
 }
 

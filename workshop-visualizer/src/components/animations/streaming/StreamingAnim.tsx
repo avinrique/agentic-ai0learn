@@ -17,8 +17,9 @@ import {
   spring,
   useClock,
   useHeight,
+  useSpillsOver,
 } from './StreamParts';
-import { Caption, CheckCard, ChunkCard, CompareView, RequestCard, SetupCard } from './StreamCards';
+import { Caption, CheckCard, ChunkCard, CompareView, RecapCard, RequestCard, SetupCard } from './StreamCards';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // StreamingAnim — Lesson 11 (Streaming: The Typing Effect), the sequel to
@@ -82,9 +83,12 @@ const LAPTOP_H: Record<string, number> = {
   add2: 280,
   fast: 330,
   last: 250,
-  done: 360,
-  recap: 360,
+  done: 370,
+  recap: 300,
 };
+
+/** Fades the top edge of the terminal when older lines scroll off it. */
+const TOP_FADE = 'linear-gradient(to bottom, transparent 0, #000 30px)';
 
 const GAP = 110; // ms between chunks in the fast-forward (slowed down so you can watch)
 const DROP = 600; // ms for a tile to fall down the pipe
@@ -278,6 +282,7 @@ export default function StreamingAnim() {
       </div>
     );
   else if (trig === 'last') side = <ChunkCard n={n + 1} piece={null} kind="last" />;
+  else if (trig === 'recap') side = <RecapCard />;
 
   // ── Terminal ──────────────────────────────────────────────────────────────
   const showStatus = rank >= RANK.status || trig === 'intro';
@@ -319,7 +324,10 @@ export default function StreamingAnim() {
   const BAR_MAX = barFocus ? 44 : 60;
 
   const laptopH = LAPTOP_H[trig] ?? 240;
-  const writing = rank >= RANK.chunk1 && rank < RANK.last ? true : flowing && flowWritten < flowPieces.length;
+  // The server is "writing" while pieces are still coming; once the last text piece is out it is done.
+  const writing = flowing ? flowWritten < flowPieces.length : rank >= RANK.chunk1 && rank < RANK.last;
+  const serverDone = rank >= RANK.last || (flowing && !writing);
+  const [termOuter, termInner, termSpills] = useSpillsOver<HTMLDivElement, HTMLDivElement>();
 
   return (
     <div className="h-full flex flex-col gap-3 px-5 py-4 overflow-hidden text-white">
@@ -357,8 +365,8 @@ export default function StreamingAnim() {
                 </motion.span>
               ) : null}
             </div>
-            <span className="shrink-0 text-[13px] font-semibold" style={{ color: writing ? GOLD : rank >= RANK.last ? GREEN : 'rgba(255,255,255,0.35)' }}>
-              {writing ? 'writing…' : rank >= RANK.last ? '✓ done' : 'waiting'}
+            <span className="shrink-0 text-[13px] font-semibold" style={{ color: writing ? GOLD : serverDone ? GREEN : 'rgba(255,255,255,0.35)' }}>
+              {writing ? 'writing…' : serverDone ? '✓ done' : 'waiting'}
             </span>
           </motion.div>
 
