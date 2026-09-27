@@ -168,7 +168,7 @@ function parallelSteps(run: ParallelRun): TraceStep[] {
     if (i === 0) {
       exp = `This line runs research once per topic, in order, and collects the answers in a list. Lane 1 first: Rita researches "${j.topic}".`;
     } else if (i === 1) {
-      exp = `The ${j.topic} job can only start once ${jobs[0].topic} is done. Most of Rita's time is just waiting for OpenAI to answer, and the stopwatch keeps adding up.`;
+      exp = `The ${j.topic} job can only start once the ${jobs[0].topic} job is done. Most of Rita's time is just waiting for OpenAI to answer, and the stopwatch keeps adding up.`;
     } else if (!last) {
       exp = `Next: "${j.topic}". Still one at a time: ${sec(offsets[i] + j.seconds)} seconds so far.`;
     } else {

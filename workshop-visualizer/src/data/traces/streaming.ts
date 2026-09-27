@@ -227,7 +227,7 @@ function streamingSteps(ex: StreamExample): TraceStep[] {
       trig: 'fast',
       set: { chunk: chunkLabel(n), piece: str(ex.pieces[n - 1]), full_story: str(full) },
       out: full,
-      exp: `The loop repeats for every chunk (${n} in this answer). Watch them flow down the pipe, type out, and fill up full_story.`,
+      exp: `The loop repeats for every chunk (${n} with text in this answer). Watch them flow down the pipe, type out, and fill up full_story.`,
     },
     {
       at: L.check,

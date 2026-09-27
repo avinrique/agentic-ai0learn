@@ -165,7 +165,7 @@ export const lessonGuides: Record<string, LessonGuide> = {
   },
 
   hallucination: {
-    lastTime: "The system prompt, messages[0], is the job briefing that sets the AI's role and rules.",
+    lastTime: 'A good prompt gives the AI a role, a clear task, context, a format and examples.',
     today: 'Sometimes AI sounds sure but is wrong. We learn why, and five ways to fight it.',
     quiz: [
       {
@@ -277,7 +277,7 @@ export const lessonGuides: Record<string, LessonGuide> = {
 
   // ===== PART 1: API Basics =====
   'basic-api': {
-    lastTime: 'An agent is an LLM plus tools plus a loop: the AI decides, your code acts.',
+    lastTime: 'We installed Python, made an API key, hid it safely in .env, and checked our setup.',
     today: 'We write real Python: send one question to OpenAI and print the answer it sends back.',
     quiz: [
       {
@@ -315,7 +315,7 @@ export const lessonGuides: Record<string, LessonGuide> = {
   },
 
   'system-prompts-tracer': {
-    lastTime: 'We sent one user message to gpt-4o-mini and printed the reply text.',
+    lastTime: 'We read response.usage to count tokens and worked out what one API call really costs.',
     today: 'We add one "system" message that tells the AI who to be before it answers.',
     quiz: [
       {
@@ -462,7 +462,7 @@ export const lessonGuides: Record<string, LessonGuide> = {
   },
 
   challenge: {
-    lastTime: 'Example user/assistant pairs (few-shot) teach the AI a task and its answer style.',
+    lastTime: 'try/except catches API errors, and we retry with longer and longer waits instead of crashing.',
     today: 'We combine all of Part 1 to build a restaurant recommender that replies in JSON.',
     quiz: [
       {
@@ -640,7 +640,7 @@ export const lessonGuides: Record<string, LessonGuide> = {
   },
 
   'terminal-assistant': {
-    lastTime: 'StudyBuddy Pro used a dictionary to map seven tool names to real Python functions.',
+    lastTime: 'We turned documents into embeddings and answered from the closest ones, not exact matching words.',
     today: 'An assistant that runs real commands and reads and writes files, with two loops working together.',
     quiz: [
       {
@@ -678,7 +678,7 @@ export const lessonGuides: Record<string, LessonGuide> = {
 
   // ===== PART 4: Multi-Agent Teams =====
   'why-teams': {
-    lastTime: 'Our terminal assistant ran real commands and edited files, looping through tools until done.',
+    lastTime: 'We wrote test cases, ran our agent on each one, and got a score we can trust.',
     today: 'One agent doing everything gets overwhelmed, so we split the job among a team of specialists.',
     quiz: [
       {

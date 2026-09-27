@@ -276,7 +276,9 @@ function testingSteps(story: TestingStory): TraceStep[] {
           ? `The AI answers "${r.answer}" with no tool call, so ask_agent takes this early return: None for the tool, plus the answer.`
           : bug
             ? `The pretend bug strikes again: add(250, 175) returns ${r.toolResult}, so the agent answers "${r.answer}"`
-            : `Same path as test 1: the agent calls add(250, 175), gets ${r.toolResult}, and answers "${r.answer}"`,
+            : kind === 'notool'
+              ? `This time the agent does use its tool: add(250, 175) gives ${r.toolResult}, and it answers "${r.answer}"`
+              : `Same path as test 1: the agent calls add(250, 175), gets ${r.toolResult}, and answers "${r.answer}"`,
       });
     }
 
@@ -372,7 +374,7 @@ function testingSteps(story: TestingStory): TraceStep[] {
       exp:
         kind === 'pass' ? `The final score: ${passed}/${total} passed. A number you can track, instead of "I tried it once and it seemed fine."`
         : kind === 'notool' ? `The final score: ${passed}/${total} passed. The report shows exactly which test failed, and why.`
-        : `The final score: ${passed}/${total} passed. One bug broke two tests, and the reasons point straight at the answers from add.`,
+        : `The final score: ${passed}/${total} passed. One bug broke two tests, and both FAIL reasons point at the math, so you'd check the add tool first.`,
     },
     {
       at: L.score,
@@ -380,7 +382,9 @@ function testingSteps(story: TestingStory): TraceStep[] {
       exp:
         kind === 'pass'
           ? 'Re-run ALL tests after every change to the prompt or tools. If 3/3 drops to 2/3, your change broke something: a "regression", a step backwards.'
-          : 'Fix the problem, then re-run ALL tests until it is back to 3/3. Do it after every change, so a step backwards (a "regression") never sneaks in.',
+          : kind === 'notool'
+            ? 'To fix it, you might add a system prompt like "Always use add for sums." Then re-run ALL tests: a fix can break something else (a "regression", a step backwards).'
+            : 'Fix the bug in add, then re-run ALL tests until it is back to 3/3. Re-run after every change too, so a step backwards (a "regression") never sneaks in.',
     },
     {
       at: L.tests,

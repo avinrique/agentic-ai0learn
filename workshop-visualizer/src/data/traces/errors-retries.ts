@@ -213,7 +213,7 @@ function errorsRetriesSteps(outcomes: Outcome[]): TraceStep[] {
         {
           at: L.exceptAuth,
           trig: 'caught',
-          exp: 'The first net catches it: no crash! But a wrong key stays wrong, so retrying would only fail again.',
+          exp: 'Net 1, AuthenticationError, catches it: no crash! But a wrong key stays wrong, so retrying would only fail again.',
         },
         {
           at: L.returnOops,
@@ -247,7 +247,7 @@ function errorsRetriesSteps(outcomes: Outcome[]): TraceStep[] {
           set: { error: RATE_LIMIT_ERROR },
           exp:
             attempt === 1
-              ? "Python checks the nets from top to bottom. Not a key problem... the RateLimitError net catches it! No crash. The error is saved in error."
+              ? 'Python checks the except nets in order. Net 1? Not a key problem. Net 2, RateLimitError, catches it! No crash. The error is saved in error.'
               : 'Caught by the same RateLimitError net. Still no crash.',
         },
         {
@@ -285,7 +285,7 @@ function errorsRetriesSteps(outcomes: Outcome[]): TraceStep[] {
           trig: 'caught',
           exp:
             attempt === 1
-              ? "Python checks the nets from top to bottom. The APIConnectionError net catches it (timeouts too). The internet may come back, so it's worth retrying."
+              ? "Python checks the except nets in order. Net 3, APIConnectionError, catches it (it catches timeouts too). The internet may come back, so it's worth retrying."
               : 'Caught by the same APIConnectionError net. Still no crash.',
         },
         {
