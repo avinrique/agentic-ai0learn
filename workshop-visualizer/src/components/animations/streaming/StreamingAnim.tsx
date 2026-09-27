@@ -413,27 +413,27 @@ export default function StreamingAnim() {
                 className="flex-1 min-h-0 px-4 pb-3 font-mono text-[15px] leading-[1.5] overflow-hidden flex flex-col justify-end"
                 style={termSpills ? { maskImage: TOP_FADE, WebkitMaskImage: TOP_FADE } : undefined}
               >
-               <div ref={termInner}>
-                <div className="text-white/40">$ python run.py part1/streaming.py</div>
-                {showStatus && (
-                  <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="text-white/75">
-                    {STATUS_LINE}
-                  </motion.div>
-                )}
-                {(printed > 0 || streaming) && (
-                  <div className="whitespace-pre-wrap text-accent-green">
-                    {storyShown}
-                    {streaming && <span className="ml-0.5 inline-block h-4 w-2 translate-y-0.5 bg-white/60 animate-pulse" />}
-                  </div>
-                )}
-                {rank >= RANK.done && (
-                  <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="whitespace-pre-wrap text-white/85">
-                    {doneLine(full.length).replace(/^\n/, '')}
-                  </motion.div>
-                )}
-                {rank >= RANK.done && <div className="text-white/40">$ ▌</div>}
-                {rank < RANK.status && trig !== 'intro' && <span className="inline-block h-4 w-2 bg-white/40 animate-pulse" />}
-               </div>
+                <div ref={termInner}>
+                  <div className="text-white/40">$ python run.py part1/streaming.py</div>
+                  {showStatus && (
+                    <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="text-white/75">
+                      {STATUS_LINE}
+                    </motion.div>
+                  )}
+                  {(printed > 0 || streaming) && (
+                    <div className="whitespace-pre-wrap text-accent-green">
+                      {storyShown}
+                      {streaming && <span className="ml-0.5 inline-block h-4 w-2 translate-y-0.5 bg-white/60 animate-pulse" />}
+                    </div>
+                  )}
+                  {rank >= RANK.done && (
+                    <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="whitespace-pre-wrap text-white/85">
+                      {doneLine(full.length).replace(/^\n/, '')}
+                    </motion.div>
+                  )}
+                  {rank >= RANK.done && <div className="text-white/40">$ ▌</div>}
+                  {rank < RANK.status && trig !== 'intro' && <span className="inline-block h-4 w-2 bg-white/40 animate-pulse" />}
+                </div>
               </div>
             </motion.div>
 
