@@ -47,36 +47,41 @@ const HUMAN = ['risky-check', 'human-ask', 'human-answer', 'allowed-set'];
 function BrakeChip({ n, label, state }: { n: string; label: string; state: BrakeState }) {
   const look = {
     idle: { c: 'rgba(255,255,255,0.4)', bg: 'transparent', b: 'rgba(255,255,255,0.18)', tail: '' },
-    active: { c: ACCENT, bg: `${ACCENT}1f`, b: ACCENT, tail: ' …' },
+    active: { c: ACCENT, bg: `${ACCENT}1f`, b: ACCENT, tail: '' },
     pass: { c: GREEN, bg: `${GREEN}14`, b: `${GREEN}88`, tail: ' ✓' },
     stop: { c: RED, bg: `${RED}1a`, b: RED, tail: ' ⛔' },
     no: { c: AMBER, bg: `${AMBER}14`, b: `${AMBER}88`, tail: ': said no ✋' },
     skip: { c: 'rgba(255,255,255,0.3)', bg: 'transparent', b: 'rgba(255,255,255,0.12)', tail: ' —' },
   }[state];
   return (
-    <motion.div
-      initial={false}
-      animate={{ scale: state === 'active' ? 1.05 : 1 }}
-      className="text-[13px] px-2.5 py-0.5 rounded-full whitespace-nowrap font-semibold"
+    <div
+      className="flex items-center text-[13px] px-2.5 py-0.5 rounded-full whitespace-nowrap font-semibold"
       style={{
         color: look.c,
         background: look.bg,
         border: `1.5px ${state === 'idle' || state === 'skip' ? 'dashed' : 'solid'} ${look.b}`,
-        boxShadow: state === 'active' ? `0 0 12px ${ACCENT}66` : 'none',
       }}
     >
       {n} {label}
       {look.tail}
-    </motion.div>
+      {state === 'active' && (
+        <motion.span
+          className="inline-block w-2 h-2 rounded-full ml-1.5"
+          style={{ background: ACCENT }}
+          animate={{ opacity: [0.25, 1, 0.25] }}
+          transition={{ repeat: Infinity, duration: 1.2 }}
+        />
+      )}
+    </div>
   );
 }
 
 /** Intro: the whole road, with its three brakes. */
 function RoadMap() {
-  const arrow = <span className="text-white/35 text-[20px]">➜</span>;
+  const arrow = <span className="flex-shrink-0 text-white/35 text-[18px]">➜</span>;
   const node = (top: ReactNode, label: string, brake?: string) => (
-    <div className="flex flex-col items-center gap-1.5 w-[104px]">
-      <div className="h-[96px] flex items-end">{top}</div>
+    <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0 max-w-[104px]">
+      <div className="h-[90px] flex items-end">{top}</div>
       <div className="text-[14px] font-semibold text-center leading-tight" style={{ color: brake ? AMBER : 'rgba(255,255,255,0.8)' }}>
         {brake && <span className="mr-1">{brake}</span>}
         {label}
@@ -84,20 +89,20 @@ function RoadMap() {
     </div>
   );
   return (
-    <div className="flex flex-col items-center gap-6">
+    <div className="w-full flex flex-col items-center gap-6">
       <div className="text-[20px] font-bold" style={{ color: AMBER }}>🛑 3 brakes for an agent that acts</div>
-      <div className="flex items-center gap-2">
-        {node(<div className="text-[54px]">📥</div>, 'request')}
+      <div className="w-full flex items-center justify-center gap-1.5">
+        {node(<div className="text-[50px]">📥</div>, 'request')}
         {arrow}
-        {node(<Cora size={70} />, 'check in', '①')}
+        {node(<Cora size={66} />, 'check in', '①')}
         {arrow}
-        {node(<Max size={70} />, 'acts')}
+        {node(<Max size={66} />, 'asks')}
         {arrow}
-        {node(<Person size={70} label="" />, 'human OK', '②')}
+        {node(<Person size={66} label="" />, 'human OK', '②')}
         {arrow}
-        {node(<Cora size={70} />, 'check out', '③')}
+        {node(<Cora size={66} />, 'check out', '③')}
         {arrow}
-        {node(<div className="text-[54px]">💬</div>, 'reply')}
+        {node(<div className="text-[50px]">💬</div>, 'reply')}
       </div>
     </div>
   );
@@ -157,7 +162,7 @@ function IsSafeDiagram() {
 function ToolCard() {
   return (
     <div className="flex flex-col items-center gap-4">
-      <CodeChip big>send_email(to, message)</CodeChip>
+      <CodeChip big>send_email(to, body)</CodeChip>
       <div className="relative pr-16 pb-2">
         <div className="text-[120px] leading-none">📧</div>
         <Stamp text="PRETEND" color={AMBER} className="absolute bottom-2 right-0" />
@@ -176,7 +181,7 @@ function MenuCard() {
           <div className="font-mono text-[20px] font-bold text-white">📧 send_email</div>
           <div className="flex gap-2 mt-2">
             <span className="font-mono text-[14px] px-2 py-0.5 rounded bg-white/10 text-white/85">to</span>
-            <span className="font-mono text-[14px] px-2 py-0.5 rounded bg-white/10 text-white/85">message</span>
+            <span className="font-mono text-[14px] px-2 py-0.5 rounded bg-white/10 text-white/85">body</span>
           </div>
           <div className="text-[16px] text-white/70 mt-2">Send an email to someone.</div>
         </div>
@@ -192,14 +197,6 @@ function RiskyCard() {
         <div className="font-mono text-[18px] font-bold" style={{ color: RED }}>⚠️ RISKY_TOOLS</div>
         <div className="font-mono text-[24px] font-bold px-4 py-1.5 rounded-lg bg-white/5 text-white" style={{ border: `2px solid ${RED}88` }}>
           📧 send_email
-        </div>
-      </div>
-      <div className="flex flex-col items-center gap-2">
-        <div className="text-[14px] text-white/55">hard to undo:</div>
-        <div className="flex gap-2 text-[15px] text-white/75">
-          <span className="px-2.5 py-0.5 rounded-full bg-white/5">📤 sending</span>
-          <span className="px-2.5 py-0.5 rounded-full bg-white/5">🗑️ deleting</span>
-          <span className="px-2.5 py-0.5 rounded-full bg-white/5">💳 paying</span>
         </div>
       </div>
     </div>
@@ -268,14 +265,14 @@ function Recap({ blocked }: { blocked: boolean }) {
           </motion.div>
         ))}
       </div>
-      <div className="text-[14px] text-white/50">{blocked ? 'Try the other runs: approved, and human says no.' : 'You can now build agents that act, safely.'}</div>
+      <div className="text-[14px] text-white/50">{blocked ? 'Try the other runs: approved, and human says no.' : 'You can now build agents that act more safely.'}</div>
     </div>
   );
 }
 
-/** Pull to/message out of the Python dict text, e.g. {'to': 'Ms. Lee', 'message': 'Hi!'} */
+/** Pull to/body out of the Python dict text, e.g. {'to': 'Ms. Lee', 'body': 'Hi!'} */
 function parseArgs(raw?: string): { to: string; message: string } {
-  const m = raw?.match(/'to': '(.*?)', 'message': '(.*)'\}$/);
+  const m = raw?.match(/'to': '(.*?)', 'body': '(.*)'\}$/);
   return m ? { to: m[1], message: m[2] } : { to: EMAIL_TO, message: EMAIL_MESSAGE };
 }
 
@@ -413,11 +410,14 @@ export default function GuardrailsAnim() {
     }
     case 'refuse':
       focal = (
-        <div className="flex flex-col items-center gap-5 max-w-[620px]">
-          <Bubble size={20} border={GREEN}>
-            🛡️ {"Sorry, I can't help with that. Let's keep things kind and safe."}
-          </Bubble>
-          <Person size={80} />
+        <div className="flex items-end gap-4 max-w-[640px]">
+          <Person size={90} />
+          <div className="mb-8">
+            <Bubble size={20} border={GREEN}>
+              <span className="font-bold" style={{ color: '#15803d' }}>🛡️ Guardrail:</span>{' '}
+              {"Sorry, I can't help with that. Let's keep things kind and safe."}
+            </Bubble>
+          </div>
         </div>
       );
       break;
@@ -425,12 +425,13 @@ export default function GuardrailsAnim() {
       focal = (
         <div className="flex flex-col items-center gap-6">
           <CodeChip big color={RED}>🛑 raise SystemExit</CodeChip>
-          <div className="flex items-end gap-8">
-            <Barrier state="blocked" scale={0.8} />
-            <div className="flex flex-col items-center gap-2">
-              <Max size={110} mood="sleeping" />
-              <div className="text-[17px] font-semibold text-white/75">💤 never called</div>
+          <div className="flex items-end gap-3">
+            <div className="relative w-[210px] mb-4">
+              <Slip title="📥 request" text={request} tone="red" size={15} />
+              <div className="absolute -top-4 -right-3 text-[28px]">⛔</div>
             </div>
+            <Barrier state="blocked" scale={0.8} />
+            <Max size={100} mood="sleeping" dimmed />
           </div>
         </div>
       );
@@ -438,21 +439,42 @@ export default function GuardrailsAnim() {
 
     // ── Max works on the request ──
     case 'max-notepad':
+    case 'notepad-add': {
+      const added = trig === 'notepad-add';
       focal = (
         <div className="flex items-center gap-6">
-          <Max size={110} active />
+          <Max size={110} active={!added} />
           <div className="rounded-xl p-4 w-[420px] flex flex-col gap-2.5" style={{ background: '#0b1b2b', border: `2px solid ${ACCENT}` }}>
             <div className="text-[15px] font-semibold" style={{ color: ACCENT }}>📒 messages</div>
-            <div className="text-[16px] rounded-md px-3 py-1.5" style={{ background: 'rgba(148,163,184,0.18)', color: '#e2e8f0' }}>
+            <div
+              className="text-[16px] rounded-md px-3 py-1.5"
+              style={{ background: 'rgba(148,163,184,0.18)', color: '#e2e8f0', opacity: added ? 0.5 : 1 }}
+            >
               📋 system: Max&apos;s job card
             </div>
-            <div className="text-[16px] rounded-md px-3 py-1.5 leading-snug" style={{ background: 'rgba(34,211,238,0.15)', color: '#cffafe' }}>
-              💬 user: &ldquo;{request}&rdquo;
+            <div
+              className="text-[16px] rounded-md px-3 py-1.5 leading-snug"
+              style={{ background: 'rgba(34,211,238,0.15)', color: '#cffafe', opacity: added ? 0.5 : 1 }}
+            >
+              💬 user: {added ? 'the request' : <>&ldquo;{request}&rdquo;</>}
             </div>
+            {added && (
+              <motion.div
+                initial={{ x: -40, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.6 }}
+                className="flex items-center gap-3 rounded-md px-3 py-2"
+                style={{ background: `${AMBER}1f`, border: `2px solid ${AMBER}` }}
+              >
+                <span className="text-[16px] font-semibold" style={{ color: AMBER }}>🤖 assistant:</span>
+                <OrderSlip small />
+              </motion.div>
+            )}
           </div>
         </div>
       );
       break;
+    }
     case 'max-think':
     case 'max-final':
       focal = (
@@ -507,10 +529,7 @@ export default function GuardrailsAnim() {
     // ── Gate 2: the human decides ──
     case 'allowed-default':
       focal = (
-        <div className="flex flex-col items-center gap-5">
-          <AllowedSwitch on />
-          <div className="text-[16px] text-white/60">🧮 a harmless tool could just run</div>
-        </div>
+        <AllowedSwitch on />
       );
       break;
     case 'risky-check':
@@ -594,10 +613,7 @@ export default function GuardrailsAnim() {
       focal = (
         <div className="flex items-center gap-5 max-w-[680px]">
           <Max size={110} mood="proud" />
-          <div className="flex flex-col items-start gap-2">
-            <Bubble from="left" size={19}>{reply}</Bubble>
-            <span className="text-[14px] text-white/55">🙈 not shown yet</span>
-          </div>
+          <Bubble from="left" size={19}>{reply}</Bubble>
         </div>
       );
       break;
@@ -615,7 +631,7 @@ export default function GuardrailsAnim() {
           coraActive={!safe}
           sign={safe ? 'SAFE' : undefined}
           note={safe ? undefined : <CodeChip>is_safe(reply)</CodeChip>}
-          top={safe ? <CodeChip big color={GREEN}>not True ➜ False: skip the fallback</CodeChip> : undefined}
+          top={safe ? <CodeChip big color={GREEN}>not True ➜ False: keep Max&apos;s answer</CodeChip> : undefined}
           barrier={safe ? 'open' : 'checking'}
           dest={<Person size={76} dimmed={!safe} />}
         />

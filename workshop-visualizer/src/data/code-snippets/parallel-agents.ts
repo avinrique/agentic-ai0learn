@@ -26,7 +26,7 @@ topics = ["Mars", "Jupiter", "Saturn"]
 def research(topic):
     return run_agent(researcher_prompt, f"Topic: {topic}")
 
-# Race 1: one at a time. Each job waits for the one before it.
+# Race 1: one at a time. Each job waits for its turn.
 start = time.time()  # press the stopwatch
 facts = [research(topic) for topic in topics]
 print(f"One at a time: {time.time() - start:.1f} seconds")

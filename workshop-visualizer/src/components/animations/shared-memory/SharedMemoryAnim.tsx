@@ -9,11 +9,11 @@
  * appear as one centred card over the dimmed board. Everything is derived from
  * the current tracer step, so Prev/Next/jumps always look right.
  */
-import type { ReactNode } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import AgentBot, { TEAM, BotMood } from '@/components/animations/characters/AgentBot';
 import { useTracerStore } from '@/stores/tracerStore';
-import { useTracerScene } from '@/components/animations/part4/useTracerScene';
+import { useShortScreen, useTracerScene } from '@/components/animations/part4/useTracerScene';
 import {
   sharedMemoryStories,
   boardNotes,
@@ -78,8 +78,8 @@ interface Mark {
   fg?: string;
 }
 
-/** Text with some phrases highlighted (first match of each, no overlaps). */
-function Marked({ text, marks }: { text: string; marks: Mark[] }) {
+/** Text with some phrases highlighted (first match of each, no overlaps); `delay` fades the highlights in late. */
+function Marked({ text, marks, delay }: { text: string; marks: Mark[]; delay?: number }) {
   const hits = marks
     .map((m) => ({ ...m, at: text.indexOf(m.phrase) }))
     .filter((h) => h.at >= 0)
@@ -90,9 +90,22 @@ function Marked({ text, marks }: { text: string; marks: Mark[] }) {
     if (h.at < pos) return;
     parts.push(text.slice(pos, h.at));
     parts.push(
-      <span key={k} className="rounded px-0.5 font-semibold" style={{ background: h.bg, color: h.fg ?? 'inherit' }}>
-        {h.phrase}
-      </span>,
+      delay === undefined ? (
+        <span key={k} className="rounded px-0.5 font-semibold" style={{ background: h.bg, color: h.fg ?? 'inherit' }}>
+          {h.phrase}
+        </span>
+      ) : (
+        <motion.span
+          key={k}
+          className="rounded px-0.5 font-semibold"
+          initial={{ backgroundColor: `${h.bg}00` }}
+          animate={{ backgroundColor: h.bg }}
+          transition={{ delay, duration: 0.5 }}
+          style={{ color: h.fg ?? 'inherit' }}
+        >
+          {h.phrase}
+        </motion.span>
+      ),
     );
     pos = h.at + h.phrase.length;
   });
@@ -108,6 +121,9 @@ function NoteStrip({
   ring,
   isNew,
   size = 17,
+  padY = 8,
+  lines,
+  markDelay,
   tone,
 }: {
   who: Author;
@@ -116,33 +132,46 @@ function NoteStrip({
   ring?: string;
   isNew?: boolean;
   size?: number;
+  /** Vertical padding in px (smaller when the board is short). */
+  padY?: number;
+  /** Clamp the note to this many lines (only for notes that aren't the focus). */
+  lines?: number;
+  markDelay?: number;
   tone?: 'bad';
 }) {
   const w = WHO[who];
+  const clamp = lines
+    ? { display: '-webkit-box', WebkitLineClamp: lines, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }
+    : undefined;
   return (
     <motion.div
+      data-sm-note
       initial={isNew ? { opacity: 0, x: FROM_X[who], y: 230, scale: 0.45 } : false}
       animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
       transition={{ duration: 0.8, ease: 'easeOut' }}
-      className="relative rounded-lg px-3.5 py-2 leading-snug"
+      className="relative shrink-0 rounded-lg px-3.5 leading-snug"
       style={{
         fontSize: size,
+        paddingTop: padY,
+        paddingBottom: padY,
         background: tone === 'bad' ? '#fee2e2' : '#ffffff',
         color: '#1e293b',
         borderLeft: `5px solid ${tone === 'bad' ? RED : w.color}`,
         boxShadow: ring ? `0 0 0 3px ${ring}, 0 0 18px ${ring}aa` : '0 1px 2px rgba(15,23,42,0.15)',
       }}
     >
-      <span className="font-bold" style={{ color: w.ink }}>
-        {who}:
-      </span>{' '}
-      <Marked text={text} marks={marks} />
+      <div style={clamp}>
+        <span className="font-bold" style={{ color: w.ink }}>
+          {who}:
+        </span>{' '}
+        <Marked text={text} marks={marks} delay={markDelay} />
+      </div>
       {isNew && (
         <motion.span
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.7 }}
-          className="absolute -right-2 -top-2.5 text-[12px] font-bold px-1.5 rounded-full text-white"
+          className="absolute -right-2 -top-3 text-[13px] font-bold px-1.5 rounded-full text-white"
           style={{ background: w.color }}
         >
           new
@@ -163,8 +192,10 @@ function Figure({
   chip,
   chipSet,
   chipGlow,
+  size = 78,
 }: {
   who: Author;
+  size?: number;
   dim: boolean;
   up: boolean;
   active: boolean;
@@ -182,10 +213,13 @@ function Figure({
       transition={{ duration: 0.5 }}
     >
       {who === 'Teacher' ? (
-        <div className="flex flex-col items-center" style={{ width: 78 }}>
+        <div className="flex flex-col items-center" style={{ width: size }}>
           <div
-            className="mt-3 w-[68px] h-[68px] rounded-full flex items-center justify-center text-[38px]"
+            className="mt-3 rounded-full flex items-center justify-center"
             style={{
+              width: size - 10,
+              height: size - 10,
+              fontSize: Math.round(size / 2),
               background: `${w.color}22`,
               border: `3px solid ${w.color}`,
               boxShadow: active ? `0 0 18px ${w.color}` : 'none',
@@ -196,7 +230,7 @@ function Figure({
           <div className="text-[13px] font-semibold text-white leading-tight mt-2.5">Teacher</div>
         </div>
       ) : (
-        <AgentBot {...AGENTS[who].bot} role={undefined} size={78} mood={mood} active={active} />
+        <AgentBot {...AGENTS[who].bot} role={undefined} size={size} mood={mood} active={active} />
       )}
       {badge && (
         <motion.span
@@ -412,7 +446,8 @@ function JobCardOverlay({ who, text }: { who: Exclude<Author, 'Teacher'>; text: 
 function ReplyOverlay({ who, text, uses }: { who: Exclude<Author, 'Teacher'>; text: string; uses: Borrow[] }) {
   const w = WHO[who];
   const shown = uses.filter((b) => b.dst);
-  const sources = shown.map((b) => b.from).filter((f, i, all) => all.indexOf(f) === i);
+  // Every note this reply drew on (even when no exact words were reused).
+  const sources = uses.map((b) => b.from).filter((f, i, all) => all.indexOf(f) === i);
   return (
     <motion.div
       initial={{ scale: 0.6, opacity: 0, y: 40 }}
@@ -499,29 +534,118 @@ function WrongOverlay({ s }: { s: SharedMemoryStory }) {
   );
 }
 
+/** Three tiny pictures, one per takeaway (the explanation bar has the words). */
 function RecapOverlay() {
+  const bar = (who: Author, w: string, bad = false) => (
+    <div
+      key={`${who}-${w}`}
+      className="h-[11px] rounded-sm"
+      style={{ width: w, background: bad ? '#fecaca' : WHO[who].tint, borderLeft: `4px solid ${bad ? RED : WHO[who].color}` }}
+    />
+  );
+  const items: { label: string; pic: ReactNode }[] = [
+    {
+      label: 'just a list',
+      pic: (
+        <div className="font-mono text-[38px] font-bold leading-none" style={{ color: ACCENT }}>
+          [ ]
+        </div>
+      ),
+    },
+    {
+      label: 'build on notes',
+      pic: (
+        <div className="w-[108px] flex flex-col gap-1">
+          {(['Teacher', 'Rita', 'Milo'] as Author[]).map((w) => bar(w, '100%'))}
+          <div className="text-center text-[13px] leading-none text-white/60">⬇</div>
+          {bar('Wally', '100%')}
+        </div>
+      ),
+    },
+    {
+      label: 'grows · errors spread',
+      pic: (
+        <div className="w-[108px] flex flex-col gap-1">
+          {bar('Rita', '35%')}
+          {bar('Milo', '65%')}
+          {bar('Wally', '100%')}
+          <div className="mt-1 flex items-center gap-1.5 text-[13px]" style={{ color: RED }}>
+            ⚠️ {bar('Teacher', '70%', true)}
+          </div>
+        </div>
+      ),
+    },
+  ];
   return (
-    <Card className="w-full max-w-[640px] flex flex-col gap-3 text-[17px] leading-snug text-white/90">
-      <div>
-        1️⃣ A shared whiteboard is just a <span className="font-mono" style={{ color: ACCENT }}>list</span> every agent reads
-        and writes.
-      </div>
-      <div>2️⃣ Later agents build on earlier notes.</div>
-      <div>3️⃣ It grows (more tokens), and one wrong note spreads.</div>
+    <Card className="w-full max-w-[620px] grid grid-cols-3 gap-4">
+      {items.map((it, i) => (
+        <motion.div
+          key={it.label}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 + i * 0.3 }}
+          className="flex flex-col items-center gap-3"
+        >
+          <div className="h-[84px] flex items-center justify-center">{it.pic}</div>
+          <div className="text-[15px] font-semibold text-white/90 text-center">
+            {i + 1}. {it.label}
+          </div>
+        </motion.div>
+      ))}
     </Card>
   );
 }
 
 // ───────────────────────────── main ─────────────────────────────
 
+/** How tightly the notes are packed: 0 = roomy … 3 = notes that aren't the focus shrink to one line. */
+const FIT = [
+  { size: 17, padY: 8, gap: 10, lines: undefined },
+  { size: 15, padY: 6, gap: 6, lines: undefined },
+  { size: 15, padY: 4, gap: 4, lines: 2 },
+  { size: 15, padY: 4, gap: 4, lines: 1 },
+] as const;
+
 export default function SharedMemoryAnim() {
   const { steps, trig, v } = useTracerScene();
   const variantId = useTracerStore((st) => st.activeVariantId);
+  const short = useShortScreen();
+
+  // Keep every note inside the board on short screens: measure the notes list and, if the notes
+  // don't fit, step down to a tighter FIT level (all before paint, so nothing jumps).
+  const listEl = useRef<HTMLDivElement | null>(null);
+  const observer = useRef<ResizeObserver | null>(null);
+  const [listH, setListH] = useState(0);
+  const listRef = useCallback((el: HTMLDivElement | null) => {
+    observer.current?.disconnect();
+    listEl.current = el;
+    if (!el) return;
+    observer.current = new ResizeObserver(() => setListH(el.clientHeight));
+    observer.current.observe(el);
+  }, []);
+  const rawBoard = v('whiteboard');
+  const fitKey = `${variantId}|${trig}|${rawBoard ?? ''}|${listH}|${short}`;
+  const [fit, setFit] = useState({ key: '', level: 0 });
+  const level = fit.key === fitKey ? fit.level : 0;
+  useLayoutEffect(() => {
+    const el = listEl.current;
+    const kids = el ? (Array.from(el.children) as HTMLElement[]) : [];
+    let over = false;
+    if (el && kids.length > 0) {
+      const first = kids[0];
+      const last = kids[kids.length - 1];
+      // offsetTop/offsetHeight ignore the fly-in transform, so this is the settled layout.
+      over = last.offsetTop + last.offsetHeight - first.offsetTop > el.clientHeight + 1;
+    }
+    if (over && level < FIT.length - 1) setFit({ key: fitKey, level: level + 1 });
+    else if (fit.key !== fitKey) setFit({ key: fitKey, level });
+  }, [level, fitKey, fit.key]);
+
   if (steps.length === 0) return null;
 
   const story = sharedMemoryStories[variantId] ?? sharedMemoryStories.default;
-  const notes = parseBoard(v('whiteboard'));
-  const boardExists = v('whiteboard') !== undefined;
+  const notes = parseBoard(rawBoard);
+  const boardExists = rawBoard !== undefined;
   const t = parseTrig(trig);
   const agent = t && t.who !== 'Teacher' ? (t.who as Exclude<Author, 'Teacher'>) : null;
   const uses: Record<Exclude<Author, 'Teacher'>, Borrow[]> = {
@@ -533,6 +657,7 @@ export default function SharedMemoryAnim() {
   // Which notes are being read right now (everything on the board), and what the reader picks up.
   const reader = t?.kind === 'read' ? agent : null;
   const newNote = t?.kind === 'note' ? notes.length - 1 : -1;
+  const pack = FIT[level];
 
   // The one centred card over the dimmed board (or none: then the board is the focus).
   let overlay: ReactNode = null;
@@ -563,21 +688,13 @@ export default function SharedMemoryAnim() {
       .join('\n'),
   );
 
-  // Board header tag for this step.
-  let tag: ReactNode = null;
-  if (reader)
-    tag = (
-      <span style={{ color: WHO[reader].ink }}>
-        👀 {reader} reads {notes.length === 1 ? '1 note' : notes.length === 3 ? 'all 3 notes' : `${notes.length} notes`}
-      </span>
-    );
-  else if (t?.kind === 'note') tag = <span style={{ color: WHO[t.who].ink }}>✏️ {t.who} adds a note</span>;
-  else if (trig === 'print') tag = <span className="font-mono text-slate-600">🖨️ print(read_board())</span>;
+  // Only the print step gets a header tag (the pill and the figures already name who reads or writes).
+  const tag = trig === 'print' ? <span className="font-mono text-slate-600">🖨️ print(read_board())</span> : null;
 
-  const boardGlow = trig === 'board' ? ACCENT : reader ? WHO[reader].color : null;
+  const boardGlow = trig === 'board' ? ACCENT : null;
 
   // The row of figures.
-  const allDim = ['setup', 'helper', 'add-def', 'read-def', 'tokens', 'compare'].includes(trig);
+  const allDim = ['setup', 'helper', 'board', 'add-def', 'read-def', 'tokens', 'compare'].includes(trig);
   const figure = (who: Author) => {
     const mine = t?.who === who;
     const isAgent = who !== 'Teacher';
@@ -603,18 +720,16 @@ export default function SharedMemoryAnim() {
         active = true;
       }
     }
-    if (trig === 'wrong-note' && (who === 'Milo' || who === 'Wally')) mood = 'confused';
+    // A wrong Teacher note reaches everyone who reads the board after it.
+    if (trig === 'wrong-note' && isAgent) mood = 'confused';
     if (trig === 'recap' || trig === 'print') mood = 'proud';
-    const dim =
-      allDim ||
-      (t !== null && !mine) ||
-      (trig === 'wrong-note' && who === 'Rita') ||
-      (trig === 'board' && isAgent);
+    const dim = allDim || (t !== null && !mine);
     const chipSet = isAgent ? !!v(AGENTS[who as Exclude<Author, 'Teacher'>].prompt) : !!v('event');
     return (
       <div key={who} className="flex-1 flex justify-center">
         <Figure
           who={who}
+          size={short ? 60 : 78}
           dim={dim}
           up={up}
           active={active}
@@ -629,7 +744,7 @@ export default function SharedMemoryAnim() {
   };
 
   return (
-    <div className="h-full flex flex-col gap-3 p-4 overflow-hidden text-white">
+    <div className={`h-full flex flex-col overflow-hidden text-white ${short ? 'gap-2 p-3' : 'gap-3 p-4'}`}>
       {/* Header: title + small token counter */}
       <div className="flex items-center gap-3 flex-shrink-0 h-[30px]">
         <div className="text-[16px] font-bold" style={{ color: ACCENT }}>
@@ -648,7 +763,7 @@ export default function SharedMemoryAnim() {
               boxShadow: reader ? `0 0 14px ${WHO[reader].color}66` : 'none',
             }}
           >
-            {reader ? `📨 ≈ ${boardTokens} tokens ➜ ${reader}` : `📏 board ≈ ${boardTokens} tokens`}
+            {reader ? `📨 board ≈ ${boardTokens} tokens ➜ ${reader}` : `📏 board ≈ ${boardTokens} tokens`}
             {t?.kind === 'note' && notes.length > 1 && (
               <span className="ml-1.5 text-accent-green">+{boardTokens - prevTokens}</span>
             )}
@@ -659,65 +774,84 @@ export default function SharedMemoryAnim() {
       {/* The whiteboard (with an optional centred card on top) */}
       <div className="relative flex-1 min-h-0 z-10">
         <motion.div
-          className="relative h-full mx-[3%] rounded-2xl border-[6px] border-slate-400/70 bg-slate-100 px-4 pt-2.5 pb-4 flex flex-col"
-          animate={{
-            opacity: overlay ? 0.1 : 1,
-            filter: overlay ? 'blur(2px)' : 'blur(0px)',
-            boxShadow: boardGlow ? `0 0 0 3px ${boardGlow}, 0 0 28px ${boardGlow}88` : '0 0 0 0 transparent',
-          }}
+          className="relative h-full mx-[3%]"
+          animate={{ opacity: overlay ? 0.1 : 1, filter: overlay ? 'blur(2px)' : 'blur(0px)' }}
           transition={{ duration: 0.4 }}
         >
-          <div className="flex items-center gap-2 mb-2 text-[13px] font-bold text-slate-600 flex-shrink-0">
-            <span className="font-mono">📋 whiteboard</span>
-            {boardExists && (
-              <span className="font-normal text-slate-500">
-                · {notes.length} {notes.length === 1 ? 'note' : 'notes'}
-              </span>
-            )}
-            {tag && (
-              <motion.span key={trig} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="ml-auto text-[14px]">
-                {tag}
-              </motion.span>
-            )}
-          </div>
-
-          {notes.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-2 text-slate-500">
-              {trig === 'board' ? (
-                <>
-                  <div className="font-mono text-[44px] font-bold text-slate-400">[ ]</div>
-                  <div className="text-[16px]">an empty list</div>
-                </>
-              ) : (
-                <div className="text-[20px] font-semibold flex items-center gap-4">
-                  <span>📖 read every note</span>
-                  <span className="text-slate-400">➜</span>
-                  <span>✏️ add yours</span>
-                </div>
+          <motion.div
+            data-sm-board
+            className={`relative h-full rounded-2xl border-[6px] border-slate-400/70 bg-slate-100 px-4 pt-2.5 flex flex-col ${
+              short ? 'pb-2.5' : 'pb-4'
+            } ${level === FIT.length - 1 ? 'overflow-hidden' : ''}`}
+            animate={{
+              boxShadow: boardGlow ? `0 0 0 3px ${boardGlow}, 0 0 28px ${boardGlow}88` : '0 0 0 0 transparent',
+            }}
+            transition={{ duration: 0.4 }}
+          >
+            <div className="flex items-center gap-2 mb-2 text-[13px] font-bold text-slate-600 flex-shrink-0">
+              <span className="font-mono">📋 whiteboard</span>
+              {boardExists && (
+                <span className="font-normal text-slate-500">
+                  · {notes.length} {notes.length === 1 ? 'note' : 'notes'}
+                </span>
+              )}
+              {tag && (
+                <motion.span key={trig} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="ml-auto text-[14px]">
+                  {tag}
+                </motion.span>
               )}
             </div>
-          ) : (
-            <div className="flex flex-col gap-2.5">
-              {notes.map((n, i) => {
-                // While someone reads, highlight the phrases they pick up (coloured by whose note it is).
-                const marks: Mark[] = reader
-                  ? uses[reader]
-                      .filter((b) => b.from === n.who)
-                      .map((b) => ({ phrase: b.src, bg: WHO[b.from].tint, fg: WHO[b.from].ink }))
-                  : [];
-                return (
-                  <NoteStrip
-                    key={i}
-                    who={n.who}
-                    text={n.text}
-                    marks={marks}
-                    ring={reader ? WHO[reader].color : undefined}
-                    isNew={i === newNote}
-                  />
-                );
-              })}
-            </div>
-          )}
+
+            {notes.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-2 text-slate-500">
+                {trig === 'board' && (
+                  <>
+                    <div className="font-mono text-[44px] font-bold text-slate-400">[ ]</div>
+                    <div className="text-[16px]">an empty list</div>
+                  </>
+                )}
+                {trig === 'intro' && (
+                  <div className="text-[20px] font-semibold flex items-center gap-4">
+                    <span>📖 read every note</span>
+                    <span className="text-slate-400">➜</span>
+                    <span>✏️ add yours</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              // "safe center": centred while the notes fit, top-aligned if they ever don't.
+              <div
+                ref={listRef}
+                className="flex-1 min-h-0 flex flex-col"
+                style={{ gap: pack.gap, justifyContent: 'safe center' }}
+              >
+                {notes.map((n, i) => {
+                  // While someone reads, highlight the phrases they pick up (coloured by whose note it is),
+                  // fading in after the rings.
+                  const marks: Mark[] = reader
+                    ? uses[reader]
+                        .filter((b) => b.from === n.who)
+                        .map((b) => ({ phrase: b.src, bg: WHO[b.from].tint, fg: WHO[b.from].ink }))
+                    : [];
+                  const focus = reader !== null || i === newNote;
+                  return (
+                    <NoteStrip
+                      key={i}
+                      who={n.who}
+                      text={n.text}
+                      marks={marks}
+                      markDelay={reader ? 0.7 : undefined}
+                      ring={reader ? WHO[reader].color : undefined}
+                      isNew={i === newNote}
+                      size={pack.size}
+                      padY={pack.padY}
+                      lines={focus ? undefined : pack.lines}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
           <MarkerTray />
         </motion.div>
 
@@ -729,7 +863,7 @@ export default function SharedMemoryAnim() {
       </div>
 
       {/* The team, standing in front of the board */}
-      <div className="flex-shrink-0 flex items-end pt-3 relative z-0">{ROW.map(figure)}</div>
+      <div className={`flex-shrink-0 flex items-end relative z-0 ${short ? 'pt-2' : 'pt-3'}`}>{ROW.map(figure)}</div>
     </div>
   );
 }

@@ -30,8 +30,18 @@ const ORDER = [
 ];
 const rankOf = (t: string) => Math.max(0, ORDER.indexOf(t));
 const num = (n: number) => n.toLocaleString('en-US');
-/** Show the spaces and line breaks that belong to a token. */
-const showToken = (t: string) => t.replace(/\n/g, '↵').replace(/ /g, '·');
+/** Show the spaces (·) and line breaks (↵) that belong to a token, in a font that draws them clearly. */
+function showToken(t: string): ReactNode[] {
+  return Array.from(t).map((ch, i) =>
+    ch === ' ' || ch === '\n' ? (
+      <span key={i} style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif', fontSize: '1.15em', lineHeight: 1 }}>
+        {ch === ' ' ? '·' : '↵'}
+      </span>
+    ) : (
+      ch
+    ),
+  );
+}
 
 // ── Small building blocks ───────────────────────────────────────────────────
 
@@ -106,10 +116,10 @@ function Brick({ text, id, i }: { text: string; id: number; i: number }) {
       className="flex flex-col items-center gap-1"
     >
       <div
-        className="px-2.5 py-1.5 rounded-lg border-2 font-mono text-[17px] font-bold whitespace-pre"
+        className="h-[40px] px-2.5 flex items-center rounded-lg border-2 font-mono text-[17px] font-bold whitespace-pre"
         style={{ borderColor: c, color: c, background: `${c}14` }}
       >
-        {showToken(text)}
+        <span className="leading-none">{showToken(text)}</span>
       </div>
       <span className="text-[13px] font-mono text-white/40">{id}</span>
     </motion.div>
@@ -208,6 +218,7 @@ function Encoder({ scene, long }: { scene: TokensCostScene; long: boolean }) {
 function Bricks({ scene, phase }: { scene: TokensCostScene; phase: 'bricks' | 'estimate' }) {
   const hidden = scene.estimate - scene.pieces.length;
   const isEstimate = phase === 'estimate';
+  const hasNewline = scene.pieces.some((p) => p.includes('\n'));
   return (
     <div className="w-full flex flex-col items-center gap-5">
       <motion.div
@@ -228,6 +239,19 @@ function Bricks({ scene, phase }: { scene: TokensCostScene; phase: 'bricks' | 'e
           </motion.div>
         )}
       </motion.div>
+
+      {!isEstimate && (
+        <div className="-mt-2 flex gap-5 text-[13px] text-white/50">
+          <span className="flex items-center gap-1.5">
+            <b className="text-white/80 text-[20px] leading-none">·</b>= space
+          </span>
+          {hasNewline && (
+            <span className="flex items-center gap-1.5">
+              <b className="text-white/80 text-[18px] leading-none">↵</b>= new line
+            </span>
+          )}
+        </div>
+      )}
 
       <motion.div
         animate={{ scale: isEstimate ? 1.12 : 1 }}
@@ -257,29 +281,26 @@ function Lane({
   sub,
   color,
   value,
-  counted,
   max,
   active,
+  dim,
   run,
 }: {
   label: string;
   sub: string;
   color: string;
   value: number;
-  counted?: number; // IN lane: the part tiktoken counted; the rest is the message "envelope"
   max: number;
-  active: boolean;
+  active: boolean; // highlighted: the lane that is counting right now
+  dim: boolean;
   run: boolean;
 }) {
-  const pct = (n: number) => (value === 0 ? 0 : Math.max(1.5, (n / max) * 100));
-  const main = counted ?? value;
-  const extra = value - main;
+  const width = value === 0 ? 0 : Math.max(1.5, (value / max) * 100);
   const dur = Math.min(2.2, 0.6 + value / 160);
-  const stripes = (c: string) =>
-    `repeating-linear-gradient(90deg, ${c} 0 9px, ${c}aa 9px 11px)`;
+  const stripes = `repeating-linear-gradient(90deg, ${color} 0 9px, ${color}aa 9px 11px)`;
   return (
     <motion.div
-      animate={{ opacity: active ? 1 : 0.45 }}
+      animate={{ opacity: dim ? 0.45 : 1 }}
       className="flex items-center gap-4 rounded-xl px-4 py-3"
       style={{ background: active ? `${color}10` : 'transparent', border: `1.5px solid ${active ? color : 'rgba(255,255,255,0.08)'}` }}
     >
@@ -291,19 +312,10 @@ function Lane({
         <motion.div
           key={`m-${run}`}
           initial={run ? { width: '0%' } : false}
-          animate={{ width: `${pct(main)}%` }}
+          animate={{ width: `${width}%` }}
           transition={{ duration: run ? dur : 0.3, ease: 'easeOut' }}
-          style={{ background: stripes(color) }}
+          style={{ background: stripes }}
         />
-        {extra > 0 && (
-          <motion.div
-            key={`e-${run}`}
-            initial={run ? { width: '0%' } : false}
-            animate={{ width: `${pct(extra)}%` }}
-            transition={{ duration: run ? 0.4 : 0.3, delay: run ? dur : 0 }}
-            style={{ background: stripes('#64748b') }}
-          />
-        )}
       </div>
       <div className="w-[96px] text-right font-mono text-[34px] font-bold leading-none" style={{ color }}>
         <CountUp to={value} run={run} duration={dur} />
@@ -333,8 +345,9 @@ function Meter({ scene, phase }: { scene: TokensCostScene; phase: 'send' | 'writ
       </div>
       <div className="w-[92%] rounded-2xl border border-white/10 bg-black/25 p-3 flex flex-col gap-2.5">
         <div className="text-[13px] font-semibold text-white/45 uppercase tracking-wider px-1">🧮 API token meter</div>
-        <Lane label="IN" sub="we send" color={IN} value={scene.prompt} counted={scene.estimate} max={max} active={!writing} run={!writing} />
-        <Lane label="OUT" sub="AI writes" color={OUT} value={writing ? scene.completion : 0} max={max} active={writing} run={writing} />
+        {/* While the AI writes, IN stays bright when it is the bigger lane (a long question). */}
+        <Lane label="IN" sub="we send" color={IN} value={scene.prompt} max={max} active={!writing} dim={writing && scene.prompt <= scene.completion} run={!writing} />
+        <Lane label="OUT" sub="AI writes" color={OUT} value={writing ? scene.completion : 0} max={max} active={writing} dim={!writing} run={writing} />
       </div>
     </div>
   );
@@ -357,7 +370,6 @@ function Answer({ scene, long }: { scene: TokensCostScene; long: boolean }) {
           <div className="absolute inset-x-0 bottom-0 h-14 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0), #fff)' }} />
         )}
       </motion.div>
-      <Chip color={OUT}>OUT: {num(scene.completion)} tokens</Chip>
     </div>
   );
 }
@@ -718,9 +730,9 @@ function Tips({ focus, hints }: { focus: 'prompts' | 'answers'; hints: TokensCos
 
 function Recap() {
   const points = [
-    { icon: '🧱', text: 'The API measures text in tokens: input and output.' },
-    { icon: '🧾', text: 'tiktoken estimates before sending; response.usage has the exact counts.' },
-    { icon: '💰', text: 'Cost = tokens ÷ 1,000,000 × price, and it adds up.' },
+    { icon: '🧱', label: 'Tokens', code: 'IN + OUT' },
+    { icon: '🧾', label: 'Estimate, then exact', code: 'tiktoken → response.usage' },
+    { icon: '💰', label: 'Cost', code: 'tokens ÷ 1M × price' },
   ];
   return (
     <div className="w-[86%] flex flex-col gap-4">
@@ -733,7 +745,8 @@ function Recap() {
           className="flex items-center gap-4 rounded-xl px-5 py-4 bg-white/[0.04] border border-white/10"
         >
           <span className="text-[30px] leading-none">{p.icon}</span>
-          <span className="text-[18px] leading-snug text-white/90">{p.text}</span>
+          <span className="text-[18px] font-semibold text-white/90">{p.label}</span>
+          <span className="ml-auto font-mono text-[17px] font-bold whitespace-nowrap" style={{ color: GOLD }}>{p.code}</span>
         </motion.div>
       ))}
     </div>

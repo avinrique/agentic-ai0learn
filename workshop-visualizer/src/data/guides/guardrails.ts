@@ -19,7 +19,7 @@ export const guide: LessonGuide = {
     {
       q: 'Why does Cora\'s job card say "Reply SAFE or UNSAFE only"?',
       options: [
-        'To make her answers shorter and cheaper',
+        'Because the API only allows one-word replies',
         'Because long answers are always unsafe',
         'So our code can easily read her one-word answer',
       ],
@@ -29,7 +29,7 @@ export const guide: LessonGuide = {
     {
       q: 'Looking back at the whole course, which is true about an AI agent?',
       options: [
-        'It guesses tokens, asks for tools, and our code keeps it safe',
+        'It guesses tokens, asks for tools, and our code adds safety checks',
         'It runs any tool it wants, whenever it wants',
         'It never makes mistakes, so checks are optional',
       ],

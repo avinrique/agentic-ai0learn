@@ -124,7 +124,7 @@ function sharedMemorySteps(s: SharedMemoryStory): TraceStep[] {
     {
       at: '# A shared whiteboard: every agent reads ALL',
       trig: 'compare',
-      exp: "Remember the assembly line? Each agent only saw the note just before it. With a whiteboard, everyone can read everything written so far. That's called shared memory.",
+      exp: "Remember the whiteboard from Team Shapes? Today we code it. In the assembly line each agent saw only the note before it; here everyone reads everything. That's shared memory.",
     },
     {
       at: 'client = OpenAI()',
@@ -148,13 +148,13 @@ function sharedMemorySteps(s: SharedMemoryStory): TraceStep[] {
       at: 'whiteboard.append(',
       trig: 'add-def',
       set: { add_note: '<function add_note>' },
-      exp: 'add_note sticks a new line on the board, starting with who wrote it. Good habit: with a name on every note, everyone knows where each idea came from.',
+      exp: 'add_note sticks a new note on the board, starting with who wrote it. Good habit: with a name on every note, everyone knows where each idea came from.',
     },
     {
       at: '".join(whiteboard)',
       trig: 'read-def',
       set: { read_board: '<function read_board>' },
-      exp: 'read_board glues all the notes into one text, one note per line. "Reading the board" just means putting this text into an agent\'s task.',
+      exp: 'read_board glues all the notes into one text, each note starting on a new line. "Reading the board" just means putting this text into an agent\'s task.',
     },
     {
       at: 'event = "',
@@ -241,7 +241,7 @@ function sharedMemorySteps(s: SharedMemoryStory): TraceStep[] {
       at: 'print(read_board())',
       trig: 'print',
       out: notes.join('\n'),
-      exp: "Print the board: everyone's work in one place, and every line says who wrote it.",
+      exp: "Print the board: everyone's work in one place, and every note starts with who wrote it.",
     },
     {
       at: '".join(whiteboard)',
@@ -249,9 +249,9 @@ function sharedMemorySteps(s: SharedMemoryStory): TraceStep[] {
       exp: 'The catch: read_board() returns the WHOLE board, so every call sends more tokens than the one before. Like Context & Memory: more text sent means more cost and waiting.',
     },
     {
-      at: 'every agent can read and write here',
+      at: 'add_note("Teacher", event)',
       trig: 'wrong-note',
-      exp: `Second catch: everyone trusts the board. If one note had a typo, like "${s.wrong.count}", Milo and Wally would both build on it. Check important notes!`,
+      exp: `Second catch: everyone trusts the board. If the Teacher's note had a typo, like "${s.wrong.count}", Rita, Milo and Wally would all build on it. Check important notes!`,
     },
     {
       at: 'print(read_board())',
@@ -270,7 +270,7 @@ const PARTY: SharedMemoryStory = {
   shopping: '$60 ÷ 24 students = $2.50 each. 6 pizzas $42 + 24 juice boxes $12 + quiz prizes $6 = $60.',
   invite:
     "You're invited to our End-of-Year Class Party! 🎉 Play musical chairs, a trivia quiz and a team relay race, then enjoy pizza and juice. Quiz winners get a prize!",
-  ritaUses: [{ from: 'Teacher', src: 'class party for 24 students' }],
+  ritaUses: [{ from: 'Teacher', src: 'class party for 24 students', dst: 'Team relay race' }],
   miloUses: [
     { from: 'Teacher', src: '24 students', dst: '24 students' },
     { from: 'Teacher', src: '$60', dst: '$60 ÷' },
@@ -300,7 +300,7 @@ const BOOK_CLUB: SharedMemoryStory = {
   shopping: '$20 ÷ 8 friends = $2.50 each. Cookies $8 + lemonade $5 + fruit $5 + quote cards $2 = $20.',
   invite:
     "Calling all 8 bookworms! 📚 Join our book club meeting for character charades, a quote swap and a vote on next month's book, with cookies and lemonade.",
-  ritaUses: [{ from: 'Teacher', src: 'Book club meeting for 8 friends' }],
+  ritaUses: [{ from: 'Teacher', src: 'Book club meeting for 8 friends', dst: "Vote on next month's book" }],
   miloUses: [
     { from: 'Teacher', src: '8 friends', dst: '8 friends' },
     { from: 'Teacher', src: '$20', dst: '$20 ÷' },
@@ -315,7 +315,7 @@ const BOOK_CLUB: SharedMemoryStory = {
     { from: 'Milo', src: 'Cookies', dst: 'cookies' },
     { from: 'Milo', src: 'lemonade', dst: 'lemonade' },
   ],
-  ritaWhy: '3 activities that fit a cosy group of 8 book lovers.',
+  ritaWhy: "3 activities that fit a cosy group of 8 book lovers, like a vote on next month's book.",
   miloWhy:
     "Milo's maths: $20 ÷ 8 = $2.50 per friend. He even saved $2 for quote cards, because he read Rita's quote-swap idea!",
   wrong: { count: '80 friends', milo: '$20 ÷ 80 = $0.25 each 😬', wally: 'Calling all 80 bookworms!' },
@@ -330,7 +330,7 @@ const SCIENCE_FAIR: SharedMemoryStory = {
   shopping: '$30 ÷ 4 people = $7.50 each. Volcano supplies $8 + slime kit $10 + poster board $5 + quiz stickers $7 = $30.',
   invite:
     'Come visit our science fair stand! 🔬 Watch a real baking-soda volcano erupt, guess the result in our quiz and get your hands slimy. Stickers for every quiz player!',
-  ritaUses: [{ from: 'Teacher', src: 'Science fair stand' }],
+  ritaUses: [{ from: 'Teacher', src: 'Science fair stand', dst: 'quiz for visitors' }],
   miloUses: [
     { from: 'Teacher', src: 'team of 4', dst: '4 people' },
     { from: 'Teacher', src: '$30', dst: '$30 ÷' },

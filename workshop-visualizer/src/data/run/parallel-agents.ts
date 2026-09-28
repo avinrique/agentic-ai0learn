@@ -6,7 +6,7 @@ export const runInfo: RunInfo = {
   fileName: 'part4/parallel_agents.py',
   shownCode: parallelAgentsCode,
   expect:
-    'Two times ("One at a time", then a much smaller "All at once"), then Wally\'s 4-sentence poster. Your times and facts will be different on every run.',
+    'Two stopwatch readings ("One at a time: …", then a much smaller "All at once: …"), then Wally\'s 4-sentence poster. Your times and facts will differ every run.',
   tryThis: [
     'Add two more topics to the list: race 1 gets a lot longer, race 2 barely changes.',
     'Swap the planets for your own topics, like "volcanoes", "sharks" and "rainbows".',

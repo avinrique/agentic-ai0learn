@@ -1,6 +1,6 @@
 'use client';
 import { motion } from 'framer-motion';
-import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { KeyboardEvent, ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 // Shared pieces for the "Get Set Up" lesson: fake terminals, the station checklist,
 // the Mac/Windows switch, and a few drawings (key, safe, cost meter).
@@ -13,6 +13,30 @@ export const BLUE = '#4a9eff';
 export const spring = { type: 'spring' as const, stiffness: 240, damping: 24 };
 
 export type OS = 'win' | 'mac';
+
+/** The lesson uses Space for play/pause. On a focused button, Space should press the button instead. */
+export function keepSpaceForButtons(e: KeyboardEvent) {
+  if (e.key === ' ' && (e.target as HTMLElement).closest('button')) e.stopPropagation();
+}
+
+/** A "Fix:" text made of plain words and commands. Only the commands get the code look, so they can't be mixed up with the words. */
+export type FixPart = string | { cmd: string };
+
+export function FixText({ parts, cmdSize = 13 }: { parts: FixPart[]; cmdSize?: number }) {
+  return (
+    <>
+      {parts.map((p, i) =>
+        typeof p === 'string' ? (
+          <span key={i}>{p}</span>
+        ) : (
+          <code key={i} className="font-mono px-1.5 py-0.5 rounded-md bg-black/40 border border-white/15 text-white whitespace-nowrap" style={{ fontSize: cmdSize }}>
+            {p.cmd}
+          </code>
+        ),
+      )}
+    </>
+  );
+}
 
 // ---------- the six stations ----------
 
@@ -280,7 +304,8 @@ export function Terminal({
               {isIdle ? (
                 <Cursor />
               ) : instant ? (
-                <span className="text-white font-semibold">{l.cmd}</span>
+                // one unbreakable block: a long prompt pushes the whole command to the next line instead of splitting it
+                <span className="inline-block whitespace-nowrap text-white font-semibold">{l.cmd}</span>
               ) : (
                 <motion.span
                   className="inline-block align-bottom overflow-hidden whitespace-pre text-white font-semibold"

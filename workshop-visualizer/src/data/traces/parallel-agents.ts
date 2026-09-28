@@ -85,8 +85,8 @@ export function raceTimes(run: ParallelRun) {
   return { offsets, seqTotal: sum, parTotal: slowest.seconds, slowest, fastest, goTime };
 }
 
-// An illustrative clock reading for time.time() (seconds since 1 Jan 1970).
-const CLOCK = 1790467200.0;
+/** An illustrative clock reading for time.time() (seconds since 1 Jan 1970). */
+export const CLOCK = 1790467200.0;
 const NUMBER_WORDS: Record<number, string> = { 3: 'Three', 5: 'Five' };
 
 function parallelSteps(run: ParallelRun): TraceStep[] {
@@ -109,7 +109,7 @@ function parallelSteps(run: ParallelRun): TraceStep[] {
       at: 'import time',
       trig: 'time',
       set: { time: '<module time>' },
-      exp: 'import time gives us a stopwatch. time.time() reads the clock in seconds, so "later minus earlier" tells us how long something took.',
+      exp: 'import time gives us a stopwatch. time.time() reads the clock (a big number: seconds since 1970), and "later minus earlier" tells us how long something took.',
     },
     {
       at: 'from concurrent.futures import ThreadPoolExecutor',
@@ -168,7 +168,7 @@ function parallelSteps(run: ParallelRun): TraceStep[] {
     if (i === 0) {
       exp = `This line runs research once per topic, in order, and collects the answers in a list. Lane 1 first: Rita researches "${j.topic}".`;
     } else if (i === 1) {
-      exp = `The ${j.topic} job can only start once the ${jobs[0].topic} job is done. Most of Rita's time is just waiting for OpenAI to answer, and the stopwatch keeps adding up.`;
+      exp = `The ${j.topic} job doesn't need the ${jobs[0].topic} fact, but this loop makes it wait its turn. Most of Rita's time is just waiting for OpenAI, and the stopwatch keeps adding up.`;
     } else if (!last) {
       exp = `Next: "${j.topic}". Still one at a time: ${sec(offsets[i] + j.seconds)} seconds so far.`;
     } else {
@@ -199,7 +199,7 @@ function parallelSteps(run: ParallelRun): TraceStep[] {
       at: 'with ThreadPoolExecutor() as pool:',
       trig: 'pool',
       set: { pool: '<ThreadPoolExecutor>' },
-      exp: 'Open the team of helpers, called pool. When the with block ends, Python waits for every job to finish and sends the helpers home.',
+      exp: 'Open the team of helpers, called pool. When the indented lines under with are done, Python waits for every job to finish and sends the helpers home.',
     },
     {
       at: 'facts = list(pool.map(research, topics))',
@@ -215,7 +215,7 @@ function parallelSteps(run: ParallelRun): TraceStep[] {
       at: 'facts = list(pool.map(research, topics))',
       trig: 'tray',
       set: { facts: pyList(facts) },
-      exp: `pool.map hands the answers back in the SAME order as topics, even though the ${fastest.topic} job finished first. list() collects them into facts.`,
+      exp: `pool.map hands the answers back in the SAME order as topics, even though ${fastest.topic} finished first. list() puts them in facts, replacing race 1's list (real wording may differ).`,
     },
     {
       at: 'print(f"All at once:',
@@ -245,7 +245,7 @@ function parallelSteps(run: ParallelRun): TraceStep[] {
     },
     {
       at: `print("\\nWally's poster:`,
-      trig: 'poster',
+      trig: 'print',
       out: `\nWally's poster:\n${run.poster}`,
       exp: 'Print the poster. The research ran in parallel; the writing waited for it.',
     },
@@ -290,7 +290,7 @@ const ANIMALS: ParallelRun = {
   jobs: [
     { topic: 'octopus', seconds: 1.9, fact: 'An octopus has three hearts and blue blood.' },
     { topic: 'owl', seconds: 2.2, fact: 'An owl can turn its head about 270 degrees to look behind itself.' },
-    { topic: 'cheetah', seconds: 1.8, fact: 'The cheetah is the fastest land animal and can sprint at around 100 km/h.' },
+    { topic: 'cheetah', seconds: 1.4, fact: 'The cheetah is the fastest land animal and can sprint at around 100 km/h.' },
   ],
   poster:
     "Meet three animal superstars! The octopus has three hearts pumping blue blood through its wiggly arms. The owl can swivel its head about 270 degrees to see what's behind it. And the cheetah, the fastest runner on land, can zoom along at around 100 km/h!",
@@ -300,7 +300,7 @@ const FIVE_PLANETS: ParallelRun = {
   jobs: [
     ...PLANETS.jobs,
     { topic: 'Venus', seconds: 2.0, fact: 'Venus spins so slowly that one turn takes longer than its whole trip around the Sun.' },
-    { topic: 'Neptune', seconds: 2.2, fact: 'Neptune has the fastest winds in the solar system, reaching about 2,000 km per hour.' },
+    { topic: 'Neptune', seconds: 1.9, fact: 'Neptune has the fastest winds in the solar system, reaching about 2,000 km per hour.' },
   ],
   poster:
     'Blast off on a tour of five amazing planets! Mars has a volcano about two and a half times taller than Mount Everest, and Jupiter has a storm wider than the whole Earth. Saturn could float in a giant bathtub, and Venus spins so slowly that one turn takes longer than a trip around the Sun. Out on Neptune, the winds roar at about 2,000 km per hour!',

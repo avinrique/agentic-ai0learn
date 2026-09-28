@@ -9,6 +9,8 @@ import {
   CYAN,
   FileRow,
   FitBox,
+  FixPart,
+  FixText,
   GOLD,
   GREEN,
   KeyArt,
@@ -21,11 +23,12 @@ import {
   Terminal,
   TermLine,
   endTime,
+  keepSpaceForButtons,
   spring,
 } from './SetupParts';
 import { CHECK_OUT, COPIED_WIN, PIP_OUT, PY_VERSION, REQUIREMENTS, RUN_OUT } from './realOutput';
-import SetupSimulator from './SetupSimulator';
-import SpotTheLeak from './SpotTheLeak';
+import SetupSimulator, { FRESH_RUNS, SimRuns } from './SetupSimulator';
+import SpotTheLeak, { FRESH_LEAK, LeakState } from './SpotTheLeak';
 
 const SOLO = TEAM.solo;
 const pop = { initial: { opacity: 0, scale: 0.85 }, animate: { opacity: 1, scale: 1 } };
@@ -375,8 +378,9 @@ function PythonCheckScene({ os }: { os: OS }) {
   return (
     <Scene>
       <Terminal os={os} lines={lines} width={760} fontSize={20} />
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: endTime(lines) }} className="mt-5">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: endTime(lines) }} className="mt-5 flex flex-col items-center gap-3">
         <Chip color={GREEN}>✓ 3.10 or newer = ready</Chip>
+        {os === 'mac' && <div className="text-[14px] text-white/60">Says 3.9? That&apos;s Apple&apos;s old Python: install from python.org, then open a new terminal.</div>}
       </motion.div>
     </Scene>
   );
@@ -386,7 +390,7 @@ const KIT_FILES: { icon: string; name: string; label: string; hl?: boolean }[] =
   { icon: '📄', name: 'README.md', label: 'read me first' },
   { icon: '📄', name: 'requirements.txt', label: 'tool shopping list' },
   { icon: '📄', name: '.env.example', label: 'key template' },
-  { icon: '📄', name: '.gitignore', label: '“don’t upload” list' },
+  { icon: '📄', name: '.gitignore', label: 'tells Git to skip .env' },
   { icon: '🐍', name: 'run.py', label: 'runs a lesson', hl: true },
   { icon: '🐍', name: 'check_setup.py', label: 'checks your setup', hl: true },
   { icon: '📁', name: 'part1/ … part4/', label: 'every lesson program' },
@@ -419,6 +423,7 @@ function KitScene({ os }: { os: OS }) {
               <FileRow key={f.name} icon={f.icon} name={f.name} label={f.label} hl={f.hl} delay={0.9 + i * 0.12} />
             ))}
           </div>
+          {os === 'mac' && <div className="mt-2 text-[13px] text-white/60">Finder hides names that start with a dot. They&apos;re there: the terminal sees them.</div>}
         </motion.div>
       </div>
     </Scene>
@@ -589,7 +594,7 @@ function CostMeter() {
     return `M ${p(from)} A ${R} ${R} 0 0 1 ${p(to)}`;
   };
   return (
-    <svg viewBox="0 0 360 215" width={400} height={239} aria-hidden>
+    <svg viewBox="0 0 360 215" width={340} height={203} aria-hidden>
       <path d={arc(-90, 30)} stroke={GREEN} strokeWidth="22" fill="none" opacity="0.75" />
       <path d={arc(30, 62)} stroke={GOLD} strokeWidth="22" fill="none" opacity="0.75" />
       <path d={arc(62, 90)} stroke={RED} strokeWidth="22" fill="none" opacity="0.85" />
@@ -607,27 +612,19 @@ function CostMeter() {
 function CostScene() {
   return (
     <Scene>
-      <div className="flex items-center gap-10">
-        <div className="flex flex-col gap-3 w-[300px]">
-          <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={spring} className="rounded-xl border px-4 py-3" style={{ borderColor: `${BLUE}60`, backgroundColor: `${BLUE}10` }}>
-            <div className="text-[16px] font-bold text-white">⬆ Tokens in</div>
-            <div className="text-[14px] text-white/65">your message · cheaper</div>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ ...spring, delay: 0.2 }} className="rounded-xl border px-4 py-3" style={{ borderColor: `${GOLD}60`, backgroundColor: `${GOLD}10` }}>
-            <div className="text-[16px] font-bold text-white">⬇ Tokens out</div>
-            <div className="text-[14px] text-white/65">the AI&apos;s answer · pricier</div>
-          </motion.div>
-        </div>
-        <motion.div {...pop} transition={{ ...spring, delay: 0.3 }} className="flex flex-col items-center">
-          <div className="text-[13px] font-bold uppercase tracking-wider text-white/50 mb-1">🧾 Cost meter · gpt-4o-mini</div>
-          <CostMeter />
-          <div className="-mt-1 text-[26px] font-bold text-white">a few cents</div>
-          <div className="text-[14px] text-white/60">the whole course: every program, a few runs</div>
-        </motion.div>
-      </div>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6 }} className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-[14px] text-white/75 text-center">
+      <motion.div {...pop} transition={{ ...spring, delay: 0.1 }} className="flex flex-col items-center">
+        <div className="text-[13px] font-bold uppercase tracking-wider text-white/50 mb-1">🧾 Cost meter · gpt-4o-mini</div>
+        <CostMeter />
+        <div className="-mt-1 text-[30px] font-bold text-white">a few cents</div>
+      </motion.div>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0 }} className="mt-3 flex items-center gap-3 text-[15px] text-white/70">
+        <span>⬆ tokens in = cheaper</span>
+        <span className="text-white/30">·</span>
+        <span>⬇ tokens out = pricier</span>
+      </motion.div>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6 }} className="mt-4 px-4 text-[14px] text-white/70 text-center">
         Example: the poem program, one run ≈ 20 tokens in + 40 out ≈ <span className="font-bold text-white">$0.00003</span>
-        <div className="text-[13px] text-white/45 mt-0.5">illustrative, with example prices: $0.15 per 1M tokens in, $0.60 per 1M out · check openai.com/api/pricing</div>
+        <div className="text-[13px] text-white/60 mt-0.5">illustrative, with example prices: $0.15 per 1M tokens in, $0.60 per 1M out · check openai.com/api/pricing</div>
       </motion.div>
     </Scene>
   );
@@ -645,7 +642,13 @@ function EnvFileScene({ os }: { os: OS }) {
       <div className="mt-6 flex items-center gap-6">
         <SafeBox width={560}>
           <div className="w-full">
-            <div className="text-[13px] text-white/50 mb-1">{os === 'mac' ? '📝 .env — TextEdit' : '📝 .env — Notepad'}</div>
+            <div className="flex items-center justify-between text-[13px] text-white/50 mb-1">
+              <span>{os === 'mac' ? '📝 .env — TextEdit' : '📝 .env — Notepad'}</span>
+              {/* Notepad and TextEdit don't save by themselves */}
+              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: t + 2 }} className="font-semibold" style={{ color: GREEN }}>
+                💾 Save: {os === 'mac' ? '⌘ S' : 'Ctrl + S'}
+              </motion.span>
+            </div>
             {ENV_COMMENTS.map((c) => (
               <div key={c} className="font-mono text-[13px] text-white/40 whitespace-nowrap">
                 {c}
@@ -674,8 +677,11 @@ function EnvFileScene({ os }: { os: OS }) {
             </div>
           </div>
         </SafeBox>
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: t + 2 }} className="w-[220px] text-[14px] text-white/70 leading-snug">
-          <span className="font-mono text-white px-1.5 py-0.5 rounded bg-white/10">.gitignore</span> already lists <span className="font-mono text-white">.env</span>, so it&apos;s never uploaded.
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: t + 2.4 }} className="w-[240px] text-[14px] text-white/70 leading-snug space-y-3">
+          <div>
+            <span className="font-mono text-white px-1.5 py-0.5 rounded bg-white/10">.gitignore</span> tells Git to leave <span className="font-mono text-white">.env</span> out when you upload code.
+          </div>
+          <div className="text-white/60">Sharing the folder another way (zip, email, Drive)? Delete .env from the copy first.</div>
         </motion.div>
       </div>
     </Scene>
@@ -730,7 +736,7 @@ function PostcardScene() {
               </div>
             </Postcard>
             <Postcard title="🌍 on GitHub" rot={3} delay={0.5}>
-              a public code-sharing website: bots search it for keys all day
+              bots search it for keys all day
             </Postcard>
             <Postcard title="💬 chat or screenshot" rot={-2} delay={0.7}>
               “look, my setup works!” 📸 with the key in the picture
@@ -738,9 +744,6 @@ function PostcardScene() {
           </div>
         </div>
       </div>
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.8 }} className="mt-10 flex items-center gap-3 text-[15px] text-white/80">
-        <Chip color={RED}>🚨 Leaked?</Chip>→<Chip color={RED}>🗑️ Delete it on the website</Chip>→<Chip color={GOLD}>🔑 Make a new one</Chip>
-      </motion.div>
     </Scene>
   );
 }
@@ -786,73 +789,111 @@ function FirstRunScene({ os }: { os: OS }) {
 }
 
 interface ErrCard {
-  /** what the student sees (through run.py or check_setup.py) */
+  /** short name on the chip */
+  label: string;
+  /** what the student sees */
   err: string;
-  /** the same problem when a file is run directly with python */
-  direct?: string;
   means: string;
-  fix: string;
+  fix: FixPart[];
 }
 
-function ErrorsScene({ os }: { os: OS }) {
-  const cards: ErrCard[] = [
+function errCards(os: OS): ErrCard[] {
+  return [
     {
+      label: '📦 Libraries missing',
       err: "The course libraries aren't installed yet, or your toolbox (.venv) isn't switched on.",
-      direct: "ModuleNotFoundError: No module named 'openai'",
       means: 'The toolbox is off, or pip install never ran in it.',
-      fix: `${CMD.activate(os)}, then pip install -r requirements.txt`,
+      fix: ['Switch it on: ', { cmd: CMD.activate(os) }, ', then run ', { cmd: CMD.pip() }],
     },
     {
+      label: '🔑 No key found',
       err: 'No API key found.',
-      direct: 'OpenAIError: Missing credentials. Please pass an `api_key`…',
-      means: 'There is no .env file, or no key in it.',
-      fix: 'Copy .env.example to .env and put your key in it.',
+      means: "There's no .env file yet, or no key in it.",
+      fix: ['Run ', { cmd: CMD.copyEnv(os) }, ', paste your key into .env and save.'],
     },
     {
+      // Only run.py loads .env. A file run any other way (or an editor's ▶ button) never sees the key.
+      label: '▶️ Ran without run.py',
+      err: 'OpenAIError: Missing credentials. Please pass an `api_key`…',
+      means: 'The file ran on its own (maybe an editor’s ▶ button), so nothing loaded .env.',
+      fix: ['Run it through run.py: ', { cmd: CMD.run() }],
+    },
+    {
+      label: '🚫 Key not accepted',
       err: "AuthenticationError: OpenAI didn't accept your API key.",
       means: 'Error 401: the key has a typo, or it was deleted.',
-      fix: 'Check the key in .env. Deleted? Make a new one.',
+      fix: ['Check the key in .env. Deleted? Make a new one.'],
     },
     {
+      label: '💳 No credit left',
       err: 'RateLimitError: Your OpenAI account has no credit left (insufficient_quota).',
       means: 'Your credit has run out. Trying again won’t help.',
-      fix: 'Add credit on the Billing page.',
+      fix: ['Add credit on the Billing page.'],
     },
     os === 'mac'
-      ? { err: 'zsh: command not found: python', means: 'Outside the toolbox, a Mac only knows python3.', fix: 'Type python3, or switch on the toolbox first.' }
+      ? { label: '🐍 python not found', err: 'zsh: command not found: python', means: 'Outside the toolbox, a Mac only knows python3.', fix: ['Type ', { cmd: 'python3' }, ' instead, or switch on the toolbox first.'] }
       : {
+          label: '🐍 Python not found',
           err: 'Python was not found; run without arguments to install from the Microsoft Store…',
           means: "Windows can't find the Python you installed.",
-          fix: 'Try py instead. Or reinstall with “Add python.exe to PATH” ticked, then open a new terminal.',
+          fix: ['Try ', { cmd: 'py' }, ' instead. Or reinstall with “Add python.exe to PATH” ticked, then open a new terminal.'],
         },
   ];
+}
+
+/** One error at a time: pick a chip, read the big card. */
+function ErrorsScene({ os }: { os: OS }) {
+  const cards = errCards(os);
+  const [sel, setSel] = useState(0);
+  const c = cards[sel];
   return (
     <Scene>
-      <div className="grid grid-cols-2 gap-3 w-[1090px]">
-        {cards.map((c, i) => (
-          <motion.div
-            key={c.err}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ ...spring, delay: 0.15 + i * 0.15 }}
-            className={`rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden ${i === cards.length - 1 ? 'col-span-2 justify-self-center w-[540px]' : ''}`}
-          >
-            <div className="px-4 py-2 font-mono text-[14px] font-semibold leading-snug" style={{ backgroundColor: 'rgba(248,113,113,0.12)', color: '#fca5a5' }}>
-              {c.err}
-              {c.direct && <div className="mt-0.5 text-[13px] font-normal text-white/45">or, running a file directly: {c.direct}</div>}
+      <div className="flex items-start gap-6">
+        <div className="w-[250px] flex flex-col gap-2">
+          {cards.map((card, i) => (
+            <motion.button
+              key={card.label}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ ...spring, delay: 0.1 + i * 0.08 }}
+              onClick={() => setSel(i)}
+              aria-pressed={i === sel}
+              className="text-left rounded-xl border px-4 py-2.5 text-[15px] transition-colors hover:bg-white/[0.08]"
+              style={
+                i === sel
+                  ? { borderColor: `${CYAN}b0`, backgroundColor: `${CYAN}1c`, color: '#ffffff', fontWeight: 600 }
+                  : { borderColor: 'rgba(255,255,255,0.12)', backgroundColor: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.65)' }
+              }
+            >
+              {card.label}
+            </motion.button>
+          ))}
+        </div>
+        <motion.div
+          key={sel}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={spring}
+          className="w-[660px] min-h-[300px] rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden"
+        >
+          <div className="px-5 py-4 font-mono text-[18px] font-semibold leading-snug" style={{ backgroundColor: 'rgba(248,113,113,0.12)', color: '#fca5a5' }}>
+            {c.err}
+          </div>
+          <div className="px-5 py-4 space-y-4">
+            <div>
+              <div className="text-[13px] font-bold uppercase tracking-wider text-white/45">Means</div>
+              <div className="text-[17px] text-white/85 mt-0.5">{c.means}</div>
             </div>
-            <div className="px-4 py-2 space-y-1 text-[14px]">
-              <div className="text-white/75">
-                <span className="text-white/45">Means: </span>
-                {c.means}
+            <div>
+              <div className="text-[13px] font-bold uppercase tracking-wider" style={{ color: GREEN }}>
+                Fix
               </div>
-              <div className="text-white">
-                <span style={{ color: GREEN }}>Fix: </span>
-                {c.fix}
+              <div className="text-[17px] text-white mt-1 leading-[1.8]">
+                <FixText parts={c.fix} cmdSize={15} />
               </div>
             </div>
-          </motion.div>
-        ))}
+          </div>
+        </motion.div>
       </div>
     </Scene>
   );
@@ -978,6 +1019,9 @@ export default function SetupAnim() {
   const trigger = useConceptStore((st) => st.steps[st.currentStep]?.animationTrigger) ?? 'intro';
   const [os, setOs] = useState<OS>('win');
   useEffect(() => setOs(detectOs()), []);
+  // The two games keep their progress here, so a trip to another step and back doesn't wipe it.
+  const [simRuns, setSimRuns] = useState<SimRuns>(FRESH_RUNS);
+  const [leak, setLeak] = useState<LeakState>(FRESH_LEAK);
 
   let scene: ReactNode;
   switch (trigger) {
@@ -1036,10 +1080,10 @@ export default function SetupAnim() {
       scene = <RoutineScene os={os} />;
       break;
     case 'playground':
-      scene = <SetupSimulator os={os} setOs={setOs} />;
+      scene = <SetupSimulator os={os} setOs={setOs} runs={simRuns} setRuns={setSimRuns} />;
       break;
     case 'playground2':
-      scene = <SpotTheLeak />;
+      scene = <SpotTheLeak state={leak} setState={setLeak} />;
       break;
     case 'takeaways':
       scene = <TakeawaysScene />;
@@ -1054,7 +1098,8 @@ export default function SetupAnim() {
   const sceneKey = trigger === 'playground' ? trigger : `${trigger}-${os}`;
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-navy-900/40 flex flex-col">
+    // Space on a focused button (Mac/Windows switch, game buttons) presses it instead of starting autoplay.
+    <div className="relative w-full h-full overflow-hidden bg-navy-900/40 flex flex-col" onKeyDown={keepSpaceForButtons}>
       {showBar && (
         <div className="shrink-0 h-12 px-5 flex items-center justify-between gap-4 border-b border-white/5">
           <div key={`${trigger}-${os}`} className="min-w-0">

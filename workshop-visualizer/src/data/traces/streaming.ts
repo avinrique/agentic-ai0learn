@@ -56,8 +56,10 @@ export const chunkLabel = (piece: string | null) =>
   `<ChatCompletionChunk, content=${piece === null ? 'None' : str(piece)}>`;
 
 export const STATUS_LINE = 'Asking the AI to write (streaming)...';
-/** What the last print shows: a blank line (the story's line already ended), then the count. */
+/** What the last print shows in the terminal: a blank line (the story's line already ended), then the count. */
 export const doneLine = (chars: number) => `\nDone! ${chars} characters in total.`;
+/** The same line for the Output tab, which already puts every output on its own line. */
+const doneOut = (chars: number) => doneLine(chars).trimStart();
 
 const L = {
   file: '# part1/streaming.py',
@@ -80,20 +82,22 @@ export interface StreamExample {
   prompt: string;
   /** Short description for the explanation bar. */
   ask: string;
-  /** The text pieces in the order the chunks bring them (a token or a few characters each). */
+  /** The text pieces in the order the chunks bring them (one o200k_base token each). */
   pieces: string[];
 }
 
-// Realistic-looking chunk sequences: real streams send roughly one token per chunk.
+// Real streams send about one token per chunk. These pieces are the exact o200k_base tokens
+// (the gpt-4o tokenizer) of each answer, so a tiktoken count matches the chunk count shown.
+// Prompts stay short so the prompt line fits the code panel on one line.
 const ROBOT: StreamExample = {
-  prompt: 'Tell a 3-sentence story about a robot who learns to paint.',
-  ask: 'a 3-sentence story about a robot who learns to paint',
+  prompt: 'Tell a 3-sentence robot story.',
+  ask: 'a 3-sentence robot story',
   pieces: [
     'Pixel', ' was', ' a', ' cleaning', ' robot', ' who', ' swept', ' an', ' art', ' museum', ' every', ' night', '.',
     ' It', ' began', ' copying', ' the', ' paintings', ' with', ' a', ' dusty', ' old', ' brush', ',', ' and', ' night',
-    ' after', ' night', ' its', ' wob', 'bly', ' lines', ' grew', ' smoother', '.', ' One', ' morning', ' the', ' guards',
-    ' found', ' a', ' bright', ' sunset', ' on', ' an', ' easel', ',', ' and', ' they', ' hung', ' Pixel', "'s", ' first',
-    ' painting', ' by', ' the', ' front', ' door', '.',
+    ' after', ' night', ' its', ' w', 'obb', 'ly', ' lines', ' grew', ' smoother', '.', ' One', ' morning', ' the',
+    ' guards', ' found', ' a', ' bright', ' sunset', ' on', ' an', ' eas', 'el', ',', ' and', ' they', ' hung', ' Pixel',
+    "'s", ' first', ' painting', ' by', ' the', ' front', ' door', '.',
   ],
 };
 
@@ -101,18 +105,18 @@ const HAIKU: StreamExample = {
   prompt: 'Write a haiku about the moon.',
   ask: 'a haiku about the moon',
   pieces: [
-    'Silver', ' lantern', ' glows', ',\n', 'guiding', ' lost', ' waves', ' back', ' to', ' shore', ',\n', 'night', "'s",
-    ' calm', ',', ' watch', 'ful', ' eye', '.',
+    'Silver', ' lantern', ' gl', 'ows', ',\n', 'guid', 'ing', ' lost', ' waves', ' back', ' to', ' shore', ',\n', 'night',
+    "'s", ' calm', ',', ' watch', 'ful', ' eye', '.',
   ],
 };
 
 const TIPS: StreamExample = {
-  prompt: 'Give 3 tips for staying focused while studying.',
-  ask: '3 tips for staying focused while studying',
+  prompt: 'Give 3 tips for focused studying.',
+  ask: '3 tips for focused studying',
   pieces: [
-    'Here', ' are', ' 3', ' tips', ':\n\n', '1', '.', ' Put', ' your', ' phone', ' in', ' another', ' room', '.\n', '2', '.',
-    ' Study', ' for', ' 25', ' minutes', ',', ' then', ' take', ' a', ' 5', '-minute', ' break', '.\n', '3', '.', ' Write',
-    ' one', ' clear', ' goal', ' before', ' you', ' start', '.',
+    'Here', ' are', ' ', '3', ' tips', ':\n\n', '1', '.', ' Put', ' your', ' phone', ' in', ' another', ' room', '.\n',
+    '2', '.', ' Study', ' for', ' ', '25', ' minutes', ',', ' then', ' take', ' a', ' ', '5', '-minute', ' break', '.\n',
+    '3', '.', ' Write', ' one', ' clear', ' goal', ' before', ' you', ' start', '.',
   ],
 };
 
@@ -197,12 +201,12 @@ function streamingSteps(ex: StreamExample): TraceStep[] {
     {
       at: L.check,
       trig: 'check1',
-      exp: `if piece: checks that the piece has some text. "${p1}" does, so we go inside. (The very first chunk only carries role "assistant", with content "", so it gets skipped.)`,
+      exp: `if piece: checks that the piece has some text. "${p1}" does, so we go inside. (Before it, the very first chunk had just role "assistant" and content "", so it was skipped.)`,
     },
     {
       at: L.print,
       trig: 'print1',
-      exp: `Look at the laptop terminal: print shows "${p1}". flush=True means "show it right now", so it doesn't sit waiting for more text first.`,
+      exp: `In the laptop terminal, print shows "${p1}". flush=True means "show it right now" instead of waiting for more text. (The Output tab gets the whole line when the loop ends.)`,
     },
     {
       at: L.add,
@@ -214,7 +218,7 @@ function streamingSteps(ex: StreamExample): TraceStep[] {
       at: L.piece,
       trig: 'piece2',
       set: { chunk: chunkLabel(p2), piece: str(p2) },
-      exp: `Round 2: the loop hands us the next chunk. ${spaceNote}`,
+      exp: `Next round: the loop hands us the next chunk. ${spaceNote}`,
     },
     {
       at: L.print,
@@ -231,21 +235,21 @@ function streamingSteps(ex: StreamExample): TraceStep[] {
       at: L.forLine,
       trig: 'fast',
       set: { chunk: chunkLabel(ex.pieces[n - 1]), piece: str(ex.pieces[n - 1]), full_story: str(full) },
-      exp: `The loop repeats for every chunk (${n} with text in this answer). Watch them flow down the pipe, type out, and fill up full_story.`,
+      // Every text piece gets printed in this loop, so the Output tab gets the whole answer here
+      // (it shows each output on its own line, so it can't show pieces joining one line).
+      out: full,
+      exp: `The loop repeats for every chunk (${n} with text in this answer). Watch them flow down the pipe, type out, and fill up full_story. The tabs on the right skip to the end.`,
     },
     {
       at: L.check,
       trig: 'last',
       set: { chunk: chunkLabel(null), piece: 'None' },
-      // By now every piece has been printed, so the Output tab gets the whole answer here
-      // (it shows each output on its own line, so it can't show pieces joining one line).
-      out: full,
       exp: 'The last chunk has no text (content is None); its finish_reason "stop" says the answer is done. if piece: is False, so we skip it. Without the check, full_story += None would crash.',
     },
     {
       at: L.done,
       trig: 'done',
-      out: doneLine(full.length),
+      out: doneOut(full.length),
       exp: `The stream is used up, so the loop ends. len(full_story) counts the characters we collected: ${full.length}.`,
     },
     {

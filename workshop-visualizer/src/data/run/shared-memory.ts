@@ -6,7 +6,7 @@ export const runInfo: RunInfo = {
   fileName: 'part4/shared_memory.py',
   shownCode: sharedMemoryCode,
   expect:
-    "The finished whiteboard: 4 labelled lines from the Teacher, Rita, Milo and Wally. Milo's plan uses the Teacher's numbers and Wally's invitation mixes in everyone's ideas; the wording changes every run.",
+    "The finished whiteboard: 4 labelled notes from the Teacher, Rita, Milo and Wally (Rita's and Milo's lists may run over several lines). Milo's plan uses the Teacher's numbers and Wally's invitation mixes in everyone's ideas; the wording changes every run.",
   tryThis: [
     'Change event to your own plan, like "Birthday picnic for 10 friends, budget $40".',
     'Add print(len(read_board()), "characters") before each run_agent call to watch the board grow.',

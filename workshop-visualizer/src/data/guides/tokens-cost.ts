@@ -17,10 +17,10 @@ export const guide: LessonGuide = {
     {
       q: 'Why did tiktoken count 11 tokens when the API said prompt_tokens = 18?',
       options: [
-        'tiktoken made a mistake',
+        'tiktoken uses different cutting rules than gpt-4o-mini',
         'The AI read the question twice',
         'The answer tokens were added to the count',
-        'The API wraps our message in a few extra formatting tokens',
+        'The API adds formatting tokens around our message',
       ],
       answer: 3,
       why: 'The API puts a small "envelope" around each message: its role label and start and end markers. Those extra tokens count as input too, so the estimate is a little low.',

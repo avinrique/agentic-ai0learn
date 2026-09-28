@@ -33,6 +33,7 @@ const PHASE: Record<string, number> = {
   temp0: 2,
   'tool-run': 3,
   'no-tool': 3,
+  'tool-reply': 3.5,
   returned: 4,
   print: 5,
   'check-tool': 6,
@@ -53,19 +54,18 @@ function TestCard({
   n,
   stamp,
   glowNone,
-  compact,
 }: {
   test: TestCase;
   n: number;
   stamp?: 'PASS' | 'FAIL';
   glowNone?: boolean;
-  compact?: boolean;
 }) {
   const stampColor = stamp === 'PASS' ? '#16a34a' : '#dc2626';
   return (
     <div className="relative w-full h-full rounded-lg bg-white text-slate-800 shadow-xl p-4 flex flex-col">
       <div className="text-[13px] font-bold tracking-wider text-slate-500">TEST {n}</div>
-      <div className={`${compact ? 'text-[19px]' : 'text-[20px]'} font-bold leading-snug mt-1`}>{test.question}</div>
+      {/* Non-breaking spaces keep a sum like "45 + 13" on one line. */}
+      <div className="text-[18px] font-bold leading-snug mt-1">{test.question.replace(/ \+ /g, '\u00a0+\u00a0')}</div>
       <div className="mt-auto pt-2.5 border-t border-slate-200 flex flex-col gap-1 text-[15px]">
         <div>
           <span className="text-slate-500">🔧 tool:</span>{' '}
@@ -77,7 +77,8 @@ function TestCard({
           </b>
         </div>
         <div>
-          <span className="text-slate-500">📝 must contain:</span> <b className="font-mono">&quot;{test.mustContain}&quot;</b>
+          <span className="text-slate-500">📝 must contain:</span>{' '}
+          <b className="font-mono whitespace-nowrap">&quot;{test.mustContain}&quot;</b>
         </div>
       </div>
       {stamp && (
@@ -186,7 +187,7 @@ function CheckRow({
     >
       <div className="flex items-center gap-2">
         <span className="text-[20px]">{icon}</span>
-        <span className="text-[18px] font-semibold text-white/90">{title}</span>
+        <span className="text-[17px] font-semibold text-white/90 whitespace-nowrap">{title}</span>
         <span className="ml-auto">
           {shown ? (
             <motion.span
@@ -293,15 +294,17 @@ function Machine({
 
   const agentFocal = phase >= 1 && phase <= 5;
   const botMood: BotMood =
-    phase === 1 || phase === 2 ? 'thinking'
+    phase === 1 || phase === 2 || trig === 'tool-reply' ? 'thinking'
     : trig === 'tool-run' ? 'working'
     : phase >= 8 ? (pass ? 'proud' : 'confused')
     : 'happy';
 
   const cardFocal = phase === 0 || phase === 8;
   const why = trig === 'fail-why';
-  // The small tool chip matters up to check 1 (and whenever it explains a failure).
-  const toolChipBright = phase <= 6 || bug || (why && kind === 'notool');
+  // The small tool chip matters until the answer is printed (and when it explains a failure).
+  const toolChipBright = phase <= 5 || (why && kind === 'notool');
+  // After the verdict, rows that passed fade so the stamp (or the failing row) stands out.
+  const settled = phase >= 8 && !why;
 
   const toolChip = (big: boolean) => {
     if (run.toolUsed === 'add' && t.args) {
@@ -314,12 +317,15 @@ function Machine({
           className={`w-full rounded-xl text-center font-mono ${big ? 'px-3 py-4' : 'px-2 py-1.5'}`}
           style={{ border: `2px solid ${bug ? RED : GOLD}`, background: bug ? `${RED}14` : `${GOLD}12` }}
         >
-          <div className={big ? 'text-[21px] text-white/90' : 'text-[15px] text-white/80'}>
-            🔧 add({a}, {b}) = <b style={{ color: bug ? RED : GOLD }}>{run.toolResult}</b>
+          <div className={big ? 'text-[18px] text-white/90' : 'text-[15px] text-white/80'}>
+            <span className="whitespace-nowrap">🔧 add({a}, {b})</span>{' '}
+            <span className="whitespace-nowrap">
+              = <b style={{ color: bug ? RED : GOLD }}>{run.toolResult}</b>
+            </span>
           </div>
           {bug && (
             <div className={`${big ? 'mt-1.5 text-[15px]' : 'text-[13px]'} font-sans font-semibold`} style={{ color: RED }}>
-              🐞 pretend bug: a − b
+              🐞 bug: <span className="font-mono whitespace-nowrap">a − b</span>
             </div>
           )}
         </motion.div>
@@ -331,7 +337,7 @@ function Machine({
         key={inHead ? 'head' : 'none'}
         initial={{ scale: 0.7, opacity: 0 }}
         animate={{ scale: 1, opacity: toolChipBright ? 1 : 0.45 }}
-        className="w-fit mx-auto rounded-full px-3 py-1 text-[15px] font-semibold"
+        className="w-fit mx-auto rounded-full px-3 py-1 text-[15px] font-semibold whitespace-nowrap"
         style={
           inHead
             ? { color: GOLD, border: `1.5px solid ${GOLD}`, background: `${GOLD}14` }
@@ -344,7 +350,7 @@ function Machine({
   };
 
   // Notes on the check lights for the "why it failed" step.
-  const toolNote = why && kind === 'notool' ? '🎲 right by luck' : undefined;
+  const toolNote = !why ? undefined : kind === 'notool' ? '🎲 not guaranteed' : kind === 'wrong' ? '🙈 missed the bug' : undefined;
   const answerNote = why && kind === 'wrong' ? '🛡️ caught the bug' : undefined;
 
   return (
@@ -355,9 +361,9 @@ function Machine({
         initial={{ x: -60, opacity: 0 }}
         animate={{ x: 0, opacity: cardFocal ? 1 : 0.5, scale: cardFocal ? 1.03 : 1 }}
         transition={{ duration: 0.5 }}
-        className="w-[28%] flex-shrink-0"
+        className="w-[24%] flex-shrink-0"
       >
-        <TestCard test={t} n={n} stamp={stamp} compact />
+        <TestCard test={t} n={n} stamp={stamp} />
       </motion.div>
 
       <Arrow on={phase === 1} />
@@ -368,8 +374,8 @@ function Machine({
           {...BOT}
           size={118}
           mood={botMood}
-          active={phase >= 1 && phase <= 3}
-          dimmed={!agentFocal && phase !== 7}
+          active={phase >= 1 && phase <= 3.5}
+          dimmed={!agentFocal}
         />
         <div className="w-full min-h-[170px] flex flex-col items-center gap-3">
           {phase === 0 && <div className="text-[15px] text-white/35">waiting…</div>}
@@ -390,11 +396,24 @@ function Machine({
               className="w-full rounded-xl px-3 py-3 text-center"
               style={{ border: `2px solid ${ACCENT}`, background: `${ACCENT}14`, boxShadow: `0 0 18px ${ACCENT}44` }}
             >
-              <div className="text-[20px] font-bold font-mono whitespace-nowrap" style={{ color: ACCENT }}>🌡️ temperature=0</div>
-              <div className="text-[15px] text-white/75 mt-1">same question → same answer</div>
+              <div className="text-[28px] leading-none">🌡️</div>
+              <div className="mt-1.5 text-[19px] font-bold font-mono" style={{ color: ACCENT }}>temperature=0</div>
             </motion.div>
           )}
           {trig === 'tool-run' && toolChip(true)}
+          {trig === 'tool-reply' && (
+            <>
+              {toolChip(false)}
+              <motion.div
+                className="text-[17px] font-semibold whitespace-nowrap"
+                style={{ color: ACCENT }}
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ repeat: Infinity, duration: 1.1 }}
+              >
+                ↩ back to the AI…
+              </motion.div>
+            </>
+          )}
           {hasAnswer && (
             <>
               {toolChip(false)}
@@ -404,6 +423,16 @@ function Machine({
                 found={answerOk}
                 bright={agentFocal || phase === 7 || trig === 'no-tool'}
               />
+              {trig === 'print' && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-full px-3 py-1 text-[15px] font-semibold whitespace-nowrap"
+                  style={{ color: ACCENT, border: `1.5px solid ${ACCENT}`, background: `${ACCENT}14` }}
+                >
+                  🖨️ printed → Output
+                </motion.div>
+              )}
             </>
           )}
         </div>
@@ -412,20 +441,24 @@ function Machine({
       <Arrow on={phase === 6} />
 
       {/* 3. The two checks */}
-      <div className="w-[31%] flex-shrink-0 flex flex-col gap-4">
+      <div className="w-[29%] flex-shrink-0 flex flex-col gap-4">
         <CheckRow
           icon="🔧"
           title="Right tool?"
           detail={
             <>
-              expected <b className="font-mono text-white">{t.expectTool ?? 'None'}</b> · used{' '}
-              <b className="font-mono" style={{ color: toolOk ? GREEN : RED }}>{run.toolUsed ?? 'None'}</b>
+              <span className="whitespace-nowrap">
+                expected <b className="font-mono text-white">{t.expectTool ?? 'None'}</b> ·
+              </span>{' '}
+              <span className="whitespace-nowrap">
+                used <b className="font-mono" style={{ color: toolOk ? GREEN : RED }}>{run.toolUsed ?? 'None'}</b>
+              </span>
             </>
           }
           ok={toolOk}
           shown={phase >= 6}
           focal={phase === 6 || (why && kind === 'notool')}
-          dim={phase < 6 || (why && kind === 'wrong') || (phase === 7 && toolOk) || trig === 'count'}
+          dim={phase < 6 || phase === 7 || (settled && toolOk)}
           note={toolNote}
           noteColor={GOLD}
         />
@@ -440,7 +473,7 @@ function Machine({
           ok={answerOk}
           shown={phase >= 7}
           focal={phase === 7 || (why && kind === 'wrong')}
-          dim={phase < 7 || (why && kind === 'notool') || trig === 'count'}
+          dim={phase < 7 || (why && kind === 'notool') || (settled && answerOk)}
           note={answerNote}
           noteColor={GREEN}
         />
@@ -551,26 +584,28 @@ export default function TestingAgentsAnim() {
               <span className="text-[17px] font-semibold text-white">real projects: dozens</span>
             </div>
           </div>
-          <div className="flex items-center gap-2 opacity-60">
+          <div className="flex items-center gap-2">
             <AgentBot color="#a3a3a3" badge="⚖️" size={46} mood="thinking" />
-            <span className="text-[14px] text-white/70">sometimes: a 2nd AI as judge</span>
+            <span className="text-[16px] font-semibold text-white/85">AI judge</span>
           </div>
         </div>
       );
     } else {
       stage = (
-        <div className="h-full flex items-center justify-center gap-4 px-2">
-          {TESTING_TESTS.map((t, i) => (
-            <motion.div
-              key={i}
-              initial={{ y: 30, opacity: 0 }}
-              animate={{ y: 0, opacity: noneStep && i < 2 ? 0.35 : 1, scale: noneStep && i === 2 ? 1.06 : 1 }}
-              transition={{ delay: noneStep ? 0 : i * 0.15 }}
-              className="w-[31%] h-[190px]"
-            >
-              <TestCard test={t} n={i + 1} glowNone={noneStep && i === 2} />
-            </motion.div>
-          ))}
+        <div className="h-full flex items-center px-2">
+          <div className="w-full flex items-stretch justify-center gap-4">
+            {TESTING_TESTS.map((t, i) => (
+              <motion.div
+                key={i}
+                initial={{ y: 30, opacity: 0 }}
+                animate={{ y: 0, opacity: noneStep && i < 2 ? 0.35 : 1, scale: noneStep && i === 2 ? 1.06 : 1 }}
+                transition={{ delay: noneStep ? 0 : i * 0.15 }}
+                className="w-[31%] min-h-[190px] flex"
+              >
+                <TestCard test={t} n={i + 1} glowNone={noneStep && i === 2} />
+              </motion.div>
+            ))}
+          </div>
         </div>
       );
     }

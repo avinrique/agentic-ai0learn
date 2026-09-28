@@ -63,7 +63,7 @@ export const REQUEST_OK = 'Email my teacher that I finished my science project.'
 export const REQUEST_BAD = 'Write a mean message to embarrass my classmate.';
 export const EMAIL_TO = 'Ms. Lee';
 export const EMAIL_MESSAGE = 'Hi Ms. Lee! I finished my science project.';
-const ARGS = `{'to': '${EMAIL_TO}', 'message': '${EMAIL_MESSAGE}'}`; // Python prints a dict like this
+const ARGS = `{'to': '${EMAIL_TO}', 'body': '${EMAIL_MESSAGE}'}`; // Python prints a dict like this
 const REFUSAL = "Sorry, I can't help with that. Let's keep things kind and safe.";
 
 const L = {
@@ -80,7 +80,7 @@ const L = {
 type Story = 'approved' | 'denied' | 'blocked';
 
 const LAYERS_EXP =
-  "No guardrail is perfect: Cora can miss things too. So we stack layers: a checker, a human's OK, and only a few, pretend tools. Each catches what others miss.";
+  "No guardrail is perfect: Cora can miss things too. So we stack layers: a checker, a human's OK, and only a few, pretend tools. Together they catch much more, but still not everything.";
 const RECAP_EXP =
   "What you learned: 1) guardrails check what goes in and what comes out, and can be small agents; 2) risky tools wait for a human's yes; 3) our code enforces it, not the AI.";
 
@@ -111,7 +111,7 @@ function guardrailsSteps(story: Story): TraceStep[] {
       at: 'checker_prompt = ',
       trig: 'cora-card',
       set: { checker_prompt: str(CHECKER_PROMPT) },
-      exp: 'Cora the critic gets a new job: safety checker. "Reply SAFE or UNSAFE only" makes her answer one word, so our code can read it easily.',
+      exp: 'Cora the critic gets a new job: safety checker. "Reply SAFE or UNSAFE only" asks her for one word, so our code can read it easily.',
     },
     {
       at: 'def is_safe(text):',
@@ -120,7 +120,7 @@ function guardrailsSteps(story: Story): TraceStep[] {
       exp: 'is_safe(text) is our guardrail: it asks Cora about any text and gives back True or False. A guardrail can itself be a small agent!',
     },
     {
-      at: 'def send_email(to, message):',
+      at: 'def send_email(to, body):',
       trig: 'tool-def',
       set: { send_email: '<function send_email>' },
       exp: 'A pretend tool: send_email only prints a "(pretend)" line. It never really sends anything, so it is safe to practise with.',
@@ -129,7 +129,7 @@ function guardrailsSteps(story: Story): TraceStep[] {
       at: 'tools = [{',
       trig: 'menu',
       set: { tools: '[send_email]' },
-      exp: "The menu Max will see: one tool, send_email, with two inputs: who it's to, and the message.",
+      exp: "The menu Max will see: one tool, send_email, with two inputs: who it's to, and the body (the email's text).",
     },
     {
       at: 'RISKY_TOOLS = {',
@@ -232,6 +232,7 @@ function guardrailsSteps(story: Story): TraceStep[] {
     {
       at: 'response = client.chat.completions.create(model=',
       trig: 'max-think',
+      set: { response: '<ChatCompletion>' },
       exp: "Our code calls OpenAI with Max's notepad AND his tool menu (tools=tools). Max is thinking…",
     },
     {
@@ -241,9 +242,15 @@ function guardrailsSteps(story: Story): TraceStep[] {
       exp: "Max's reply is not text. It's an order slip (a tool call): he wants to use send_email.",
     },
     {
+      at: 'messages.append(message)',
+      trig: 'notepad-add',
+      set: { messages: '[system, user, assistant]' },
+      exp: "Our code adds Max's order slip to his notepad (messages), so the tool's answer can follow it later.",
+    },
+    {
       at: 'reply = message.content',
       trig: 'reply-none',
-      set: { messages: '[system, user, assistant]', reply: 'None' },
+      set: { reply: 'None' },
       exp: "reply holds Max's text answer. It's None for now, because he asked for a tool instead of answering.",
     },
     {
@@ -297,17 +304,19 @@ function guardrailsSteps(story: Story): TraceStep[] {
       {
         at: 'result = send_email(**args)',
         trig: 'run-tool',
-        exp: "allowed is True, so our code finally runs the tool. **args fills in to= and message= from Max's slip.",
+        exp: "allowed is True, so our code finally runs the tool. **args fills in to= and body= from Max's slip.",
       },
       {
         at: 'print(f"📧 (pretend)',
         trig: 'sent',
+        set: { to: str(EMAIL_TO), body: str(EMAIL_MESSAGE) },
         out: `📧 (pretend) Email to ${EMAIL_TO}: ${EMAIL_MESSAGE}`,
         exp: 'The pretend tool just prints. In a real app, a real email would leave here, which is exactly why we asked first.',
       },
       {
         at: L.toolMsg,
         trig: 'tool-msg',
+        unset: ['to', 'body'],
         set: { result: str(result), messages: '[system, user, assistant, tool]' },
         exp: 'send_email returned "Email sent." Our code passes that back to Max as a tool message, so he knows what happened.',
       },
@@ -338,6 +347,7 @@ function guardrailsSteps(story: Story): TraceStep[] {
     {
       at: 'final = client',
       trig: 'max-final',
+      set: { final: '<ChatCompletion>' },
       exp: 'One more call: Max reads the tool result and writes his reply for the student.',
     },
     {
@@ -356,7 +366,7 @@ function guardrailsSteps(story: Story): TraceStep[] {
     {
       at: L.gate3,
       trig: 'gate3-safe',
-      exp: 'Cora says SAFE, so not is_safe(reply) is False and we skip the fallback line. The exit gate opens.',
+      exp: 'Cora says SAFE, so not is_safe(reply) is False and we skip the backup answer ("Sorry, I can\'t share that answer."). The exit gate opens.',
     },
     {
       at: L.printReply,
@@ -364,7 +374,7 @@ function guardrailsSteps(story: Story): TraceStep[] {
       out: `Max: ${reply}`,
       exp: yes
         ? 'Every gate said yes, so the answer is printed. Three brakes, one happy student.'
-        : 'The answer is printed. The human said no, and Max respected it.',
+        : 'The answer is printed. The human said no, so our code never ran send_email. Max only reported what happened.',
     },
     { at: L.printReply, trig: 'layers', exp: LAYERS_EXP },
     { at: L.printReply, trig: 'recap', exp: RECAP_EXP },

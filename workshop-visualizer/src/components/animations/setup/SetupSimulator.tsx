@@ -1,8 +1,9 @@
 'use client';
 import { motion } from 'framer-motion';
-import { KeyboardEvent, useState } from 'react';
+import { Dispatch, SetStateAction } from 'react';
 import AgentBot, { TEAM } from '@/components/animations/characters/AgentBot';
-import { CMD, CYAN, GOLD, GREEN, OS, OsToggle, RED, Terminal, TermLine, spring } from './SetupParts';
+import { useConceptStore } from '@/stores/conceptStore';
+import { CMD, CYAN, FixPart, FixText, GOLD, GREEN, OS, OsToggle, RED, Terminal, TermLine, spring } from './SetupParts';
 import { CHECK_OUT, COPIED_WIN, PIP_OUT, PY_VERSION, RUN_NO_KEY, RUN_NO_LIBS, RUN_OUT, checkSetupOut } from './realOutput';
 
 // A pretend terminal: the student picks the next command. Everything is scripted,
@@ -25,7 +26,7 @@ interface Outcome {
   lines: TermLine[] | null;
   kind: 'ok' | 'err' | 'warn';
   hint: string;
-  fix?: string;
+  fix?: FixPart[];
   next: Partial<SimState>;
 }
 
@@ -45,6 +46,13 @@ interface Run {
 
 const START: SimState = { venv: false, active: false, installed: false, env: false, checked: false, done: [] };
 const FRESH: Run = { s: START, history: [], last: null, mistakes: 0 };
+
+/** Both computers' progress. SetupAnim keeps it, so it survives moving to another step and back. */
+export type SimRuns = Record<OS, Run>;
+export const FRESH_RUNS: SimRuns = { mac: FRESH, win: FRESH };
+
+/** The five commands that build the workshop. python --version and check_setup.py are optional checks. */
+const REQUIRED: CmdId[] = ['venv', 'activate', 'pip', 'env', 'run'];
 
 // scrambled on purpose, so the order is the student's job
 const CHIP_ORDER: CmdId[] = ['check', 'venv', 'run', 'pip', 'version', 'env', 'activate'];
@@ -70,9 +78,18 @@ function cmdText(id: CmdId, os: OS) {
 
 const CHIP_NOTE: Partial<Record<CmdId, string>> = { env: 'then put your key in .env' };
 
-function toolboxFix(s: SimState, os: OS) {
-  return s.venv ? `Switch the toolbox on first: ${CMD.activate(os)}` : `Make the toolbox (${CMD.venv(os)}), then switch it on.`;
+/** The toolbox isn't on yet: make it first, or switch it on. */
+function toolboxFix(s: SimState, os: OS): FixPart[] {
+  return s.venv ? ['Switch the toolbox on: ', { cmd: CMD.activate(os) }] : ['Make the toolbox first: ', { cmd: CMD.venv(os) }];
 }
+
+/** The libraries are missing: install them, after switching the toolbox on if needed. */
+function libsFix(s: SimState, os: OS): FixPart[] {
+  if (s.active) return [{ cmd: CMD.pip() }];
+  return s.venv ? [...toolboxFix(s, os), ', then run ', { cmd: CMD.pip() }] : toolboxFix(s, os);
+}
+
+const keyFix = (os: OS): FixPart[] => ['Run ', { cmd: CMD.copyEnv(os) }, ' and put your key in .env'];
 
 function run(id: CmdId, s: SimState, os: OS): Outcome {
   const macNoPython: Outcome = {
@@ -95,7 +112,7 @@ function run(id: CmdId, s: SimState, os: OS): Outcome {
           lines: [{ t: 'out', text: os === 'mac' ? 'source: no such file or directory: .venv/bin/activate' : 'The system cannot find the path specified.', tone: 'err' }],
           kind: 'err',
           hint: "There's no toolbox to switch on yet.",
-          fix: `Make it first: ${CMD.venv(os)}`,
+          fix: ['Make it first: ', { cmd: CMD.venv(os) }],
           next: {},
         };
       }
@@ -134,7 +151,7 @@ function run(id: CmdId, s: SimState, os: OS): Outcome {
           lines: checkSetupOut(kit, os),
           kind: 'err',
           hint: 'The checker stops at the first missing piece: the openai library.',
-          fix: s.active ? CMD.pip() : `${toolboxFix(s, os)} Then pip install.`,
+          fix: libsFix(s, os),
           next: {},
         };
       }
@@ -143,7 +160,7 @@ function run(id: CmdId, s: SimState, os: OS): Outcome {
           lines: checkSetupOut(kit, os),
           kind: 'err',
           hint: 'Everything is ready except the key.',
-          fix: `${CMD.copyEnv(os)}, then put your key in .env.`,
+          fix: keyFix(os),
           next: {},
         };
       }
@@ -155,7 +172,7 @@ function run(id: CmdId, s: SimState, os: OS): Outcome {
           lines: RUN_NO_LIBS,
           kind: 'err',
           hint: 'run.py can’t find the course libraries.',
-          fix: s.active ? CMD.pip() : `${toolboxFix(s, os)} Then pip install.`,
+          fix: libsFix(s, os),
           next: {},
         };
       }
@@ -164,7 +181,7 @@ function run(id: CmdId, s: SimState, os: OS): Outcome {
           lines: RUN_NO_KEY,
           kind: 'err',
           hint: 'run.py looked for your key and found none.',
-          fix: `${CMD.copyEnv(os)}, then put your key in .env.`,
+          fix: keyFix(os),
           next: {},
         };
       }
@@ -177,18 +194,26 @@ function run(id: CmdId, s: SimState, os: OS): Outcome {
   }
 }
 
-/** The lesson uses Space for play/pause. On a focused button, Space should press the button instead. */
-function keepSpaceForButtons(e: KeyboardEvent) {
-  if (e.key === ' ' && (e.target as HTMLElement).closest('button')) e.stopPropagation();
-}
-
-export default function SetupSimulator({ os, setOs }: { os: OS; setOs: (o: OS) => void }) {
-  const [runs, setRuns] = useState<Record<OS, Run>>({ mac: FRESH, win: FRESH });
+export default function SetupSimulator({
+  os,
+  setOs,
+  runs,
+  setRuns,
+}: {
+  os: OS;
+  setOs: (o: OS) => void;
+  runs: SimRuns;
+  setRuns: Dispatch<SetStateAction<SimRuns>>;
+}) {
   const { s, history, last, mistakes } = runs[os];
   const finished = s.done.includes('run');
+  const requiredDone = s.done.filter((id) => REQUIRED.includes(id)).length;
   const update = (fn: (r: Run) => Run) => setRuns((all) => ({ ...all, [os]: fn(all[os]) }));
+  // Using the simulator pauses autoplay, so the lesson doesn't move on in the middle of it.
+  const pauseAutoplay = () => useConceptStore.getState().setPlaying(false);
 
   const pick = (id: CmdId) => {
+    pauseAutoplay();
     const out = run(id, s, os);
     update((r) => ({
       s: out.kind === 'ok' ? { ...r.s, ...out.next, done: [...r.s.done, id] } : r.s,
@@ -197,18 +222,25 @@ export default function SetupSimulator({ os, setOs }: { os: OS; setOs: (o: OS) =
       mistakes: out.kind === 'ok' ? r.mistakes : r.mistakes + 1,
     }));
   };
-  const reset = () => update(() => FRESH);
+  const reset = () => {
+    pauseAutoplay();
+    update(() => FRESH);
+  };
+  const switchOs = (o: OS) => {
+    pauseAutoplay();
+    setOs(o);
+  };
 
   const lines: TermLine[] = [
-    { t: 'out', text: "(You're in the ai-course folder. Python is installed and your key is copied.)", tone: 'dim' },
+    { t: 'out', text: "(You're in the ai-course folder. Python is installed, and your key from the website is ready to paste.)", tone: 'dim' },
     ...history.flatMap((e): TermLine[] => [{ t: 'cmd', cmd: e.cmd, venv: e.venv }, ...e.lines]),
-    ...(finished ? [] : [{ t: 'idle' as const, venv: s.active }]),
+    { t: 'idle', venv: s.active },
   ];
 
   const hintColor = !last ? '#ffffff' : last.kind === 'ok' ? GREEN : last.kind === 'warn' ? GOLD : RED;
 
   return (
-    <div className="absolute inset-0 flex gap-4 p-4 text-white" onKeyDown={keepSpaceForButtons}>
+    <div className="absolute inset-0 flex gap-4 p-4 text-white">
       {/* ---------- controls ---------- */}
       <div className="w-[330px] shrink-0 min-h-0 flex flex-col gap-2.5">
         <div className="text-[13px] font-bold uppercase tracking-wide" style={{ color: CYAN }}>
@@ -216,26 +248,30 @@ export default function SetupSimulator({ os, setOs }: { os: OS; setOs: (o: OS) =
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="text-[13px] text-white/60">Pick the next command:</span>
-          <OsToggle os={os} setOs={setOs} />
+          <OsToggle os={os} setOs={switchOs} />
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1.5 pr-1" style={{ scrollbarWidth: 'thin' }}>
           {CHIP_ORDER.map((id) => {
             const isDone = s.done.includes(id);
+            // A finished workshop leaves only the optional checks to try.
+            const locked = isDone || (finished && REQUIRED.includes(id));
             return (
               <button
                 key={id}
-                onClick={() => pick(id)}
-                disabled={isDone || finished}
-                className="shrink-0 text-left rounded-lg border px-3 py-1.5 transition-colors disabled:cursor-default hover:bg-white/[0.08]"
+                // aria-disabled (not disabled) keeps keyboard focus on the chip after it runs
+                onClick={() => !locked && pick(id)}
+                aria-disabled={locked}
+                className={`shrink-0 text-left rounded-lg border px-3 py-1.5 transition-colors ${locked ? 'cursor-default' : 'hover:bg-white/[0.08]'}`}
                 style={
                   isDone
                     ? { borderColor: `${GREEN}50`, backgroundColor: `${GREEN}10` }
-                    : { borderColor: 'rgba(255,255,255,0.16)', backgroundColor: 'rgba(255,255,255,0.04)', opacity: finished ? 0.5 : 1 }
+                    : { borderColor: 'rgba(255,255,255,0.16)', backgroundColor: 'rgba(255,255,255,0.04)', opacity: locked ? 0.5 : 1 }
                 }
               >
                 <div className="font-mono text-[14px] flex items-center gap-2" style={{ color: isDone ? '#bbf7d0' : '#ffffff' }}>
                   <span className="w-4 shrink-0 text-center">{isDone ? '✓' : '›'}</span>
                   {cmdText(id, os)}
+                  {!REQUIRED.includes(id) && <span className="ml-auto pl-2 font-sans text-[13px] text-white/45">optional</span>}
                 </div>
                 {CHIP_NOTE[id] && <div className="text-[13px] text-white/50 pl-6">{CHIP_NOTE[id]}</div>}
               </button>
@@ -244,7 +280,7 @@ export default function SetupSimulator({ os, setOs }: { os: OS; setOs: (o: OS) =
         </div>
         <div className="shrink-0 flex items-center justify-between text-[13px] text-white/55">
           <span>
-            Steps done: <span className="text-white font-semibold">{s.done.length}/7</span> · Oops: <span className="text-white font-semibold">{mistakes}</span>
+            Steps done: <span className="text-white font-semibold">{requiredDone}/{REQUIRED.length}</span> · Oops: <span className="text-white font-semibold">{mistakes}</span>
           </span>
           <button onClick={reset} className="px-3 py-1 rounded-md bg-white/[0.06] hover:bg-white/10 text-white/75">
             ↺ Start over
@@ -277,14 +313,14 @@ export default function SetupSimulator({ os, setOs }: { os: OS; setOs: (o: OS) =
                   {last.hint}
                 </div>
                 {last.fix && (
-                  <div className="text-[14px] text-white/85 mt-0.5">
+                  <div className="text-[14px] text-white/85 mt-1 leading-relaxed">
                     <span style={{ color: GREEN }}>Fix: </span>
-                    <span className="font-mono text-[13px]">{last.fix}</span>
+                    <FixText parts={last.fix} />
                   </div>
                 )}
                 {finished && (
                   <div className="text-[14px] text-white/80 mt-0.5">
-                    🎉 Workshop ready in {s.done.length} steps{mistakes ? `, with ${mistakes} oops fixed along the way` : ' with no mistakes'}. Try the other computer type, or start over.
+                    🎉 Workshop ready{mistakes ? `, with ${mistakes} oops fixed along the way` : ' with no mistakes'}. Try the other computer type, or start over.
                   </div>
                 )}
               </>

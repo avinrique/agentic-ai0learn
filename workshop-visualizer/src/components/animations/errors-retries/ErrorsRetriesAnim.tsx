@@ -303,7 +303,12 @@ function CrashScene({ kind }: { kind: ErrorKind }) {
   );
 }
 
+/** Seconds between Python checking one except net and the next. */
+const NET_BEAT = 0.35;
+
 function NetsScene({ caught, stepKey }: { caught?: ErrorKind; stepKey: number }) {
+  const hitIndex = caught ? NET_ORDER.indexOf(caught) : -1;
+  const dropDelay = 0.15 + NET_BEAT * Math.max(0, hitIndex);
   return (
     <div className="w-full flex flex-col items-center">
       {/* The try block */}
@@ -316,61 +321,81 @@ function NetsScene({ caught, stepKey }: { caught?: ErrorKind; stepKey: number })
         <span className="font-mono text-[15px] text-white/85">client.chat.completions.create(...)</span>
       </div>
 
-      {/* The nets, in the same order as the except blocks */}
+      {/* The nets, in the same order as the except blocks. Python tries them left to
+          right: nets before the matching one get a quick "no match", then the ball drops. */}
       <div className="w-full flex justify-center gap-4 mt-24">
         {NET_ORDER.map((k, i) => {
           const hit = caught === k;
+          const passed = hitIndex > i;
           const dim = !!caught && !hit;
           return (
-            <motion.div
-              key={k}
-              className="relative w-[230px] flex flex-col items-center"
-              animate={{ opacity: dim ? 0.3 : 1 }}
-              transition={{ duration: 0.4 }}
-            >
+            <div key={k} className="relative w-[230px] flex flex-col items-center">
+              {passed && (
+                <motion.div
+                  key={`pass-${stepKey}`}
+                  initial={{ scale: 0.6, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.15 + NET_BEAT * i }}
+                  className="absolute -top-11 z-10 text-[15px] font-bold px-3 py-0.5 rounded-full whitespace-nowrap"
+                  style={{ color: 'rgba(255,255,255,0.8)', border: '1.5px solid rgba(255,255,255,0.35)', background: '#0f0f2a' }}
+                >
+                  ✗ no match
+                </motion.div>
+              )}
               {hit && (
                 <motion.div
                   key={`ball-${stepKey}`}
                   initial={{ y: -150, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  transition={{ type: 'spring', damping: 11, stiffness: 120 }}
+                  transition={{ type: 'spring', damping: 11, stiffness: 120, delay: dropDelay }}
                   className="absolute top-2 z-10 w-[54px] h-[54px] rounded-full flex items-center justify-center text-[15px] font-bold shadow-xl"
-                  style={{ background: KIND[k].color, color: '#0a0a1a' }}
+                  style={
+                    k === 'offline'
+                      ? { background: '#0f0f2a', border: `3px solid ${BLUE}`, fontSize: 24 }
+                      : { background: KIND[k].color, color: '#0a0a1a' }
+                  }
                 >
                   {k === 'offline' ? '📡' : KIND[k].code}
                 </motion.div>
               )}
               <motion.div
-                className="w-full"
-                animate={hit ? { y: [0, 10, 0] } : { y: 0 }}
-                transition={hit ? { delay: 0.35, duration: 0.5 } : undefined}
-                style={{ filter: hit ? `drop-shadow(0 0 10px ${KIND[k].color})` : 'none' }}
+                className="w-full flex flex-col items-center"
+                initial={false}
+                animate={{ opacity: dim ? 0.3 : 1 }}
+                transition={{ duration: 0.4 }}
               >
-                <Net kind={k} color={KIND[k].color} />
+                <motion.div
+                  className="w-full"
+                  animate={hit ? { y: [0, 10, 0] } : { y: 0 }}
+                  transition={hit ? { delay: dropDelay + 0.2, duration: 0.5 } : undefined}
+                  style={{ filter: hit ? `drop-shadow(0 0 10px ${KIND[k].color})` : 'none' }}
+                >
+                  <Net kind={k} color={KIND[k].color} />
+                </motion.div>
+                <div className="mt-2 flex flex-col items-center gap-0.5 text-center">
+                  <span className="text-[13px] text-white/50 font-mono">
+                    {i + 1}. except
+                  </span>
+                  <span className="font-mono text-[15px] font-bold" style={{ color: KIND[k].color }}>
+                    {KIND[k].cls}
+                  </span>
+                  <span className="text-[15px] text-white/80">
+                    {KIND[k].icon} {KIND[k].label}
+                  </span>
+                </div>
               </motion.div>
-              <div className="mt-2 flex flex-col items-center gap-0.5 text-center">
-                <span className="text-[13px] text-white/50 font-mono">
-                  {i + 1}. except
-                </span>
-                <span className="font-mono text-[15px] font-bold" style={{ color: KIND[k].color }}>
-                  {KIND[k].cls}
-                </span>
-                <span className="text-[15px] text-white/80">
-                  {KIND[k].icon} {KIND[k].label}
-                </span>
-              </div>
               {hit && (
                 <motion.div
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6 }}
+                  transition={{ delay: dropDelay + 0.45 }}
                   className="mt-3 text-[16px] font-bold px-3 py-1 rounded-full"
                   style={{ color: GREEN, background: `${GREEN}1a`, border: `1.5px solid ${GREEN}` }}
                 >
                   ✓ caught, no crash
                 </motion.div>
               )}
-            </motion.div>
+            </div>
           );
         })}
       </div>
@@ -378,37 +403,51 @@ function NetsScene({ caught, stepKey }: { caught?: ErrorKind; stepKey: number })
   );
 }
 
-/** Where the robot stands on the road (percent of the road width). */
-const ROBOT_AT = { start: 3, server: 50, gap: 20 };
+/** The robot is ROBOT_W wide; the server box is SERVER_W wide, pinned 2% from the right. */
+const ROBOT_W = 150;
+const SERVER_W = 210;
+/**
+ * Where the robot stands on the road. All three use the same calc() shape so
+ * framer-motion can slide between them: "at the server" sits just left of the
+ * server box, and "at the gap" stops right before the cut in the road (36%).
+ */
+const ROBOT_AT = {
+  start: 'calc(1% + 0px)',
+  gap: `calc(35% + -${ROBOT_W}px)`,
+  server: `calc(98% + -${SERVER_W + ROBOT_W + 12}px)`,
+};
 
-function RoadScene({ trig, attempt }: { trig: string; attempt: number }) {
+function RoadScene({ trig, nextTrig }: { trig: string; nextTrig: string }) {
   const outcome = OUTCOME_OF[trig];
   const offline = trig === 'offline';
-  const target = offline ? ROBOT_AT.gap : ROBOT_AT.server;
+  // Look one step ahead: with no internet the robot walks up to the cut and stops there.
+  const blocked = offline || (trig === 'send' && nextTrig === 'offline');
+  const target = blocked ? ROBOT_AT.gap : ROBOT_AT.server;
   const from = trig === 'send' ? ROBOT_AT.start : target;
-  const to = trig === 'send' ? (attempt > 0 ? ROBOT_AT.server : target) : target;
   const mood: BotMood = trig === 'send' ? 'working' : outcome === 'ok' ? 'proud' : 'confused';
   const sign = outcome && outcome !== 'offline' ? KIND[outcome] : null;
 
   return (
     <div className="relative w-full h-[420px]">
       {/* Road (cut in the middle when there is no internet) */}
-      {offline ? (
+      {blocked ? (
         <>
           <div className="absolute bottom-[40px] left-[1%] w-[35%] h-[8px] rounded-full bg-white/15" />
           <div className="absolute bottom-[40px] left-[52%] right-[1%] h-[8px] rounded-full bg-white/15" />
-          <motion.div
-            initial={{ scale: 0.4, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.9 }}
-            className="absolute bottom-[64px] left-[36%] w-[16%] flex flex-col items-center gap-1"
-          >
-            <div className="relative">
-              <span className="text-[44px] leading-none">📡</span>
-              <span className="absolute -right-3 -bottom-1 text-[26px] font-black leading-none" style={{ color: RED }}>✖</span>
-            </div>
-            <span className="text-[15px] font-bold whitespace-nowrap" style={{ color: BLUE }}>no internet</span>
-          </motion.div>
+          {offline && (
+            <motion.div
+              initial={{ scale: 0.4, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="absolute bottom-[64px] left-[36%] w-[16%] flex flex-col items-center gap-1"
+            >
+              <div className="relative">
+                <span className="text-[44px] leading-none">📡</span>
+                <span className="absolute -right-3 -bottom-1 text-[26px] font-black leading-none" style={{ color: RED }}>✖</span>
+              </div>
+              <span className="text-[15px] font-bold whitespace-nowrap" style={{ color: BLUE }}>no internet</span>
+            </motion.div>
+          )}
         </>
       ) : (
         <div className="absolute bottom-[40px] left-[1%] right-[1%] h-[8px] rounded-full bg-white/15" />
@@ -416,8 +455,8 @@ function RoadScene({ trig, attempt }: { trig: string; attempt: number }) {
 
       {/* The OpenAI server */}
       <div
-        className="absolute bottom-[48px] right-[2%] w-[210px] h-[250px] rounded-2xl border-2 flex flex-col items-center justify-center gap-2"
-        style={{ borderColor: 'rgba(255,255,255,0.25)', background: '#141432', opacity: offline ? 0.5 : 1 }}
+        className="absolute bottom-[48px] right-[2%] h-[250px] rounded-2xl border-2 flex flex-col items-center justify-center gap-2"
+        style={{ width: SERVER_W, borderColor: 'rgba(255,255,255,0.25)', background: '#141432', opacity: offline ? 0.5 : 1 }}
       >
         <span className="text-[60px] leading-none">🖥️</span>
         <span className="text-[17px] font-semibold text-white/85">OpenAI server</span>
@@ -445,8 +484,9 @@ function RoadScene({ trig, attempt }: { trig: string; attempt: number }) {
       {/* The delivery robot with our question (or the reply) */}
       <motion.div
         className="absolute bottom-[48px] flex flex-col items-center gap-1"
-        initial={{ left: `${from}%` }}
-        animate={{ left: `${to}%` }}
+        style={{ width: ROBOT_W }}
+        initial={{ left: from }}
+        animate={{ left: target }}
         transition={{ duration: 1.3, ease: 'easeInOut' }}
       >
         <div
@@ -601,12 +641,12 @@ function TimerScene({ trig, wait, attempt, printed, stepKey }: { trig: string; w
 
       {/* The doubling ladder */}
       <div className="flex items-center gap-2 text-[15px] font-mono">
-        {ladder.map((s, i) => (
+        {ladder.map((s) => (
           <div key={s} className="flex items-center gap-2">
             <span
               className="px-2.5 py-0.5 rounded-full"
               style={{
-                color: s === wait ? '#0a0a1a' : s < wait ? AMBER : 'rgba(255,255,255,0.35)',
+                color: s === wait ? '#0a0a1a' : s < wait ? AMBER : 'rgba(255,255,255,0.5)',
                 background: s === wait ? AMBER : 'transparent',
                 border: `1.5px solid ${s <= wait ? AMBER : 'rgba(255,255,255,0.2)'}`,
                 fontWeight: s === wait ? 700 : 400,
@@ -857,7 +897,7 @@ export default function ErrorsRetriesAnim() {
     case 'rejected':
     case 'offline':
     case 'reply':
-      scene = <RoadScene key={`road-${attempt}`} trig={trig} attempt={attempt} nextTrig={steps[index + 1]?.animationTrigger ?? ''} />;
+      scene = <RoadScene key={`road-${attempt}`} trig={trig} nextTrig={steps[index + 1]?.animationTrigger ?? ''} />;
       break;
     case 'quota-check':
       scene = <QuotaScene />;

@@ -4,10 +4,10 @@ import { testingAgentsCode } from '@/data/code-snippets/testing-agents';
 // ─────────────────────────────────────────────────────────────────────────────
 // Lesson 25 – Code: Testing Your Agent (a tiny test suite for the calculator agent)
 //
-// All three variants show the SAME code. Only what the model (or the add tool)
-// does differs, so each variant is a pretend "what if the agent misbehaved?" run
-// and the step text says so. Steps name a unique piece of code (`at`) instead of
-// a raw line number, and variables carry forward automatically.
+// Variant 2 ("Tool not used") shows the same code and pretends the model skips its
+// tool once. Variant 3 ("buggy tool") really changes the code: add does a - b (the
+// code panel swaps `return a + b` for `return a - b`). Steps name a unique piece of
+// code (`at`) instead of a raw line number, and variables carry forward automatically.
 // ─────────────────────────────────────────────────────────────────────────────
 interface StepDef {
   at: string; // a substring that appears on exactly one line of the code
@@ -103,7 +103,7 @@ export const TESTING_STORIES: Record<string, TestingStory> = {
       FRANCE,
     ],
   },
-  // Pretend bug: add is miswired to subtract (a - b), and the AI trusts it: 1/3.
+  // Bug: add does a - b (shown in the code), and the AI trusts it: 1/3.
   variant3: {
     kind: 'wrong',
     runs: [
@@ -129,10 +129,12 @@ const L = {
   top: '# part3/testing_agents.py',
   client: 'client = OpenAI()',
   tools: 'tools = [{',
+  addBody: 'return a + b',
   askDef: 'def ask_agent(question):',
   create: 'tools=tools, temperature=0',
   noTool: 'return None, message.content',
   runAdd: 'result = add(arguments["a"], arguments["b"])',
+  final: 'final = client.chat.completions.create(',
   retTool: 'return tool_call.function.name',
   tests: 'tests = [',
   france: '"expect_tool": None',
@@ -144,8 +146,8 @@ const L = {
   answerOk: 'answer_ok = test["must_contain"] in answer',
   printPass: 'print("✅ PASS")',
   count: 'passed += 1',
-  failTool: 'print(f"❌ FAIL: expected tool',
-  failAnswer: 'print(f"❌ FAIL: the answer should contain',
+  failTool: 'print("❌ FAIL: expected tool',
+  failAnswer: 'print("❌ FAIL: the answer should contain',
   score: 'print(f"\\nScore:',
 };
 
@@ -153,7 +155,7 @@ function testingSteps(story: TestingStory): TraceStep[] {
   const { kind, runs } = story;
   const variantNote =
     kind === 'notool' ? ' (This run pretends the agent skips its tool once.)'
-    : kind === 'wrong' ? ' (This run pretends the add tool has a bug.)'
+    : kind === 'wrong' ? ' (In this run, the add tool has a bug.)'
     : '';
 
   const defs: StepDef[] = [
@@ -241,12 +243,19 @@ function testingSteps(story: TestingStory): TraceStep[] {
       } else {
         defs.push(
           {
-            at: L.runAdd,
+            at: bug ? L.addBody : L.runAdd,
             trig: 'tool-run',
             set: { result: String(r.toolResult) },
             exp: bug
-              ? `Pretend bug: imagine add says a - b instead of a + b (the code shown is unchanged). So add(45, 13) returns ${r.toolResult}, not 58.`
+              ? `The AI asked for add(45, 13). But look at add: it has a bug, a - b instead of a + b! So result = ${r.toolResult}, not 58.`
               : `The AI asked for add with a=45 and b=13. Our code runs the real function: result = ${r.toolResult}.`,
+          },
+          {
+            at: L.final,
+            trig: 'tool-reply',
+            exp: bug
+              ? `The ${r.toolResult} goes back to the AI in a second call. The AI trusts its tool, so its answer says ${r.toolResult} too.`
+              : `The result, ${r.toolResult}, goes back to the AI as a "tool" message. A second call lets the AI write its final answer.`,
           },
           {
             at: L.retTool,
@@ -254,8 +263,8 @@ function testingSteps(story: TestingStory): TraceStep[] {
             drop: ['result'],
             set: { tool_used: pyTool(r.toolUsed), answer: str(r.answer) },
             exp: bug
-              ? `The AI trusts its tool and writes "${r.answer}" ask_agent returns the tool it used ("add") and that wrong answer.`
-              : 'The result goes back to the AI, which writes its final answer. ask_agent returns two things: the tool it used ("add") and the answer.',
+              ? `ask_agent returns the tool it used ("add") and that wrong answer: "${r.answer}"`
+              : `ask_agent returns two things: the tool it used ("add") and the answer, "${r.answer}"`,
           },
         );
       }
@@ -266,20 +275,30 @@ function testingSteps(story: TestingStory): TraceStep[] {
         exp: "Print the question and the agent's answer so we can read them.",
       });
     } else {
-      // Tests 2 and 3: the same path, shown in one step.
-      const noToolPath = r.toolUsed === null;
-      defs.push({
-        at: noToolPath ? L.noTool : L.call,
-        trig: 'returned',
-        set: { tool_used: pyTool(r.toolUsed), answer: str(r.answer) },
-        exp: noToolPath
-          ? `The AI answers "${r.answer}" with no tool call, so ask_agent takes this early return: None for the tool, plus the answer.`
-          : bug
-            ? `The pretend bug strikes again: add(250, 175) returns ${r.toolResult}, so the agent answers "${r.answer}"`
+      // Tests 2 and 3: the same path, shown quickly.
+      if (r.toolUsed === null) {
+        defs.push(
+          {
+            at: L.noTool,
+            trig: 'returned',
+            set: { tool_used: pyTool(r.toolUsed), answer: str(r.answer) },
+            exp: `The AI answers "${r.answer}" with no tool call, so ask_agent stops right here and returns None for the tool, plus the answer.`,
+          },
+          { at: L.printQA, trig: 'print', out: qa, exp: 'We print the question and the answer, like for every test.' },
+        );
+      } else {
+        defs.push({
+          at: L.printQA,
+          trig: 'print',
+          out: qa,
+          set: { tool_used: pyTool(r.toolUsed), answer: str(r.answer) },
+          exp: bug
+            ? `The bug strikes again: add(250, 175) returns ${r.toolResult}, so we print the answer "${r.answer}"`
             : kind === 'notool'
-              ? `This time the agent does use its tool: add(250, 175) gives ${r.toolResult}, and it answers "${r.answer}"`
-              : `Same path as test 1: the agent calls add(250, 175), gets ${r.toolResult}, and answers "${r.answer}"`,
-      });
+              ? `This time the agent does use its tool: add(250, 175) gives ${r.toolResult}. We print its answer, "${r.answer}"`
+              : `Same path as test 1: the agent calls add(250, 175), gets ${r.toolResult}, and we print its answer, "${r.answer}"`,
+        });
+      }
     }
 
     // Check 1: behaviour (the right tool, or none).
@@ -289,13 +308,12 @@ function testingSteps(story: TestingStory): TraceStep[] {
       at: L.toolOk,
       trig: 'check-tool',
       set: { tool_ok: py(toolOk) },
-      out: first ? undefined : qa,
       exp: first
         ? toolOk
           ? `Check 1, behaviour: did it use the right tool? Expected add, and it used add. tool_ok is True ✓${bug ? ' So far so good...' : ''}`
           : 'Check 1, behaviour: did it use the right tool? Expected add, but it used None. tool_ok is False ✗ It skipped its calculator.'
         : i === 1
-          ? `The Q and A are printed. Check 1: expected add, and it used ${usedName} ${toolOk ? '✓' : '✗'}`
+          ? `Check 1: expected add, and it used ${usedName} ${toolOk ? '✓' : '✗'}`
           : `Check 1: expected ${expectName}, and it used ${usedName} ✓ It rightly left the calculator alone.`,
     });
 
@@ -325,7 +343,7 @@ function testingSteps(story: TestingStory): TraceStep[] {
         );
       } else {
         defs.push({
-          at: L.count,
+          at: L.printPass,
           trig: 'pass',
           out: '✅ PASS',
           set: { passed: String(passed) },
@@ -343,7 +361,7 @@ function testingSteps(story: TestingStory): TraceStep[] {
         {
           at: L.failTool,
           trig: 'fail-why',
-          exp: 'Why fail a right answer? Without the tool, the AI is guessing. It got lucky on 45 + 13, but on bigger sums it can slip. Right answer AND right tool = pass.',
+          exp: 'Why fail a right answer? Without the tool, the AI did the sum in its head. Right this time, but not guaranteed, and big sums can slip. Right answer AND right tool = pass.',
         },
       );
     } else {
@@ -403,10 +421,10 @@ function testingSteps(story: TestingStory): TraceStep[] {
 
 export const testingAgentsTrace = testingSteps(TESTING_STORIES.default);
 
-// The variants differ in what the model / tool does, not in the code, so inputValue
-// is a token that never appears in the code (the code panel stays unchanged).
+// The code panel swaps the default inputValue for the active one. Variant 2 only
+// changes what the model does, so its code stays the same; variant 3 shows the bug.
 export const testingAgentsVariants: TraceVariant[] = [
-  { id: 'default', label: 'All pass (3/3)', inputValue: '<<testing-agents:all-pass>>', steps: testingAgentsTrace },
-  { id: 'variant2', label: 'Tool not used', inputValue: '<<testing-agents:no-tool>>', steps: testingSteps(TESTING_STORIES.variant2) },
-  { id: 'variant3', label: 'Wrong answer (buggy tool)', inputValue: '<<testing-agents:wrong>>', steps: testingSteps(TESTING_STORIES.variant3) },
+  { id: 'default', label: 'All pass (3/3)', inputValue: 'return a + b', steps: testingAgentsTrace },
+  { id: 'variant2', label: 'Tool not used', inputValue: 'return a + b', steps: testingSteps(TESTING_STORIES.variant2) },
+  { id: 'variant3', label: 'Wrong answer (buggy tool)', inputValue: 'return a - b', steps: testingSteps(TESTING_STORIES.variant3) },
 ];

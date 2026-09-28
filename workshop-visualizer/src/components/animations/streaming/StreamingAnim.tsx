@@ -88,7 +88,7 @@ const LAPTOP_H: Record<string, number> = {
   fast: 330,
   last: 250,
   done: 370,
-  recap: 150,
+  recap: 72, // just the full_story bar: the terminal is hidden on the recap
 };
 
 // Height the middle row (pipe + focal card) needs per step. On short panels the laptop
@@ -272,7 +272,7 @@ export default function StreamingAnim() {
   const serverH = body.h > 0 && body.h < 500 ? 48 : 58;
   const lapMax = LAPTOP_H[trig] ?? 240;
   // Floors: the terminal keeps at least two lines before full_story exists, and one line after.
-  const lapMin = rank < RANK.init ? 120 : 146;
+  const lapMin = trig === 'recap' ? lapMax : rank < RANK.init ? 120 : 146;
   const laptopH =
     body.h > 0 ? Math.round(Math.min(lapMax, Math.max(lapMin, body.h - serverH - (MID_NEED[trig] ?? 150)))) : lapMax;
   const midH = body.h > 0 ? body.h - serverH - laptopH : 300;
@@ -391,7 +391,9 @@ export default function StreamingAnim() {
   const writing = flowing ? flowWritten < flowPieces.length : rank >= RANK.sent && rank < RANK.last;
   const serverDone = rank >= RANK.last || (flowing && !writing);
   const serverState = writing ? 'writing' : serverDone ? 'done' : 'waiting';
-  const serverHot = trig === 'intro' || trig === 'fast' || trig === 'chunk1';
+  // Only the first chunk's step picks out the server's newest piece; in the fast-forward the
+  // tiles and the terminal lead, and once it's done the bar just says "✓ done".
+  const serverHot = trig === 'chunk1';
   const [srvTextRef, srvText] = useSize<HTMLDivElement>();
   const srvChars = srvText.w > 0 ? fitChars(srvText.w, 15) : 40;
   const curPiece = written > 0 ? pieces[written - 1].replace(/\n/g, '↵') : '';
@@ -417,7 +419,7 @@ export default function StreamingAnim() {
           <motion.div
             animate={{
               opacity: rank >= RANK.request || trig === 'intro' ? 1 : 0.45,
-              borderColor: writing && (trig === 'fast' || trig === 'intro') ? GOLD : 'rgba(74,222,128,0.45)',
+              borderColor: 'rgba(74,222,128,0.45)',
             }}
             style={{ height: serverH }}
             className="shrink-0 rounded-2xl border-2 bg-accent-green/5 px-4 flex items-center gap-3"
@@ -428,7 +430,7 @@ export default function StreamingAnim() {
               <span className="rounded-md bg-accent-blue/10 px-2 py-0.5 font-mono text-[13px] text-accent-blue/80">gpt-4o-mini</span>
             )}
             <div ref={srvTextRef} className="flex-1 min-w-0 font-mono text-[15px] whitespace-pre overflow-hidden">
-              {written > 0 ? (
+              {written > 0 && !serverDone ? (
                 <>
                   <span className="text-white/60">{prevText}</span>
                   <span className={serverHot ? 'rounded-sm bg-accent-gold/40 text-white' : 'text-white/60'}>{curPiece}</span>
@@ -489,71 +491,74 @@ export default function StreamingAnim() {
             transition={spring}
             className="shrink-0 rounded-2xl border-2 border-accent-blue/40 bg-accent-blue/5 p-2.5 flex flex-col gap-2 overflow-hidden"
           >
-            {/* Terminal */}
-            <motion.div
-              animate={{ boxShadow: termFocus ? `0 0 0 1px ${BLUE}88, 0 0 18px ${BLUE}33` : '0 0 0 0 rgba(0,0,0,0)' }}
-              className="flex-1 min-h-0 rounded-xl bg-black/60 flex flex-col overflow-hidden"
-            >
-              <div className="flex items-center gap-2 px-3 py-1.5 shrink-0 whitespace-nowrap">
-                <LaptopIcon />
-                <span className="text-[14px] font-semibold text-accent-blue">Your laptop</span>
-                {!(narrow && termTag) && <span className="text-[13px] text-white/55">· terminal</span>}
-                {rank >= RANK.status && (
-                  <div className="flex items-center gap-1.5 ml-2">
-                    <MiniChip color={PURPLE}>openai</MiniChip>
-                    <MiniChip color={BLUE}>
-                      client <KeyIcon color={GOLD} />
-                    </MiniChip>
-                  </div>
-                )}
-                {termTag && (
-                  <motion.span
-                    key={`tag-${resetKey}`}
-                    initial={{ opacity: 0, x: 8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ ...spring, delay: 0.5 }}
-                    className="ml-auto rounded-md bg-accent-gold/15 px-2.5 py-1 text-[14px] font-semibold text-accent-gold"
+            {/* Terminal (hidden on the recap, where the full_story bar alone sums up the result) */}
+            {trig !== 'recap' && (
+              <motion.div
+                animate={{ boxShadow: termFocus ? `0 0 0 1px ${BLUE}88, 0 0 18px ${BLUE}33` : '0 0 0 0 rgba(0,0,0,0)' }}
+                className="flex-1 min-h-0 rounded-xl bg-black/60 flex flex-col overflow-hidden"
+              >
+                <div className="flex items-center gap-2 px-3 py-1.5 shrink-0 whitespace-nowrap">
+                  <LaptopIcon />
+                  <span className="text-[14px] font-semibold text-accent-blue">Your laptop</span>
+                  {!(narrow && termTag) && <span className="text-[13px] text-white/55">· terminal</span>}
+                  {rank >= RANK.status && (
+                    <div className="flex items-center gap-1.5 ml-2">
+                      <MiniChip color={PURPLE}>openai</MiniChip>
+                      <MiniChip color={BLUE}>
+                        client <KeyIcon color={GOLD} />
+                      </MiniChip>
+                    </div>
+                  )}
+                  {termTag && (
+                    <motion.span
+                      key={`tag-${resetKey}`}
+                      initial={{ opacity: 0, x: 8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ ...spring, delay: 0.5 }}
+                      className="ml-auto rounded-md bg-accent-gold/15 px-2.5 py-1 text-[14px] font-semibold text-accent-gold"
+                    >
+                      {termTag}
+                    </motion.span>
+                  )}
+                </div>
+                <div ref={termAreaRef} className="flex-1 min-h-0 px-4 pb-2.5 flex flex-col justify-end overflow-hidden">
+                  <div
+                    ref={termOuter}
+                    className="shrink-0 overflow-hidden flex flex-col justify-end font-mono"
+                    style={{
+                      height: termWindowH,
+                      fontSize: termFont,
+                      lineHeight: `${lineH}px`,
+                      // Fade the top line when older lines are hidden above it (not when it's the only line).
+                      ...(termSpills && (termWindowH ?? 0) >= 2 * lineH ? { maskImage: topFade, WebkitMaskImage: topFade } : {}),
+                    }}
                   >
-                    {termTag}
-                  </motion.span>
-                )}
-              </div>
-              <div ref={termAreaRef} className="flex-1 min-h-0 px-4 pb-2.5 flex flex-col justify-end overflow-hidden">
-                <div
-                  ref={termOuter}
-                  className="shrink-0 overflow-hidden flex flex-col justify-end font-mono"
-                  style={{
-                    height: termWindowH,
-                    fontSize: termFont,
-                    lineHeight: `${lineH}px`,
-                    // Fade the top line when older lines are hidden above it (not when it's the only line).
-                    ...(termSpills && (termWindowH ?? 0) >= 2 * lineH ? { maskImage: topFade, WebkitMaskImage: topFade } : {}),
-                  }}
-                >
-                  <div ref={termInner}>
-                    <div className="text-white/40">$ python run.py part1/streaming.py</div>
-                    {showStatus && (
-                      <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="text-white/75">
-                        {STATUS_LINE}
-                      </motion.div>
-                    )}
-                    {(printed > 0 || streaming) && (
-                      <div className="whitespace-pre-wrap text-accent-green">
-                        {storyShown}
-                        {streaming && <span className="ml-0.5 inline-block h-4 w-2 translate-y-0.5 bg-white/60 animate-pulse" />}
-                      </div>
-                    )}
-                    {rank >= RANK.done && (
-                      <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="whitespace-pre-wrap text-white/85">
-                        {doneLine(full.length)}
-                      </motion.div>
-                    )}
-                    {rank >= RANK.done && <div className="text-white/40">$ ▌</div>}
-                    {rank < RANK.status && trig !== 'intro' && <span className="inline-block h-4 w-2 bg-white/40 animate-pulse" />}
+                    <div ref={termInner}>
+                      <div className="text-white/40">$ python run.py part1/streaming.py</div>
+                      {showStatus && (
+                        <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="text-white/75">
+                          {STATUS_LINE}
+                        </motion.div>
+                      )}
+                      {/* No cursor-only line before the first print, so a one-line terminal still shows the status line. */}
+                      {printed > 0 && (
+                        <div className="whitespace-pre-wrap text-accent-green">
+                          {storyShown}
+                          {streaming && <span className="ml-0.5 inline-block h-4 w-2 translate-y-0.5 bg-white/60 animate-pulse" />}
+                        </div>
+                      )}
+                      {rank >= RANK.done && (
+                        <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="whitespace-pre-wrap text-white/85">
+                          {doneLine(full.length)}
+                        </motion.div>
+                      )}
+                      {rank >= RANK.done && <div className="text-white/40">$ ▌</div>}
+                      {rank < RANK.status && trig !== 'intro' && <span className="inline-block h-4 w-2 bg-white/40 animate-pulse" />}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
 
             {/* full_story */}
             {rank >= RANK.init && (

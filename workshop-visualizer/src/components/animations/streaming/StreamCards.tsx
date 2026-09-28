@@ -90,7 +90,7 @@ export function RequestCard({ prompt, showStream }: { prompt: string; showStream
       <motion.div animate={{ opacity: showStream ? 0.45 : 1 }} className="flex items-start gap-3">
         <span className="w-[84px] shrink-0 pt-1 font-mono text-[14px] text-white/50">messages</span>
         <div className="rounded-2xl rounded-bl-sm bg-accent-purple/10 border border-accent-purple/30 px-3 py-1.5 min-w-0">
-          <span className="mr-2 rounded bg-accent-blue px-1.5 font-mono text-[13px] font-bold text-navy-900">user</span>
+          <span className="mr-2 rounded bg-accent-blue px-1.5 font-mono text-[14px] font-bold text-navy-900">user</span>
           <span className="text-[15px] leading-snug text-white/90">{prompt}</span>
         </div>
       </motion.div>
@@ -136,7 +136,7 @@ function PieceValue({ piece, showSpace }: { piece: string; showSpace: boolean })
     <span className="relative inline-flex items-center rounded-lg border-2 border-accent-green bg-accent-green/15 px-3 py-2 font-mono text-[18px] leading-none text-emerald-100 whitespace-pre">
       &quot;
       <span className="relative inline-block w-[0.62em] self-stretch rounded-sm bg-accent-gold/45">
-        <span className="absolute left-1/2 top-full mt-2.5 -translate-x-1/2 whitespace-nowrap font-sans text-[13px] text-accent-gold">
+        <span className="absolute left-1/2 top-full mt-2.5 -translate-x-1/2 whitespace-nowrap font-sans text-[14px] text-accent-gold">
           ↑ space
         </span>
       </span>
@@ -210,11 +210,11 @@ export function ChunkCard({ piece, kind }: { piece: string | null; kind: 'first'
         {kind === 'first' && (
           <div className="flex flex-col gap-1">
             <div className="flex items-baseline gap-3">
-              <span className="w-[92px] shrink-0 text-[13px] text-white/60">last lesson</span>
+              <span className="w-[92px] shrink-0 text-[15px] text-white/60">last lesson</span>
               <Path segs={['response', '.choices[0]', '.message', '.content']} hot=".message" dim />
             </div>
             <div className="flex items-baseline gap-3">
-              <span className="w-[92px] shrink-0 text-[13px] text-accent-green">now</span>
+              <span className="w-[92px] shrink-0 text-[15px] text-accent-green">now</span>
               <Path segs={['chunk', '.choices[0]', '.delta', '.content']} hot=".delta" />
             </div>
           </div>
@@ -225,7 +225,7 @@ export function ChunkCard({ piece, kind }: { piece: string | null; kind: 'first'
   );
 }
 
-/** if piece: → the piece has text → go inside (and, quietly, the empty first chunk that was skipped). */
+/** if piece: → the piece has text → go inside (and, below, the empty very first chunk that was skipped before it). */
 export function CheckCard({ piece }: { piece: string }) {
   return (
     <Pop k={`check-${piece}`}>
@@ -258,7 +258,7 @@ export function CheckCard({ piece }: { piece: string }) {
           transition={{ delay: 1.2 }}
           className="flex items-center gap-3 self-stretch border-t border-white/10 pt-3 text-[14px] text-white/55"
         >
-          <span>first chunk</span>
+          <span>very first chunk</span>
           <Tile piece="" />
           <span className="text-white/35">→</span>
           <span style={{ color: RED }}>✗ skipped</span>
@@ -294,12 +294,12 @@ export function Caption({
   );
 }
 
-/** The three things to remember, as short code chips (last step). */
+/** The three things to remember, as code chips only (the explanation bar says what each does). */
 export function RecapCard() {
   const rows = [
-    { code: 'stream=True', label: 'answer comes in chunks', color: GREEN },
-    { code: 'chunk.choices[0].delta.content', label: 'new text (or none)', color: PURPLE },
-    { code: 'end="", flush=True', label: 'type it out', color: GOLD },
+    { code: 'stream=True', color: GREEN },
+    { code: 'chunk.choices[0].delta.content', color: PURPLE },
+    { code: 'end="", flush=True', color: GOLD },
   ];
   return (
     <div className="flex flex-col gap-3.5">
@@ -317,10 +317,9 @@ export function RecapCard() {
           >
             {i + 1}
           </span>
-          <span className="font-mono text-[17px] font-bold" style={{ color: r.color }}>
+          <span className="font-mono text-[18px] font-bold" style={{ color: r.color }}>
             {r.code}
           </span>
-          <span className="text-[15px] text-white/60">{r.label}</span>
         </motion.div>
       ))}
     </div>

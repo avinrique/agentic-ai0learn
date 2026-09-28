@@ -307,7 +307,7 @@ export function OrderSlip({ small = false }: { small?: boolean }) {
     >
       <div className={`font-semibold ${small ? 'text-[13px]' : 'text-[14px]'} text-slate-600`}>📝 tool call</div>
       <div className={`font-mono font-bold ${small ? 'text-[14px]' : 'text-[20px]'}`}>send_email</div>
-      {!small && <div className="font-mono text-[15px] text-slate-600">(to, message)</div>}
+      {!small && <div className="font-mono text-[15px] text-slate-600">(to, body)</div>}
     </div>
   );
 }
@@ -414,24 +414,49 @@ export function Layers() {
   return (
     <div className="flex flex-col items-center gap-5">
       <div className="relative flex items-end gap-10" style={{ height: 300 }}>
-        {/* the problem arrow: slips through layer 1's hole, stopped by layer 2 */}
+        {/* the problem: slips through layer 1's hole (a dashed trail stays behind), stopped by layer 2 */}
         <motion.div
-          className="absolute z-10 text-[30px]"
-          style={{ top: 78 }}
-          initial={{ left: -70 }}
-          animate={{ left: 118 }}
+          className="absolute z-10 border-t-[3px] border-dashed"
+          style={{ top: 96, left: -70, width: 238, borderColor: `${AMBER}aa`, transformOrigin: 'left center' }}
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ duration: 1.6, ease: 'easeOut' }}
+        />
+        <motion.div
+          className="absolute z-10 text-[30px] leading-none"
+          style={{ top: 80 }}
+          initial={{ left: -80 }}
+          animate={{ left: 122 }}
           transition={{ duration: 1.6, ease: 'easeOut' }}
         >
           ⚠️
         </motion.div>
         <motion.div
-          className="absolute z-10 text-[30px]"
-          style={{ top: 78, left: 168 }}
+          className="absolute z-10 text-[14px] font-bold whitespace-nowrap px-1.5 rounded"
+          style={{ top: 44, left: 104, color: AMBER, background: '#0a0a1a' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.6 }}
+        >
+          missed!
+        </motion.div>
+        <motion.div
+          className="absolute z-10 text-[30px] leading-none"
+          style={{ top: 80, left: 170 }}
           initial={{ opacity: 0, scale: 0 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 1.5 }}
         >
           ✋
+        </motion.div>
+        <motion.div
+          className="absolute z-10 text-[14px] font-bold whitespace-nowrap px-1.5 rounded"
+          style={{ top: 86, left: 204, color: GREEN, background: '#0a0a1a' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.8 }}
+        >
+          stopped!
         </motion.div>
         {layers.map((l) => (
           <div key={l.label} className="flex flex-col items-center gap-2">

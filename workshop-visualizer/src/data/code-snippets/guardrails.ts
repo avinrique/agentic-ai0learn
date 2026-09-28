@@ -22,15 +22,16 @@ def is_safe(text):
     return verdict.strip().startswith("SAFE")
 
 # A pretend tool: it only prints. It never really sends anything.
-def send_email(to, message):
-    print(f"📧 (pretend) Email to {to}: {message}")
+def send_email(to, body):
+    print(f"📧 (pretend) Email to {to}: {body}")
     return "Email sent."
 
 tools = [{"type": "function", "function": {
     "name": "send_email", "description": "Send an email to someone.",
     "parameters": {"type": "object", "properties": {
-        "to": {"type": "string"}, "message": {"type": "string"}
-    }, "required": ["to", "message"]}
+        "to": {"type": "string", "description": "a name, e.g. Ms. Lee"},
+        "body": {"type": "string"}
+    }, "required": ["to", "body"]}
 }}]
 RISKY_TOOLS = {"send_email"}  # actions a human must say yes to first
 

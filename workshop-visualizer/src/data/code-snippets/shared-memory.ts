@@ -22,7 +22,7 @@ def add_note(author, note):
     whiteboard.append(f"{author}: {note}")  # label who wrote it
 
 def read_board():
-    return "\n".join(whiteboard)  # all the notes, one per line
+    return "\n".join(whiteboard)  # all the notes, each on a new line
 
 # The teacher writes the event on the board first
 event = "End-of-year class party for 24 students, budget $60"

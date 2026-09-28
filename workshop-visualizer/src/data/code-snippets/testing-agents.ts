@@ -11,9 +11,10 @@ def add(a, b):
 tools = [{"type": "function", "function": {
     "name": "add",
     "description": "Add two numbers together",
-    "parameters": {"type": "object", "required": ["a", "b"],
-                   "properties": {"a": {"type": "number"},
-                                  "b": {"type": "number"}}},
+    "parameters": {
+        "type": "object", "required": ["a", "b"],
+        "properties": {"a": {"type": "number"},
+                       "b": {"type": "number"}}},
 }}]
 
 def ask_agent(question):  # returns (tool_used, answer)
@@ -24,7 +25,7 @@ def ask_agent(question):  # returns (tool_used, answer)
     message = response.choices[0].message
     if not message.tool_calls:
         return None, message.content  # no tool used
-    tool_call = message.tool_calls[0]  # the AI asked for add
+    tool_call = message.tool_calls[0]  # asked for add
     arguments = json.loads(tool_call.function.arguments)
     result = add(arguments["a"], arguments["b"])
     messages.append(message)
@@ -32,7 +33,8 @@ def ask_agent(question):  # returns (tool_used, answer)
                      "tool_call_id": tool_call.id,
                      "content": str(result)})
     final = client.chat.completions.create(
-        model="gpt-4o-mini", messages=messages, temperature=0)
+        model="gpt-4o-mini", messages=messages,
+        temperature=0)
     answer = final.choices[0].message.content
     return tool_call.function.name, answer
 
@@ -51,13 +53,14 @@ passed = 0
 for test in tests:
     tool_used, answer = ask_agent(test["question"])
     print(f"\\nQ: {test['question']}\\nA: {answer}")
-    tool_ok = tool_used == test["expect_tool"]  # behaviour
-    answer_ok = test["must_contain"] in answer  # output
+    tool_ok = tool_used == test["expect_tool"]  # check 1
+    answer_ok = test["must_contain"] in answer  # check 2
     if tool_ok and answer_ok:
         print("✅ PASS")
         passed += 1
     if not tool_ok:
-        print(f"❌ FAIL: expected tool {test['expect_tool']}, "
+        print("❌ FAIL: expected tool "
+              f"{test['expect_tool']}, "
               f"but it used {tool_used}")
     if not answer_ok:
         print("❌ FAIL: the answer should contain "

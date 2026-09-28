@@ -15,10 +15,10 @@ export const guide: LessonGuide = {
       options: [
         'The AI notices and fixes it',
         "Only the Teacher's note is wrong",
-        'Milo and Wally both build on the wrong number',
+        'Everyone after the Teacher builds on the wrong number',
       ],
       answer: 2,
-      why: 'Everyone trusts the board, so one wrong note spreads: Milo splits $60 between 240 people and Wally invites all 240. Check important notes before the team builds on them.',
+      why: 'Everyone trusts the board, so one wrong note spreads to every agent who reads it: Milo splits $60 between 240 people and Wally invites all 240. Check important notes first.',
     },
     {
       q: "Why does each agent's call send more tokens than the one before?",

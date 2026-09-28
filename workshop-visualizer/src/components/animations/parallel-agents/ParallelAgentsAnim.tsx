@@ -14,8 +14,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import AgentBot, { TEAM, type BotMood } from '@/components/animations/characters/AgentBot';
 import { useTracerStore } from '@/stores/tracerStore';
-import { useTracerScene } from '@/components/animations/part4/useTracerScene';
-import { parallelRuns, raceTimes, type ParallelRun } from '@/data/traces/parallel-agents';
+import { useShortScreen, useTracerScene } from '@/components/animations/part4/useTracerScene';
+import { CLOCK, parallelRuns, raceTimes, type ParallelRun } from '@/data/traces/parallel-agents';
 
 const ACCENT = '#22d3ee';
 const GOLD = '#fbbf24';
@@ -29,10 +29,11 @@ const SPEED = 0.5;
 const ORDER = [
   'intro', 'time', 'pool-import', 'setup', 'helper', 'rita-card', 'wally-card', 'topics', 'research-fn',
   'seq-start', 'seq', 'seq-time', 'par-start', 'pool', 'par-go', 'par-done', 'tray', 'par-time',
-  'join', 'wally-work', 'poster', 'when-not', 'recap',
+  'join', 'wally-work', 'poster', 'print', 'when-not', 'recap',
 ];
 
 const sec = (n: number) => n.toFixed(1);
+const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 
 /** Counts a number up from `from` to `to` (re-runs whenever `runKey` changes). Ends exactly on `to`. */
 function useCountUp(from: number, to: number, ms: number, runKey: string) {
@@ -56,12 +57,12 @@ function useCountUp(from: number, to: number, ms: number, runKey: string) {
   return val;
 }
 
-function Stopwatch({ from, to, runKey, glow }: { from: number; to: number; runKey: string; glow: boolean }) {
+function Stopwatch({ from, to, runKey, glow, dim }: { from: number; to: number; runKey: string; glow: boolean; dim: boolean }) {
   const val = useCountUp(from, to, (to - from) * SPEED * 1000, runKey);
   return (
     <motion.div
-      animate={{ scale: glow ? 1.12 : 1, boxShadow: glow ? `0 0 18px ${GOLD}88` : '0 0 0px transparent' }}
-      className="flex items-center gap-2 rounded-xl px-3 py-1 font-mono origin-right"
+      animate={{ opacity: dim ? 0.4 : 1, boxShadow: glow ? `0 0 18px ${GOLD}88` : '0 0 0px transparent' }}
+      className="flex items-center gap-2 rounded-xl px-3 py-1 font-mono"
       style={{ background: '#1c1a0e', border: `1.5px solid ${GOLD}`, color: GOLD }}
     >
       <span className="text-[18px]">⏱️</span>
@@ -120,8 +121,19 @@ function Stripes({ moving, color }: { moving: boolean; color: string }) {
 function LaneRow({ lane, axisMax, stepKey, height, botSize }: { lane: Lane; axisMax: number; stepKey: string; height: number; botSize: number }) {
   const pct = (s: number) => `${(s / axisMax) * 100}%`;
   const growing = lane.growFrom < lane.end;
+  // A lane that finishes on this step keeps working (thinking face, moving stripes, ⏳) until its bar is full.
+  const finishKey = `${stepKey}-${lane.doneDelay}`;
+  const pending = lane.status === 'done' && lane.doneDelay > 0;
+  const [fin, setFin] = useState({ key: finishKey, done: false });
+  if (fin.key !== finishKey) setFin({ key: finishKey, done: false });
+  useEffect(() => {
+    if (!pending) return;
+    const t = setTimeout(() => setFin({ key: finishKey, done: true }), lane.doneDelay * 1000);
+    return () => clearTimeout(t);
+  }, [pending, finishKey, lane.doneDelay]);
+  const status: LaneStatus = pending && !(fin.key === finishKey && fin.done) ? 'running' : lane.status;
   const mood: BotMood =
-    lane.status === 'running' ? 'thinking' : lane.status === 'done' ? 'proud' : lane.status === 'waiting' ? 'sleeping' : 'happy';
+    status === 'running' ? 'thinking' : status === 'done' ? 'proud' : status === 'waiting' ? 'sleeping' : 'happy';
   const hasBar = lane.status === 'running' || lane.status === 'done';
 
   return (
@@ -132,7 +144,7 @@ function LaneRow({ lane, axisMax, stepKey, height, botSize }: { lane: Lane; axis
           badge={RITA.badge}
           size={botSize}
           mood={mood}
-          active={lane.status === 'running'}
+          active={status === 'running'}
           dimmed={lane.status === 'waiting'}
         />
       </div>
@@ -153,7 +165,7 @@ function LaneRow({ lane, axisMax, stepKey, height, botSize }: { lane: Lane; axis
             animate={{ width: pct(lane.end - lane.start) }}
             transition={{ duration: growing ? (lane.end - lane.growFrom) * SPEED : 0, ease: 'linear' }}
           >
-            <Stripes moving={lane.status === 'running'} color={lane.slowest ? GOLD : RITA.color} />
+            <Stripes moving={status === 'running'} color={lane.slowest ? GOLD : RITA.color} />
           </motion.div>
         )}
         {lane.helper !== undefined && (
@@ -171,17 +183,16 @@ function LaneRow({ lane, axisMax, stepKey, height, botSize }: { lane: Lane; axis
       </div>
       <div style={{ width: RESULT_W }} className="flex-shrink-0 text-[14px] font-mono leading-tight">
         {lane.status === 'waiting' && <span className="text-[13px] font-sans text-white/40">🕒 in line</span>}
-        {lane.status === 'running' && (
+        {status === 'running' && (
           <motion.span className="text-white/70" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1 }}>
             ⏳ …
           </motion.span>
         )}
-        {lane.status === 'done' && (
+        {status === 'done' && (
           <motion.div
-            key={`done-${stepKey}-${lane.doneDelay}`}
-            initial={lane.doneDelay > 0 ? { opacity: 0, scale: 0.6 } : false}
+            key={`done-${finishKey}`}
+            initial={pending ? { opacity: 0, scale: 0.6 } : false}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: lane.doneDelay }}
             style={{ color: lane.slowest ? GOLD : '#86efac' }}
           >
             ✓ {sec(lane.end - lane.start)} s
@@ -199,16 +210,19 @@ function Track({
   stepKey,
   now,
   dim,
+  short,
 }: {
   lanes: Lane[];
   axisMax: number;
   stepKey: string;
   now?: { from: number; to: number };
   dim?: boolean;
+  /** Short screen (e.g. 1280×720): smaller lanes so the whole race fits. */
+  short: boolean;
 }) {
   const few = lanes.length <= 3;
-  const height = few ? 92 : 62;
-  const botSize = few ? 66 : 46;
+  const height = few ? (short ? 80 : 92) : short ? 46 : 62;
+  const botSize = few ? (short ? 58 : 66) : short ? 36 : 46;
   const tickStep = axisMax > 8 ? 2 : 1;
   const ticks: number[] = [];
   for (let t = 0; t <= axisMax; t += tickStep) ticks.push(t);
@@ -337,6 +351,7 @@ function Scoreboard({ run, stepKey }: { run: ParallelRun; stepKey: string }) {
 export default function ParallelAgentsAnim() {
   const { steps, index, trig, v } = useTracerScene();
   const activeVariantId = useTracerStore((s) => s.activeVariantId);
+  const short = useShortScreen();
   if (steps.length === 0) return null;
 
   const run = parallelRuns[activeVariantId] ?? parallelRuns.default;
@@ -377,7 +392,8 @@ export default function ParallelAgentsAnim() {
       const start = offsets[i];
       const end = start + j.seconds;
       if (i < current) return lane(i, { status: 'done', start, end, growFrom: end });
-      if (i === current) return lane(i, { status: 'running', start, end, growFrom: start, doneDelay: 0 });
+      // The current job's bar grows, and it shows "✓" exactly when the bar is full.
+      if (i === current) return lane(i, { status: 'done', start, end, growFrom: start, doneDelay: j.seconds * SPEED });
       return lane(i, { status: phase === 'seq-start' ? 'idle' : 'waiting' });
     });
     if (phase === 'seq') {
@@ -412,6 +428,8 @@ export default function ParallelAgentsAnim() {
 
   const facts = jobs.map((j) => j.fact);
   const finishOrder = [...jobs].sort((a, b) => a.seconds - b.seconds);
+  // The "waiting for OpenAI" key only matters once a bar is on the track.
+  const showLegend = !!lanes && lanes.some((l) => l.status === 'running' || l.status === 'done');
   const showRace1Chip = after('par-start') && phase !== 'par-time' && phase !== 'recap';
   const showRace2Chip = after('join') && phase !== 'recap';
   const showIllustrative = after('seq-start') && phase !== 'recap' && phase !== 'when-not';
@@ -434,7 +452,8 @@ export default function ParallelAgentsAnim() {
         {showIllustrative && <span className="ml-auto text-[13px] text-white/40">illustrative times</span>}
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col justify-center items-center gap-4">
+      {/* "safe center": if a scene is ever taller than the panel, it overflows at the bottom, never into the header. */}
+      <div className="flex-1 min-h-0 flex flex-col items-center gap-4" style={{ justifyContent: 'safe center' }}>
         {/* ── Setup steps: one focal panel each ── */}
         {phase === 'intro' && (
           <motion.div key="intro" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full flex flex-col items-center gap-7">
@@ -459,15 +478,37 @@ export default function ParallelAgentsAnim() {
         )}
 
         {phase === 'time' && (
-          <motion.div key="time" initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center gap-4">
-            <div
-              className="w-[190px] h-[190px] rounded-full flex flex-col items-center justify-center font-mono"
-              style={{ border: `5px solid ${GOLD}`, background: '#1c1a0e', boxShadow: `0 0 30px ${GOLD}44` }}
-            >
-              <div className="text-[34px]">⏱️</div>
-              <div className="text-[34px] font-bold" style={{ color: GOLD }}>0.0 s</div>
+          <motion.div key="time" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-7">
+            <div className="flex flex-col gap-3 font-mono text-[17px]">
+              {([
+                ['earlier', CLOCK],
+                ['later', CLOCK + jobs[0].seconds],
+              ] as const).map(([when, clock], k) => (
+                <motion.div
+                  key={when}
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 + k * 0.5 }}
+                  className="flex items-center gap-3"
+                >
+                  <span className="w-[64px] text-right text-[14px] font-sans text-white/50">{when}</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/5 text-white/85">time.time()</span>
+                  <span className="text-white/40">➜</span>
+                  <span className="text-white/90 tabular-nums">{clock.toFixed(1)}</span>
+                </motion.div>
+              ))}
             </div>
-            <div className="text-[16px] font-mono px-3 py-1 rounded-lg bg-white/5 text-white/85">time.time()</div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 1.3 }}
+              className="flex items-center gap-3 rounded-2xl px-6 py-3 font-mono"
+              style={{ border: `3px solid ${GOLD}`, background: '#1c1a0e', boxShadow: `0 0 26px ${GOLD}44` }}
+            >
+              <span className="text-[30px]">⏱️</span>
+              <span className="text-[17px] text-white/60">later − earlier =</span>
+              <span className="text-[34px] font-bold" style={{ color: GOLD }}>{sec(jobs[0].seconds)} s</span>
+            </motion.div>
           </motion.div>
         )}
 
@@ -549,15 +590,17 @@ export default function ParallelAgentsAnim() {
         {lanes && (
           <div className="w-full flex flex-col gap-3">
             {raceLabel && watch && (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center flex-wrap gap-x-3 gap-y-1">
                 <div className="text-[17px] font-bold">{raceLabel}</div>
-                <span className="flex items-center gap-1.5 text-[13px] text-white/50">
-                  <span
-                    className="inline-block w-5 h-3 rounded-sm"
-                    style={{ backgroundImage: `repeating-linear-gradient(-45deg, ${RITA.color} 0 4px, ${RITA.color}88 4px 8px)` }}
-                  />
-                  waiting for OpenAI
-                </span>
+                {showLegend && (
+                  <span className="flex items-center gap-1.5 text-[13px] text-white/50">
+                    <span
+                      className="inline-block w-5 h-3 rounded-sm"
+                      style={{ backgroundImage: `repeating-linear-gradient(-45deg, ${RITA.color} 0 4px, ${RITA.color}88 4px 8px)` }}
+                    />
+                    waiting for OpenAI
+                  </span>
+                )}
                 {phase === 'par-start' && (
                   <motion.span
                     key={`cost-${stepKey}`}
@@ -570,17 +613,18 @@ export default function ParallelAgentsAnim() {
                     💰 research cost ×2
                   </motion.span>
                 )}
-                <div className="ml-auto">
+                <div className="ml-auto flex-shrink-0">
                   <Stopwatch
                     from={watch.from}
                     to={watch.to}
                     runKey={stepKey}
                     glow={phase === 'seq-start' || phase === 'par-start'}
+                    dim={phase === 'seq-time'}
                   />
                 </div>
               </div>
             )}
-            <Track lanes={lanes} axisMax={axisMax} stepKey={stepKey} now={nowLine} dim={phase === 'seq-time'} />
+            <Track lanes={lanes} axisMax={axisMax} stepKey={stepKey} now={nowLine} dim={phase === 'seq-time'} short={short} />
             {phase === 'seq-time' && (
               <motion.div
                 key={`sum-${stepKey}`}
@@ -605,16 +649,11 @@ export default function ParallelAgentsAnim() {
         {/* ── The ordered tray ── */}
         {phase === 'tray' && (
           <div className="w-full flex flex-col gap-3">
-            <div className="flex items-center gap-2 flex-wrap text-[13px] text-white/50">
-              <span>finished:</span>
-              {finishOrder.map((j, k) => (
-                <span key={j.topic} className="px-2 py-0.5 rounded-full bg-white/5 text-white/70">
-                  {k + 1}. {j.topic}
-                </span>
-              ))}
-            </div>
             <div className="rounded-2xl border-2 p-3 flex flex-col gap-2" style={{ borderColor: ACCENT, background: '#0b1b2b' }}>
-              <div className="text-[15px] font-mono font-semibold px-1" style={{ color: ACCENT }}>📥 facts</div>
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[15px] font-mono font-semibold" style={{ color: ACCENT }}>📥 facts</span>
+                <span className="text-[13px] text-white/60">finished</span>
+              </div>
               {jobs.map((j, i) => (
                 <motion.div
                   key={`${stepKey}-${i}`}
@@ -626,6 +665,16 @@ export default function ParallelAgentsAnim() {
                   <span className="font-mono text-[14px] text-white/50 w-7 flex-shrink-0 pt-px">[{i}]</span>
                   <span className="text-[15px] font-semibold w-[76px] flex-shrink-0" style={{ color: RITA.color }}>{j.topic}</span>
                   <span className={`text-white/90 leading-snug flex-1 ${n > 3 ? 'text-[14px]' : 'text-[15px]'}`}>{j.fact}</span>
+                  <span
+                    className="flex-shrink-0 text-[14px] font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap"
+                    style={
+                      finishOrder.indexOf(j) === 0
+                        ? { background: `${GOLD}22`, color: GOLD }
+                        : { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.8)' }
+                    }
+                  >
+                    🏁 {ORDINAL[finishOrder.indexOf(j)]}
+                  </span>
                 </motion.div>
               ))}
             </div>
@@ -657,9 +706,13 @@ export default function ParallelAgentsAnim() {
 
         {phase === 'wally-work' && (
           <motion.div key="wally-work" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full flex items-center justify-center gap-8">
-            <div className="w-[36%] rounded-md p-3 shadow-lg rotate-[-1.5deg]" style={{ background: '#fde68a', color: '#3b2f05' }}>
-              <div className="font-bold text-[14px]">📌 Facts ×{n}</div>
-              <div className="text-[13px] leading-snug line-clamp-4 opacity-70">{facts.join(' ')}</div>
+            <div className="w-[40%] min-w-0 rounded-md p-3 shadow-lg rotate-[-1.5deg]" style={{ background: '#fde68a', color: '#3b2f05' }}>
+              <div className="font-bold text-[14px] mb-1">📌 fact_list</div>
+              <div className="flex flex-col gap-0.5 text-[13px] leading-snug opacity-75">
+                {facts.map((f) => (
+                  <div key={f} className="truncate">{f}</div>
+                ))}
+              </div>
             </div>
             <motion.span className="text-white/50 text-[22px]" animate={{ x: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 1 }}>➜</motion.span>
             <div className="flex flex-col items-center gap-2">
@@ -676,12 +729,24 @@ export default function ParallelAgentsAnim() {
           </motion.div>
         )}
 
-        {phase === 'poster' && (
+        {(phase === 'poster' || phase === 'print') && (
           <motion.div key="poster" initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} className="w-full flex items-center gap-5">
             <AgentBot {...WALLY} role={undefined} size={72} mood="proud" />
-            <div className="flex-1 rounded-2xl p-5 bg-white text-slate-800 shadow-2xl" style={{ borderTop: `8px solid ${WALLY.color}` }}>
+            <div className="relative flex-1 rounded-2xl p-5 bg-white text-slate-800 shadow-2xl" style={{ borderTop: `8px solid ${WALLY.color}` }}>
               <div className="text-[14px] font-bold text-green-700 mb-2">✍️ Wally&apos;s poster</div>
               <div className="text-[18px] leading-snug">{v('poster') ?? run.poster}</div>
+              {phase === 'print' && (
+                <motion.div
+                  key={`print-${stepKey}`}
+                  initial={{ opacity: 0, scale: 1.8, rotate: -8 }}
+                  animate={{ opacity: 1, scale: 1, rotate: -8 }}
+                  transition={{ delay: 0.2, type: 'spring', stiffness: 260, damping: 18 }}
+                  className="absolute -top-5 -right-3 rounded-lg px-3 py-1 text-[16px] font-bold"
+                  style={{ background: '#0f2a1a', color: '#86efac', border: '2px solid #86efac', boxShadow: '0 6px 18px rgba(0,0,0,0.35)' }}
+                >
+                  🖨️ printed ✓
+                </motion.div>
+              )}
             </div>
           </motion.div>
         )}

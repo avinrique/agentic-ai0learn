@@ -58,7 +58,7 @@ export const setupSteps: ConceptStep[] = [
   },
   // Step 9
   {
-    explanation: "Fill the toolbox. pip is Python's app store, and requirements.txt is the shopping list. Watch pip download the openai package and the helpers it needs.",
+    explanation: "Fill the toolbox. pip is Python's app store, and requirements.txt is the shopping list. Watch pip download openai, python-dotenv and tiktoken, plus the helpers they need.",
     animationTrigger: 'pip',
     subtitle: 'You only do this once.',
   },
@@ -82,7 +82,7 @@ export const setupSteps: ConceptStep[] = [
   },
   // Step 13
   {
-    explanation: 'Station 5: the secret safe. Copy .env.example to a new file called .env, open it, and replace sk-your-key-here with your key. run.py reads it from there.',
+    explanation: 'Station 5: the secret safe. Copy .env.example to a new file called .env, open it, replace sk-your-key-here with your key, and save. run.py reads it from there.',
     animationTrigger: 'envFile',
     subtitle: 'No spaces, no quotes.',
   },
@@ -106,7 +106,7 @@ export const setupSteps: ConceptStep[] = [
   },
   // Step 17
   {
-    explanation: 'Something went wrong? Read the message: run.py and check_setup.py explain problems in plain words. These five cover most setup trouble, and each has a simple fix.',
+    explanation: 'Something went wrong? Read the message: run.py and check_setup.py explain problems in plain words. Click each common error to see what it means and how to fix it.',
     animationTrigger: 'errors',
     subtitle: 'An error message is a clue, not a disaster.',
   },
@@ -126,7 +126,7 @@ export const setupSteps: ConceptStep[] = [
   {
     explanation: 'Spot the leak: look at each scene and decide if the key is safe or leaked. Read why after each answer.',
     animationTrigger: 'playground2',
-    subtitle: 'Five scenes, one secret key.',
+    subtitle: 'Six scenes, one secret key.',
   },
   // Step 21
   {

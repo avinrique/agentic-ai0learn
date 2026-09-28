@@ -7,7 +7,8 @@ client = OpenAI()
 
 question = "Explain what a black hole is in 2 sentences."
 
-# Count tokens BEFORE sending (an estimate: the API adds a few for formatting)
+# Count tokens BEFORE sending. It's only an estimate:
+# the API adds a few tokens for formatting.
 enc = tiktoken.get_encoding("o200k_base")
 estimate = len(enc.encode(question))
 print(f"Estimated input tokens: {estimate}")
@@ -21,19 +22,20 @@ response = client.chat.completions.create(
 )
 print("Answer:", response.choices[0].message.content)
 
-# The exact counts come back on the receipt: response.usage
+# The exact counts come back on the receipt
 usage = response.usage
-print("Input tokens (prompt):", usage.prompt_tokens)
-print("Output tokens (completion):", usage.completion_tokens)
+print("Input tokens:", usage.prompt_tokens)
+print("Output tokens:", usage.completion_tokens)
 print("Total tokens:", usage.total_tokens)
 
-# Example prices (USD per 1M tokens) — check openai.com/api/pricing
-INPUT_PRICE_PER_MILLION = 0.15   # gpt-4o-mini, tokens we send
-OUTPUT_PRICE_PER_MILLION = 0.60  # gpt-4o-mini, tokens it writes
+# Example gpt-4o-mini prices, in $ per 1M tokens
+# (prices change: check openai.com/api/pricing)
+IN_PRICE = 0.15    # tokens we send
+OUT_PRICE = 0.60   # tokens it writes
 
-# Cost = tokens ÷ 1,000,000 × price per million
-input_cost = usage.prompt_tokens / 1_000_000 * INPUT_PRICE_PER_MILLION
-output_cost = usage.completion_tokens / 1_000_000 * OUTPUT_PRICE_PER_MILLION
-cost = input_cost + output_cost
+# Cost = tokens ÷ 1,000,000 × price
+in_cost = usage.prompt_tokens / 1_000_000 * IN_PRICE
+out_cost = usage.completion_tokens / 1_000_000 * OUT_PRICE
+cost = in_cost + out_cost
 print(f"This call cost: \${cost:.6f}")
 print(f"1,000 calls like this: \${cost * 1000:.2f}")`;

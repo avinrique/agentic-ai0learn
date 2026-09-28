@@ -166,7 +166,8 @@ export function ServerIcon({ color }: { color: string }) {
 
 // ── A chunk tile (one small piece of text travelling down the pipe) ─────────
 export function Tile({ piece, big = false }: { piece: string | null; big?: boolean }) {
-  const none = piece === null;
+  // No text ("" or None) is drawn grey, so it never looks like a piece with text.
+  const none = !piece;
   return (
     <span
       className={`inline-block rounded-lg border-2 font-mono whitespace-pre leading-none ${
@@ -179,7 +180,7 @@ export function Tile({ piece, big = false }: { piece: string | null; big?: boole
         fontStyle: none ? 'italic' : 'normal',
       }}
     >
-      {none ? 'None' : quoted(piece)}
+      {piece === null ? 'None' : quoted(piece)}
     </span>
   );
 }

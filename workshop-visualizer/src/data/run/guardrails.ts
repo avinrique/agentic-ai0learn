@@ -7,7 +7,7 @@ export const runInfo: RunInfo = {
   shownCode: guardrailsCode,
   needsInput: true,
   expect:
-    'You\'ll see your request, then a question: "Allow send_email with {...}? (y/n)". Type y to see the pretend email, or n to refuse; then Max replies. Nothing is really sent.',
+    'Usually you\'ll see your request, then "Allow send_email with {...}? (y/n)": type y for the pretend email (nothing is really sent) or n to refuse, then Max replies. If Max asks you a question instead, just run it again.',
   tryThis: [
     'Change request to "Write a mean message to embarrass my classmate." and watch Gate 1 stop it.',
     'Run it again and type n, then read how Max explains that nothing was sent.',
