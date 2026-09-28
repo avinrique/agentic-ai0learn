@@ -5,7 +5,7 @@
  * A delivery robot carries our question to the OpenAI server and meets trouble:
  * a 429 "busy" sign, a 401 "wrong key" sign, or a cut road (no internet).
  * Labelled safety nets under the try block catch each error type, a countdown
- * timer doubles its wait each retry (1s, 2s, 4s), and the user ends up with a
+ * timer doubles its wait each retry (1s, then 2s), and the user ends up with a
  * friendly message card instead of a red traceback.
  * Everything is derived from the current tracer step (pure function of the step).
  */
@@ -215,7 +215,7 @@ function SetupScene({ trig }: { trig: string }) {
   if (trig === 'client') {
     return (
       <Card color={CYAN} className="flex flex-col items-center gap-3 px-12">
-        <span className="text-[16px] text-white/70">the SDK&apos;s built-in retries</span>
+        <span className="text-[16px] text-white/70">the library&apos;s built-in retries</span>
         <div className="flex items-baseline gap-4 font-mono">
           <span className="text-[20px] text-white/80">max_retries</span>
           <span className="text-[30px] text-white/35 line-through">2</span>
@@ -485,11 +485,11 @@ function QuotaScene() {
         </span>
       </Card>
       <div className="flex gap-4 w-[92%]">
-        <div className="flex-1 rounded-xl border-2 border-dashed p-4 flex flex-col items-center gap-1.5 text-center opacity-60" style={{ borderColor: '#a78bfa' }}>
-          <span className="font-mono text-[14px] text-white/80">&quot;insufficient_quota&quot;</span>
-          <span className="text-[26px]">💳</span>
+        <div className="flex-1 rounded-xl border-2 border-dashed p-4 flex flex-col items-center gap-1.5 text-center" style={{ borderColor: '#a78bfa77' }}>
+          <span className="font-mono text-[14px] text-white/65">&quot;insufficient_quota&quot;</span>
+          <span className="text-[26px] opacity-60">💳</span>
           <span className="text-[16px] font-semibold" style={{ color: '#a78bfa' }}>no credit: stop</span>
-          <span className="text-[13px] text-white/60">retrying won&apos;t help</span>
+          <span className="text-[14px] text-white/65">retrying won&apos;t help</span>
         </div>
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
@@ -549,7 +549,7 @@ function TimerScene({ trig, wait, attempt, printed, stepKey }: { trig: string; w
   const sleeping = trig === 'sleep';
   const left = useCountdown(wait, sleeping, stepKey);
   const done = sleeping && left === 0;
-  const ladder = [1, 2, 4];
+  const ladder = [1, 2]; // tries=3 means at most two waits
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="flex items-center gap-6">
@@ -585,7 +585,7 @@ function TimerScene({ trig, wait, attempt, printed, stepKey }: { trig: string; w
 
       {trig === 'backoff' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-mono text-[17px] text-white/85">
-          2 ** ({attempt} - 1) = <b style={{ color: AMBER }}>{wait}</b>
+          2 ** ({attempt} - 1) = 2 ** {attempt - 1} = <b style={{ color: AMBER }}>{wait}</b>
         </motion.div>
       )}
       {trig === 'wait-msg' && (
@@ -614,10 +614,12 @@ function TimerScene({ trig, wait, attempt, printed, stepKey }: { trig: string; w
             >
               {s}s
             </span>
-            {i < ladder.length - 1 && <span className="text-white/35 text-[13px]">×2</span>}
+            <span className="text-white/35 text-[13px]">×2</span>
           </div>
         ))}
-        <span className="text-white/35">…</span>
+        <span className="px-2.5 py-0.5 rounded-full text-white/50" style={{ border: '1.5px dashed rgba(255,255,255,0.25)' }}>
+          4s… <span className="font-sans text-[14px]">more tries</span>
+        </span>
       </div>
     </div>
   );
@@ -688,7 +690,7 @@ function PrintScene({ text, outcome }: { text: string; outcome: Outcome }) {
     outcome === 'ok'
       ? { color: GREEN, icon: '🐧' }
       : outcome === 'badkey'
-        ? { color: AMBER, icon: '🔑' }
+        ? { color: RED, icon: '🔑' }
         : { color: BLUE, icon: '🙏' };
   return (
     <div className="w-full flex items-center justify-center gap-6">
@@ -705,8 +707,8 @@ function PrintScene({ text, outcome }: { text: string; outcome: Outcome }) {
           {look.icon} {text}
         </div>
       </motion.div>
-      <div className="flex flex-col items-center gap-1.5 opacity-50">
-        <div className="relative w-[150px] rounded-lg border p-2 font-mono text-[13px] leading-tight" style={{ borderColor: `${RED}88`, background: '#1d0a12', color: '#fca5a5' }}>
+      <div className="flex flex-col items-center gap-1.5">
+        <div className="relative w-[150px] rounded-lg border p-2 font-mono text-[13px] leading-tight opacity-50" style={{ borderColor: `${RED}88`, background: '#1d0a12', color: '#fca5a5' }}>
           <div>Traceback…</div>
           <div>File …</div>
           <div>openai.…Error</div>
@@ -739,7 +741,7 @@ function RecapScene() {
     },
     {
       color: AMBER,
-      big: <span className="font-mono">⏳ 1s → 2s → 4s → 🙏</span>,
+      big: <span className="font-mono">⏳ 1s → 2s → 🙏</span>,
       label: 'back off, then give up',
     },
   ];
@@ -842,6 +844,7 @@ export default function ErrorsRetriesAnim() {
       break;
     case 'crash':
       scene = <CrashScene kind={storyKind} />;
+      showHeaderSlots = false; // a "what if" picture, not a real attempt
       break;
     case 'nets':
       scene = <NetsScene stepKey={index} />;
@@ -854,7 +857,7 @@ export default function ErrorsRetriesAnim() {
     case 'rejected':
     case 'offline':
     case 'reply':
-      scene = <RoadScene key={`road-${attempt}`} trig={trig} attempt={attempt} />;
+      scene = <RoadScene key={`road-${attempt}`} trig={trig} attempt={attempt} nextTrig={steps[index + 1]?.animationTrigger ?? ''} />;
       break;
     case 'quota-check':
       scene = <QuotaScene />;

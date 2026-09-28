@@ -118,7 +118,7 @@ function errorsRetriesSteps(outcomes: Outcome[]): TraceStep[] {
       at: L.client,
       trig: 'client',
       set: { client: '<OpenAI client, max_retries=0>' },
-      exp: 'Secret: the SDK already retries some errors twice by itself (max_retries=2). We set it to 0 so we can watch every retry by hand.',
+      exp: 'Secret: the OpenAI library already retries some errors twice by itself (max_retries=2). We set it to 0 to watch every retry by hand; real apps leave it on.',
     },
     {
       at: L.def,
@@ -155,7 +155,7 @@ function errorsRetriesSteps(outcomes: Outcome[]): TraceStep[] {
         {
           at: L.tryLine,
           trig: 'crash',
-          exp: 'First, a warning: without try, one error crashes the whole program with a scary red traceback like this. Nothing after it runs.',
+          exp: 'First, a warning: without try, one error stops the whole program with a scary red traceback like this (run.py shortens it to a one-line hint). Nothing after it runs.',
         },
         {
           at: L.tryLine,
@@ -197,7 +197,7 @@ function errorsRetriesSteps(outcomes: Outcome[]): TraceStep[] {
           exp:
             attempt === 1
               ? 'print shows the answer. No trouble this time, so the nets were never needed.'
-              : 'print shows the answer. The user saw two calm notes and then a fun fact: no scary traceback.',
+              : 'print shows the answer. The user saw a few calm notes (busy, waiting) and then a fun fact: no scary traceback.',
         },
       );
       break;
@@ -349,7 +349,7 @@ function errorsRetriesSteps(outcomes: Outcome[]): TraceStep[] {
         set: { wait: String(wait) },
         exp:
           attempt === 1
-            ? 'Exponential back-off: wait 1s, then 2s, then 4s, doubling each time. Like giving a crowded shop more room before knocking again.'
+            ? '** means "to the power of": 2 ** 0 = 1, 2 ** 1 = 2. So the wait doubles every try (4s, 8s… if we allowed more tries): exponential back-off.'
             : `The wait doubles: 2 ** (${attempt} - 1) = ${wait} seconds. Even more room for the server.`,
       },
       {
@@ -364,7 +364,10 @@ function errorsRetriesSteps(outcomes: Outcome[]): TraceStep[] {
       {
         at: L.sleep,
         trig: 'sleep',
-        exp: `time.sleep(${wait}) pauses the whole program for ${wait} second${wait === 1 ? '' : 's'}. Watch the timer run down.`,
+        exp:
+          attempt === 1
+            ? 'time.sleep(1) pauses the whole program for 1 second, like giving a crowded shop a moment before knocking again. Watch the timer.'
+            : `time.sleep(${wait}) pauses the whole program for ${wait} seconds. Watch the timer run down.`,
       },
     );
   }
@@ -372,7 +375,7 @@ function errorsRetriesSteps(outcomes: Outcome[]): TraceStep[] {
   defs.push({
     at: L.call,
     trig: 'recap',
-    exp: 'What you learned: 1) try/except catches errors instead of crashing; 2) retry only what can fix itself, never a bad key or no credit; 3) back off 1s, 2s, 4s, then give up politely.',
+    exp: 'What you learned: 1) try/except catches errors instead of crashing; 2) retry only what can fix itself, not a bad key or no credit; 3) wait longer each time (1s, 2s), then give up politely.',
   });
 
   return buildTrace(defs);

@@ -6,7 +6,7 @@ export const runInfo: RunInfo = {
   fileName: 'part1/errors_retries.py',
   shownCode: errorsRetriesCode,
   expect:
-    'Usually the first try works and you just see a penguin fact. If something goes wrong, you see short, calm notes (and waits) and then a friendly message, never a red traceback.',
+    'Usually the first try works and you just see a penguin fact. For the troubles it handles, you get calm notes or a friendly message instead of a red traceback (rarer errors, like a 500 server error, are not caught here).',
   tryThis: [
     'Copy your real key somewhere safe, put a wrong one in .env, run it and read the friendly message. Then put the real key back.',
     'Turn off your Wi-Fi and run it: watch it wait 1s, then 2s, then give up politely.',

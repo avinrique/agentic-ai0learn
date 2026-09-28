@@ -20,7 +20,7 @@ import {
 // Scene order (animation triggers in the trace, in step order).
 const ORDER = [
   'intro', 'keyword', 'setup', 'docs', 'def-embed', 'one-embedding', 'similar-nums', 'def-sim', 'sim-dot', 'sim-len',
-  'embed-docs', 'question', 'embed-q', 'map', 'scores', 'rank', 'print', 'top2',
+  'sim-div', 'embed-docs', 'question', 'embed-q', 'map', 'scores', 'rank', 'print', 'top2',
   'context', 'rule', 'augment', 'messages', 'generate', 'answer', 'recap',
 ];
 const at = (t: string) => ORDER.indexOf(t);
@@ -33,7 +33,7 @@ const STAGES = [
   { icon: '✨', label: 'Generate', color: GREEN, from: 'generate', to: 'answer', sub: 'answer from them' },
 ];
 
-const SYSTEM_TEXT = "Answer using ONLY the context. If the answer isn't there, say you don't know.";
+const SYSTEM_LINES = ['Answer using ONLY the context.', "If the answer isn't there, say you don't know."];
 
 function Paper({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-lg bg-slate-50 text-slate-800 shadow-lg ${className}`}>{children}</div>;
@@ -79,11 +79,11 @@ export default function RagCodeAnim() {
 
   // Finished stages collapse into small chips along the bottom.
   const done: string[] = [];
-  if (idx > at('embed-docs')) done.push('✓ 5 docs → numbers');
-  if (idx > at('embed-q')) done.push('✓ question → numbers');
+  if (idx > at('embed-docs') && idx <= at('top2')) done.push('✓ 5 docs → numbers');
+  if (idx > at('embed-q') && idx <= at('top2')) done.push('✓ question → numbers');
   if (idx > at('top2')) done.push(`✓ top 2: ${top2.map((i) => RAG_DOCS[i].icon).join(' ')}`);
   if (idx > at('messages')) done.push('✓ prompt packed');
-  const showDone = done.length > 0 && trig !== 'recap';
+  const showDone = (done.length > 0 || calls > 0) && trig !== 'recap';
 
   let scene: ReactNode = null;
   switch (trig) {
@@ -91,15 +91,15 @@ export default function RagCodeAnim() {
       scene = (
         <div className="flex flex-col items-center gap-7">
           <div className="text-[20px] font-bold text-white/90">RAG, in real code</div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {STAGES.map((s, i) => (
-              <div key={s.label} className="flex items-center gap-3">
+              <div key={s.label} className="flex items-center gap-2">
                 {i > 0 && <span className="text-[24px] text-white/35">→</span>}
                 <motion.div
                   initial={{ y: 16, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.15 + i * 0.25 }}
-                  className="w-[190px] rounded-2xl border-2 px-4 py-4 flex flex-col items-center gap-1.5"
+                  className="w-[172px] rounded-2xl border-2 px-3 py-4 flex flex-col items-center gap-1.5"
                   style={{ borderColor: s.color, background: `${s.color}12` }}
                 >
                   <span className="text-[30px]">{s.icon}</span>
@@ -142,7 +142,6 @@ export default function RagCodeAnim() {
         <motion.div {...pop} className="flex flex-col items-center gap-2 rounded-2xl border-2 px-8 py-6" style={{ borderColor: `${ACCENT}88`, background: `${ACCENT}10` }}>
           <span className="text-[34px]">📞</span>
           <span className="font-mono text-[20px] text-white">client = OpenAI()</span>
-          <span className="text-[15px] text-white/60">our phone line to OpenAI</span>
         </motion.div>
       );
       break;
@@ -221,15 +220,14 @@ export default function RagCodeAnim() {
           <div className="rounded-2xl border-2 p-3 flex flex-col gap-2.5" style={{ borderColor: GREEN, background: `${GREEN}0d` }}>
             {rows.slice(0, 2).map((r) => (
               <div key={r.text} className="flex items-center gap-3">
-                <span className="flex-1 text-[16px] text-white/90">{r.icon} {r.text}</span>
-                <NumberStrip nums={r.nums} size={16} color={GREEN} />
+                <span className="flex-1 min-w-0 text-[16px] text-white/90 text-balance">{r.icon} {r.text}</span>
+                <NumberStrip nums={r.nums} size={14} color={GREEN} />
               </div>
             ))}
-            <div className="text-[14px] font-semibold text-center" style={{ color: GREEN }}>similar meaning → similar numbers</div>
           </div>
           <div className="flex items-center gap-3 px-3 opacity-60">
-            <span className="flex-1 text-[16px] text-white/80">{rows[2].icon} {rows[2].text}</span>
-            <NumberStrip nums={rows[2].nums} size={16} color="#94a3b8" />
+            <span className="flex-1 min-w-0 text-[16px] text-white/80 text-balance">{rows[2].icon} {rows[2].text}</span>
+            <NumberStrip nums={rows[2].nums} size={14} color="#94a3b8" />
           </div>
           <div className="text-[13px] text-white/40 text-center">illustrative numbers</div>
         </div>
@@ -249,13 +247,14 @@ export default function RagCodeAnim() {
       scene = <WorkedExample part="length" />;
       break;
 
+    case 'sim-div':
+      scene = <WorkedExample part="divide" />;
+      break;
+
     case 'embed-docs':
       scene = (
         <div className="flex flex-col gap-2.5 w-full max-w-[640px]">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[15px] text-white/70">embed(documents)</span>
-            <Tag>📞 API call 1</Tag>
-          </div>
+          <div className="font-mono text-[15px] text-white/70">embed(documents)</div>
           {RAG_DOCS.map((d, i) => (
             <div key={d.key} className="flex items-center gap-3">
               <div className="w-[170px]"><DocChip i={i} /></div>
@@ -286,10 +285,7 @@ export default function RagCodeAnim() {
           <div className="rounded-xl px-4 py-2 text-[17px] font-semibold" style={{ background: '#0b1b33', border: `1.5px solid ${BLUE}`, color: '#cfe4ff' }}>
             🙋 {story.question}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[14px] text-white/50">⬇ embed([question])[0]</span>
-            <Tag>📞 API call 2</Tag>
-          </div>
+          <span className="font-mono text-[14px] text-white/50">⬇ embed([question])[0]</span>
           <NumberStrip nums={story.qNums} size={26} color={BLUE} delay={0.2} />
           <Tag color={BLUE}>…1,536 numbers</Tag>
         </div>
@@ -305,8 +301,11 @@ export default function RagCodeAnim() {
       break;
 
     case 'rank':
-    case 'print':
       scene = <ScoreBars story={story} mode="rank" />;
+      break;
+
+    case 'print':
+      scene = <ScoreBars story={story} mode="print" />;
       break;
 
     case 'top2':
@@ -382,7 +381,17 @@ export default function RagCodeAnim() {
         <div className="flex flex-col gap-4 w-full max-w-[640px]">
           <div className="font-mono text-[15px] text-white/70">messages</div>
           {[
-            { role: 'system', color: ACCENT, body: <span>{SYSTEM_TEXT}</span> },
+            {
+              role: 'system',
+              color: ACCENT,
+              body: (
+                <span>
+                  {SYSTEM_LINES[0]}
+                  <br />
+                  {SYSTEM_LINES[1]}
+                </span>
+              ),
+            },
             {
               role: 'user',
               color: BLUE,
@@ -432,10 +441,7 @@ export default function RagCodeAnim() {
           <motion.span className="text-[30px] text-white/40" animate={{ x: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 1 }}>
             →
           </motion.span>
-          <div className="flex flex-col items-center gap-2">
-            <AgentBot color={GREEN} badge="🧠" name="gpt-4o-mini" size={130} mood="thinking" active />
-            <Tag>📞 API call 3</Tag>
-          </div>
+          <AgentBot color={GREEN} badge="🧠" name="gpt-4o-mini" size={130} mood="working" active />
         </div>
       );
       break;
@@ -445,14 +451,14 @@ export default function RagCodeAnim() {
       scene =
         trig === 'answer' ? (
           <div className="flex items-center gap-6 w-full max-w-[720px]">
-            <AgentBot color={GREEN} badge="🧠" name="gpt-4o-mini" size={120} mood={story.found ? 'proud' : 'confused'} />
+            <AgentBot color={GREEN} badge="🧠" name="gpt-4o-mini" size={120} mood={story.found ? 'proud' : 'happy'} />
             <div className="flex-1 flex flex-col gap-3">
               <motion.div
                 {...pop}
                 className="rounded-2xl rounded-bl-sm px-5 py-4 text-[21px] font-semibold leading-snug"
                 style={{
-                  background: story.found ? `${GREEN}18` : `${GOLD}14`,
-                  border: `2px solid ${story.found ? GREEN : GOLD}`,
+                  background: story.found ? `${GREEN}18` : `${ACCENT}16`,
+                  border: `2px solid ${story.found ? GREEN : ACCENT}`,
                   color: '#f8fafc',
                 }}
               >
@@ -462,7 +468,7 @@ export default function RagCodeAnim() {
                 {story.found ? (
                   <Tag color={GREEN}>✓ from the handbook: {RAG_DOCS[ranked[0]].icon} {RAG_DOCS[ranked[0]].short}</Tag>
                 ) : (
-                  <Tag color={GOLD}>🛑 not in the context → no guessing</Tag>
+                  <Tag color={ACCENT}>✓ honest: not in the handbook</Tag>
                 )}
               </div>
             </div>
@@ -487,9 +493,9 @@ export default function RagCodeAnim() {
 
   return (
     <div className="h-full flex flex-col gap-3 p-4 overflow-hidden text-white">
-      {/* Header: title + R/A/G progress + API calls */}
+      {/* Header: title + R/A/G progress */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        <div className="text-[16px] font-bold mr-auto" style={{ color: ACCENT }}>🔎 RAG with embeddings</div>
+        <div className="text-[16px] font-bold mr-auto whitespace-nowrap" style={{ color: ACCENT }}>🔎 RAG with embeddings</div>
         {trig !== 'intro' &&
           STAGES.map((s, i) => {
             const st = stageState(i);
@@ -507,11 +513,6 @@ export default function RagCodeAnim() {
               </span>
             );
           })}
-        {calls > 0 && (
-          <span className="ml-1 rounded-full px-2.5 py-0.5 text-[13px] font-mono text-white/60 bg-white/5 whitespace-nowrap">
-            📞 {calls}/3 calls
-          </span>
-        )}
       </div>
 
       {/* The one thing this step is about */}
@@ -521,13 +522,13 @@ export default function RagCodeAnim() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="w-full flex items-center justify-center"
+          className="w-full h-full flex items-center justify-center"
         >
           {scene}
         </motion.div>
       </div>
 
-      {/* Finished stages */}
+      {/* Finished stages + API call counter */}
       {showDone && (
         <div className="flex-shrink-0 flex items-center gap-2 flex-wrap">
           {done.map((d) => (
@@ -535,6 +536,11 @@ export default function RagCodeAnim() {
               {d}
             </span>
           ))}
+          {calls > 0 && (
+            <span className="ml-auto rounded-full px-2.5 py-1 text-[13px] font-mono text-white/60 bg-white/5 whitespace-nowrap">
+              📞 {calls}/3 API calls
+            </span>
+          )}
         </div>
       )}
     </div>

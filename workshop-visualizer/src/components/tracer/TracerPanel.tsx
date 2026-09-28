@@ -33,7 +33,7 @@ export default function TracerPanel({ code }: TracerPanelProps) {
     }`;
 
   return (
-    <div ref={containerRef} className="flex flex-col h-full">
+    <div ref={containerRef} className="flex flex-col flex-1 min-h-0">
       <div style={{ height: `${codePct}%` }} className="overflow-hidden min-h-0">
         <CodePanel code={code} />
       </div>

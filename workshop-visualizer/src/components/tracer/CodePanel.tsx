@@ -39,6 +39,7 @@ export default function CodePanel({ code }: CodePanelProps) {
         style={vscDarkPlus}
         showLineNumbers
         wrapLines
+        wrapLongLines
         lineProps={(lineNumber: number) => {
           const isHighlighted = lineNumber === currentLine;
           return {
@@ -47,11 +48,16 @@ export default function CodePanel({ code }: CodePanelProps) {
               backgroundColor: isHighlighted ? 'rgba(74, 158, 255, 0.15)' : 'transparent',
               borderLeft: isHighlighted ? '3px solid #4a9eff' : '3px solid transparent',
               display: 'block',
-              paddingLeft: '0.5em',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              // Hanging indent: a wrapped long line continues under the code, not under the line number.
+              paddingLeft: '3.75em',
+              textIndent: '-3.25em',
               transition: 'background-color 0.3s ease',
             },
           };
         }}
+        codeTagProps={{ style: { whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }}
         customStyle={{
           margin: 0,
           padding: '1rem 0',

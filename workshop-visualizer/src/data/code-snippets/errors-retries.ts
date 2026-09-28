@@ -29,7 +29,7 @@ def ask(question, tries=3):
         except APIConnectionError:
             print("Can't reach the server. Is the internet on?")
 
-        # Still here? Something went wrong, but it may fix itself. Wait, then retry.
+        # Still here? It may fix itself: wait, then retry.
         if attempt < tries:
             wait = 2 ** (attempt - 1)  # 1s, 2s, 4s... doubles every time
             print(f"Waiting {wait}s before try {attempt + 1}...")

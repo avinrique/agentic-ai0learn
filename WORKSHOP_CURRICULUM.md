@@ -1,192 +1,93 @@
 # Workshop Visualizer — Curriculum & Teaching Guide
 
-## The Story Arc: From Zero to Building AI Agents
+Live site: https://workshop-visualizer-mu.vercel.app · Source: `workshop-visualizer/` · Test plan: `BEGINNER_TEST_PLAN.md`
 
-This workshop takes someone who has **never touched an LLM API** and walks them through to **building autonomous agents that run terminal commands**. The journey follows a clear narrative arc:
+## The story arc: from zero to teams of AI agents
 
-```
-"What even IS this thing?" → "How does it work inside?" → "Let me call it myself"
-→ "Let me make it smart" → "Let me give it tools" → "Let me set it free"
-```
-
----
-
-## Current Curriculum (15 Lessons)
-
-### Part 0: Foundations — "What's happening behind the curtain?" (5 concept lessons)
-
-These are **visual, animated concept lessons** with no code. They build the mental model a student needs before writing a single line. Each lesson has step-by-step animations with explanations.
-
-| # | Lesson | Steps | What It Teaches | Status |
-|---|--------|-------|-----------------|--------|
-| 1 | **What is an LLM?** | 22 | Token prediction, embeddings, attention, neural nets, training, context window | Done — most thorough lesson |
-| 2 | **Context & Memory** | 15 | Messages array, 3 roles, API call mechanics, re-sending, growing cost, system prompt anatomy | Done |
-| 3 | **Temperature & Creativity** | 8 | Probability distributions, temp=0/0.7/1.5, side-by-side comparison, use cases | Done (NEW) |
-| 4 | **Hallucination** | 8 | What/why hallucination, fake citations, plausible nonsense, confidence problem, reduction strategies | Done (NEW) |
-| 5 | **RAG & Agents** | 16 | Knowledge cutoff, RAG pipeline (retrieve/augment/generate), tool calls, agent loop, multi-step agents | Done |
-
-**Teaching flow:** Lesson 1 gives the "how does it work" foundation. Lesson 2 shows "how do I interact with it programmatically." Lessons 3-4 cover critical gotchas (temperature tuning, not trusting output blindly). Lesson 5 previews the advanced patterns they'll build.
-
----
-
-### Part 1: API Basics — "Let me call it myself" (5 tracer lessons)
-
-These are **code tracer lessons** with Python code on the right, step-by-step execution, variable inspector, and console output. Students see code execute line by line.
-
-| # | Lesson | What It Teaches | Status |
-|---|--------|-----------------|--------|
-| 6 | **Basic API Call** | First `openai.chat.completions.create()`, messages array, reading the response | Done |
-| 7 | **System Prompts & Role Playing** | `system` role, personality control, how system prompt shapes output | Done |
-| 8 | **JSON Output** | `response_format={"type": "json_object"}`, parsing structured output | Done |
-| 9 | **Few-Shot Learning** | Teaching by example, providing input/output pairs in messages | Done |
-| 10 | **Challenge: Restaurant Recommender** | Combine all Part 1 skills into one project | Done |
-
-**Teaching flow:** Each lesson builds directly on the previous. You can't do system prompts without understanding the basic API call. You can't do structured output without understanding the message format.
-
----
-
-### Part 2: Agents — "Let me give it tools" (2 tracer lessons)
-
-| # | Lesson | What It Teaches | Status |
-|---|--------|-----------------|--------|
-| 11 | **Simple Agent: Calculator** | First tool definition, `tool_choice`, parsing tool calls, executing, returning results | Done |
-| 12 | **Multi-Function Agent: Math Tutor** | Multiple tools, the agent loop (think → decide → execute → observe → repeat) | Done |
-
----
-
-### Part 3: Advanced Agents — "Let me set it free" (3 tracer lessons)
-
-| # | Lesson | What It Teaches | Status |
-|---|--------|-----------------|--------|
-| 13 | **Multi-Tool Agent: Study Buddy** | Calculator + knowledge lookup, choosing between tools | Done |
-| 14 | **Study Buddy Pro** | 7 tools including percentage and simple interest, complex multi-step reasoning | Done |
-| 15 | **Terminal Assistant** | Fully autonomous agent: runs commands, reads/writes files, shell execution | Done |
-
----
-
-## Alignment Analysis: Does the Teaching Flow Make Sense?
-
-### What's STRONG
-
-1. **Part 0 → Part 1 bridge is excellent.** The concept lessons perfectly set up the code lessons. By the time students see `messages = [{"role": "system", ...}]` in code, they've already seen the messages array animated 50+ times.
-
-2. **Progressive complexity works.** Each lesson truly builds on the last. Basic API → System Prompts → JSON → Few-Shot → Challenge → Simple Agent → Multi-Agent → Terminal. No jumps.
-
-3. **Visual-first approach.** Starting with animations before code removes the "I don't know what this code is doing" barrier. Students arrive at code with a mental model already in place.
-
-4. **Temperature & Hallucination fill critical gaps.** Before these were added, students would learn HOW to call the API without understanding WHY outputs vary or when to NOT trust them. Now they know.
-
-### What's WEAK / MISSING
-
-#### Gap 1: No "Prompt Engineering" Dedicated Lesson
-**Problem:** Students learn system prompts and few-shot, but there's no dedicated visual lesson on **prompt engineering patterns** — chain-of-thought, step-by-step reasoning, role prompting, delimiter usage, output formatting tricks.
-**Where it should go:** Part 0, between Hallucination and RAG & Agents (Lesson 5).
-**Priority:** HIGH — this is the most practical skill for day-to-day LLM usage.
-
-#### Gap 2: No "Streaming" Lesson
-**Problem:** Every real-world app streams responses. The typing effect students see in ChatGPT is streaming. Currently no lesson covers `stream=True`, reading chunks, or displaying partial responses.
-**Where it should go:** Part 1, after Basic API Call (Lesson 7).
-**Priority:** MEDIUM — important for real apps but not blocking for understanding.
-
-#### Gap 3: No "Conversation Loop" Lesson
-**Problem:** Part 1 lessons show single API calls. There's no lesson showing a **multi-turn conversation loop** — the actual pattern from Context & Memory (Lesson 2) implemented in code: send messages → get response → append → send again.
-**Where it should go:** Part 1, after System Prompts (Lesson 8).
-**Priority:** HIGH — bridges the gap between "I can make one call" and "I can build a chatbot."
-
-#### Gap 4: No "Error Handling & Rate Limits" Lesson
-**Problem:** Real API usage hits rate limits, timeouts, and 4xx/5xx errors. Students have zero exposure to handling these gracefully.
-**Where it should go:** Part 1 or early Part 2.
-**Priority:** MEDIUM — important for production but not for learning concepts.
-
-#### Gap 5: No "Cost & Token Counting" Practical Lesson
-**Problem:** Lesson 2 shows cost conceptually (growing bar chart) and the LLM lesson explains tokens, but there's no code lesson showing `response.usage.total_tokens` and calculating actual cost.
-**Where it should go:** Part 1, after Basic API Call.
-**Priority:** LOW — nice to have, not blocking.
-
-#### Gap 6: Part 2 → Part 3 Jump is Subtle
-**Problem:** Part 2 has 2 lessons, Part 3 has 3. The difference between "Agents" and "Advanced Agents" isn't that clear. Study Buddy (Part 3) isn't dramatically more complex than Math Tutor (Part 2).
-**Suggestion:** Either merge into one part or make Part 3 distinctly harder (add RAG as a tool, add multi-agent systems, add memory/state).
-
-#### Gap 7: No "Embeddings & Vector Search" Practical Lesson
-**Problem:** RAG is taught conceptually in Part 0, but there's no code lesson implementing the embedding + vector search + retrieval pipeline.
-**Where it should go:** Part 3, as the capstone before Terminal Assistant.
-**Priority:** MEDIUM-HIGH — RAG is one of the most in-demand patterns.
-
-#### Gap 8: No "Evaluation & Testing" Lesson
-**Problem:** Students build agents but never learn to evaluate if they're working correctly — assertion testing, golden datasets, automated evaluation.
-**Where it should go:** End of Part 3 or as a new Part 4.
-**Priority:** LOW for a workshop, HIGH for production use.
-
----
-
-## Recommended New Teaching Order
-
-If all gaps were filled, the ideal curriculum would be:
+The course takes someone who has **never touched an LLM API** (explained so a ~12-year-old can follow) to **building teams of
+agents with guardrails**:
 
 ```
-PART 0: Foundations (Visual Concepts)
-  1. What is an LLM?          ← existing
-  2. Context & Memory          ← existing
-  3. Temperature & Creativity  ← existing (NEW)
-  4. Hallucination             ← existing (NEW)
-  5. Prompt Engineering        ← TO BUILD (patterns, chain-of-thought, delimiters)
-  6. RAG & Agents              ← existing
-
-PART 1: API Basics (Code Tracers)
-  7.  Basic API Call            ← existing
-  8.  Streaming Responses       ← TO BUILD
-  9.  System Prompts            ← existing
-  10. Conversation Loop         ← TO BUILD (multi-turn chatbot)
-  11. JSON Output               ← existing
-  12. Few-Shot Learning         ← existing
-  13. Challenge: Restaurant     ← existing
-
-PART 2: Tool Use & Agents (Code Tracers)
-  14. Simple Agent: Calculator  ← existing
-  15. Multi-Function Agent      ← existing
-  16. Multi-Tool Agent          ← existing (moved from Part 3)
-
-PART 3: Advanced Patterns (Code Tracers)
-  17. Study Buddy Pro           ← existing
-  18. RAG Implementation        ← TO BUILD (embeddings + vector search + retrieval)
-  19. Terminal Assistant         ← existing
-  20. Evaluation & Testing      ← TO BUILD (optional capstone)
+"What even IS this thing?" → "How do I talk to it well?" → "Let me set up and call it myself"
+→ "Let me make it reliable" → "Let me give it tools" → "Let me build a team" → "Let me keep it safe"
 ```
 
----
+Every lesson has: step-by-step explanations (one idea per step), an animation, a **journey strip** on step 1 ("Last time… / Today…"),
+and a **🧠 Quick check** quiz (3 questions) on the last step. Concept lessons end with a **"Try it yourself"** playground.
+Code lessons show the Python program line by line (highlighted line, Output and Variables tabs), have 2–3 **"Try different
+inputs"** examples, and a **💻 Run it yourself** box with the exact program to download and run.
 
-## Features & UX
+## The 33 lessons
 
-### Currently Available
-- Step-by-step animated concept lessons (Part 0)
-- Line-by-line code tracer with variable inspector (Part 1-3)
-- Auto-play with configurable speed
-- Collapsible sidebar navigation
-- Resizable panels
-- **Fullscreen mode** (press `F` or click button) — hides sidebar, compacts header, maximizes animation space
-- Color-coded lesson numbering (1-15)
-- Home page with part overview cards
+### Part 0 — Foundations (concept lessons, no code)
+| # | Lesson | What it teaches |
+|---|---|---|
+| 1 | What is an LLM? | Tokens, embeddings, attention, next-token prediction, training, context window |
+| 2 | Temperature & Creativity | Probabilities, temperature and top-p (live sliders playground) |
+| 3 | Context & Memory | The messages list is the memory; re-sending; growing cost; drop vs summarise |
+| 4 | System Prompts | messages[0], persona/format/rules/safety, prompt injection |
+| 5 | Writing Good Prompts | Role, task, context, format, examples, limits, delimiters, step by step, iterate |
+| 6 | Hallucination | Why it happens, fake citations, 5 ways to fight it (Real-or-Made-up quiz) |
+| 7 | RAG | Retrieve → augment → generate (mini search engine playground) |
+| 8 | Agents & Tools | Tool calls and the agent loop (agent-run simulator) |
 
-### Would Be Nice to Have
-- **Keyboard shortcuts** — Left/Right arrow for prev/next step, Space for play/pause
-- **Progress persistence** — Remember which step the user was on (localStorage)
-- **Dark/light theme toggle** — Currently dark-only
-- **Mobile responsive** — Currently desktop-only layout
-- **Export/share** — Generate a link to a specific step for classroom sharing
-- **Speaker notes** — Hidden notes for the teacher/presenter (different from student explanations)
-- **Quiz/checkpoint** — At the end of each Part, a quick check to verify understanding
+### Part 1 — API Basics (code lessons)
+| # | Lesson | Program in the kit |
+|---|---|---|
+| 9 | Get Set Up: Run AI Code on Your Computer (concept) | Python, venv, API key, .env, cost, `check_setup.py` |
+| 10 | Basic API Call | `part1/basic_api.py` |
+| 11 | Streaming: The Typing Effect | `part1/streaming.py` |
+| 12 | Tokens & Cost in Code | `part1/tokens_cost.py` |
+| 13 | System Prompts & Role Playing | `part1/system_prompts.py` |
+| 14 | Conversation Loop | `part1/conversation_loop.py` |
+| 15 | JSON Output | `part1/json_output.py` |
+| 16 | Few-Shot Learning | `part1/few_shot.py` |
+| 17 | When Things Go Wrong: Errors & Retries | `part1/errors_retries.py` |
+| 18 | Challenge: Restaurant Recommender | `part1/challenge.py` |
 
----
+### Part 2 — Agents
+| # | Lesson | Program |
+|---|---|---|
+| 19 | Simple Agent: Calculator | `part2/simple_agent.py` |
+| 20 | Multi-Function Agent: Math Tutor | `part2/multi_function.py` |
 
-## Summary
+### Part 3 — Advanced Agents
+| # | Lesson | Program |
+|---|---|---|
+| 21 | Multi-Tool Agent: Study Buddy | `part3/multi_tool.py` |
+| 22 | Study Buddy Pro | `part3/study_buddy_pro.py` |
+| 23 | Code: RAG with Embeddings | `part3/rag_code.py` |
+| 24 | Terminal Assistant | `part3/terminal_assistant.py` |
+| 25 | Testing Your Agent | `part3/testing_agents.py` |
 
-The workshop is **well-structured and coherent**. The biggest teaching gaps are:
+### Part 4 — Multi-Agent Teams (cast: Rita 🔍, Wally ✍️, Cora 🧐, Max 👑, Milo 🧮, Rosa 🛎️)
+| # | Lesson | Program |
+|---|---|---|
+| 26 | Why a Team of Agents? (concept) | — |
+| 27 | Team Shapes: How Agents Work Together (concept) | — |
+| 28 | Code: Assembly Line (Researcher → Writer) | `part4/assembly_line.py` |
+| 29 | Code: Writer & Critic Loop | `part4/writer_critic.py` |
+| 30 | Code: The Boss Agent | `part4/boss_agent.py` |
+| 31 | Code: Agents in Parallel | `part4/parallel_agents.py` |
+| 32 | Code: A Shared Whiteboard | `part4/shared_memory.py` |
+| 33 | Code: Guardrails & Human Approval | `part4/guardrails.py` |
 
-1. **Prompt Engineering** (high priority) — the most practical daily skill
-2. **Conversation Loop** (high priority) — bridges single-call to multi-turn
-3. **RAG Implementation** (medium-high) — most in-demand production pattern
-4. **Streaming** (medium) — every real app uses this
+## The course code kit
+Download: `/code/ai-course-code.zip` (folder `ai-course/`). It is generated from the lessons themselves (`src/data/runRegistry.ts`,
+`src/lib/courseKit.ts`), so the file a student downloads is the program they watched. Contents: `README.md`, `requirements.txt`
+(openai, python-dotenv, tiktoken), `.env.example`, `.gitignore`, `run.py` (loads `.env`, runs a lesson file from its folder),
+`check_setup.py` (checks the setup, asks before one tiny test call), and one program per code lesson. Run any lesson with
+`python run.py partN/<file>.py`.
 
-The visual-first approach (Part 0 concepts → Part 1+ code) is the strongest pedagogical decision. Students arrive at code already understanding what's happening. The new Temperature and Hallucination lessons fill critical trust/tuning gaps that were previously missing.
+## Where to add things
+- Lesson list and order: `src/data/lessons.ts` · quizzes + journey lines: `src/data/lessonGuides.ts` and `src/data/guides/<id>.ts`
+- Concept steps: `src/data/concept-steps/` · code: `src/data/code-snippets/` · traces + variants: `src/data/traces/`
+- Run-it info: `src/data/run/<id>.ts` (registered in `src/data/runRegistry.ts`)
+- Animations: `src/components/animations/` (shared robot characters in `characters/AgentBot.tsx`)
 
-The fullscreen mode makes the animations suitable for classroom projection — the teacher can press `F` and the entire screen becomes the teaching canvas.
+## Ideas not built yet
+- A "short path" (8–10 key steps per lesson) for time-boxed workshops; the full course is ~600 steps.
+- Speaker notes / presenter mode, reset-progress button, printable one-page cheat sheet per part.
+- Phone/tablet layout (desktop-first today).
+- A closing "What real apps use today" lesson (OpenAI Responses API, Agents SDK).
+- Evaluation with an AI judge; RAG with a real vector database.

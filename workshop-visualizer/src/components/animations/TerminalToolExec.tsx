@@ -154,7 +154,7 @@ export default function TerminalToolExec({
         </motion.div>
       )}
       <div className="min-h-0 overflow-hidden flex flex-col justify-end px-4 py-2.5 font-mono text-[15px] leading-[1.55]">
-        {shown.length === 0 && <div className="text-white/30">$ python terminal_assistant.py</div>}
+        {shown.length === 0 && <div className="text-white/30">$ python run.py part3/terminal_assistant.py</div>}
         {shown.map((l) => (
           <motion.div
             key={l.key}

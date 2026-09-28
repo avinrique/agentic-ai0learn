@@ -46,6 +46,8 @@ export default function LessonLayout({
       setSidebarCollapsed(true);
     }
     sidebarAutoCollapsed = true;
+    // Give the animation more room on smaller screens (1280 → ~435px of code).
+    setTracerWidthPx(Math.max(380, Math.min(520, Math.round(window.innerWidth * 0.34))));
   }, [setSidebarCollapsed]);
 
   useEffect(() => {
@@ -99,7 +101,11 @@ export default function LessonLayout({
         {/* Main content */}
         <div ref={mainRef} className="flex-1 flex overflow-hidden min-h-0">
           {/* Animation Panel */}
-          <div className="flex-1 p-3 overflow-auto min-w-0">
+          {/* Clicking into the animation (e.g. a playground) pauses auto-play. */}
+          <div
+            className="flex-1 p-3 overflow-auto min-w-0"
+            onPointerDown={() => useTracerStore.getState().setPlaying(false)}
+          >
             <div className="h-full rounded-xl border border-white/10 bg-navy-800/30 overflow-hidden">
               {animationPanel}
             </div>
@@ -111,7 +117,7 @@ export default function LessonLayout({
               <ResizableHandle direction="horizontal" onResize={handleMainResize} />
               <div
                 style={{ width: tracerWidthPx }}
-                className="flex-shrink-0 border-l border-white/10 overflow-hidden"
+                className="flex-shrink-0 border-l border-white/10 overflow-hidden flex flex-col"
               >
                 {children}
               </div>

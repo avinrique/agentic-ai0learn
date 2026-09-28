@@ -1,9 +1,20 @@
 'use client';
+import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTracerStore } from '@/stores/tracerStore';
 
 export default function OutputConsole({ hideHeader = false }: { hideHeader?: boolean }) {
   const { cumulativeOutput } = useTracerStore();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Keep the newest printed line in view, like a real terminal.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    const outer = el.parentElement?.parentElement;
+    if (outer) outer.scrollTop = outer.scrollHeight;
+  }, [cumulativeOutput]);
 
   return (
     <div className="h-full flex flex-col">
@@ -12,7 +23,7 @@ export default function OutputConsole({ hideHeader = false }: { hideHeader?: boo
           Console Output
         </div>
       )}
-      <div className="p-3 font-mono text-xs bg-black/30 flex-1 min-h-0 overflow-auto">
+      <div ref={scrollRef} className="p-3 font-mono text-xs bg-black/30 flex-1 min-h-0 overflow-auto">
         <AnimatePresence mode="popLayout">
           {cumulativeOutput.length === 0 ? (
             <p className="text-white/20 italic">No output yet...</p>

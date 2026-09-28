@@ -12,7 +12,8 @@ tools = [{"type": "function", "function": {
     "name": "add",
     "description": "Add two numbers together",
     "parameters": {"type": "object", "required": ["a", "b"],
-                   "properties": {"a": {"type": "number"}, "b": {"type": "number"}}},
+                   "properties": {"a": {"type": "number"},
+                                  "b": {"type": "number"}}},
 }}]
 
 def ask_agent(question):  # returns (tool_used, answer)
@@ -27,7 +28,9 @@ def ask_agent(question):  # returns (tool_used, answer)
     arguments = json.loads(tool_call.function.arguments)
     result = add(arguments["a"], arguments["b"])
     messages.append(message)
-    messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": str(result)})
+    messages.append({"role": "tool",
+                     "tool_call_id": tool_call.id,
+                     "content": str(result)})
     final = client.chat.completions.create(
         model="gpt-4o-mini", messages=messages, temperature=0)
     answer = final.choices[0].message.content
@@ -54,8 +57,10 @@ for test in tests:
         print("✅ PASS")
         passed += 1
     if not tool_ok:
-        print(f"❌ FAIL: expected tool {test['expect_tool']}, but it used {tool_used}")
+        print(f"❌ FAIL: expected tool {test['expect_tool']}, "
+              f"but it used {tool_used}")
     if not answer_ok:
-        print(f"❌ FAIL: the answer should contain '{test['must_contain']}'")
+        print("❌ FAIL: the answer should contain "
+              f"'{test['must_contain']}'")
 
 print(f"\\nScore: {passed}/{len(tests)} passed")`;

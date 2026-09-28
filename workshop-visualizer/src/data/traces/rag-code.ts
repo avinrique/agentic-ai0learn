@@ -56,7 +56,7 @@ export const RAG_STORIES: RagStory[] = [
     answer: 'You can borrow up to 3 books, for 2 weeks.',
     found: true,
     mapNote:
-      'Picture each embedding as a spot on a meaning map. The question lands right next to the Borrowing card; lunch and the science fair are far away.',
+      'Picture each embedding as a spot on a meaning map. Close spots mean arrows pointing the same way: a high similarity(). The question lands next to Borrowing; lunch is far away.',
     scoreNote:
       'similarity() scores the question against each document. Closer in meaning means a higher score. Borrowing wins with 0.71 (illustrative numbers).',
     topNote: 'ranked[:2] means "the first two". We keep the top 2 documents, and the Retrieve step is done.',
@@ -72,7 +72,7 @@ export const RAG_STORIES: RagStory[] = [
     answer: 'The science fair is on 14 March, in the school gym.',
     found: true,
     mapNote:
-      'Picture each embedding as a spot on a meaning map. The question lands right next to the Science fair card; the others are far away.',
+      'Picture each embedding as a spot on a meaning map. Close spots mean arrows pointing the same way: a high similarity(). The question lands next to Science fair; the others are far away.',
     scoreNote:
       'similarity() scores the question against each document. Closer in meaning means a higher score. Science fair wins with 0.78 (illustrative numbers).',
     topNote: 'ranked[:2] means "the first two". We keep the top 2 documents, and the Retrieve step is done.',
@@ -87,7 +87,7 @@ export const RAG_STORIES: RagStory[] = [
     answer: "I don't know. The context doesn't mention a Wi-Fi password.",
     found: false,
     mapNote:
-      'Picture each embedding as a spot on a meaning map. This question lands far from every card: nothing in the handbook is about Wi-Fi.',
+      'Picture each embedding as a spot on a meaning map. Close spots mean arrows pointing the same way: a high similarity(). This question lands far from every card: no fact mentions Wi-Fi.',
     scoreNote:
       'similarity() scores the question against each document. Every score is low: even the best, Lunch times, is only 0.17 (illustrative numbers).',
     topNote: 'We keep the top 2 anyway: Lunch times and Library hours. The code always takes 2, even when both scores are low.',
@@ -194,7 +194,7 @@ function ragSteps(s: RagStory): TraceStep[] {
     {
       at: 'return [item.embedding',
       trig: 'one-embedding',
-      exp: 'Each text comes back as its embedding: a list of 1,536 numbers. Think of it as GPS coordinates for meaning, like in Lesson 1.',
+      exp: 'When embed() is called later, each text comes back as its embedding: a list of 1,536 numbers. Think of it as GPS coordinates for meaning, like in Lesson 1.',
     },
     {
       at: 'return [item.embedding',
@@ -210,18 +210,23 @@ function ragSteps(s: RagStory): TraceStep[] {
     {
       at: 'dot = sum(',
       trig: 'sim-dot',
-      exp: "Here's the math on tiny 3-number lists. zip pairs up matching numbers; we multiply each pair and add them up. That's the dot product: 8.",
+      exp: "What similarity() will do, on tiny 3-number lists: zip pairs up matching numbers; we multiply each pair and add them up. That's the dot product: 8.",
+    },
+    {
+      at: 'length_a = sum(',
+      trig: 'sim-len',
+      exp: "Next, each arrow's length: square every number, add them up, then take the square root (** 0.5 means square root). Both lengths here are 3.",
     },
     {
       at: 'return dot /',
-      trig: 'sim-len',
-      exp: "Then divide by both arrows' lengths so only the direction counts: 8 ÷ (3 × 3) = 0.89, very alike. Real embeddings do this with 1,536 numbers.",
+      trig: 'sim-div',
+      exp: 'Divide the dot product by both lengths, so only the direction counts: 8 ÷ (3 × 3) = 0.89. Real embeddings do the same with 1,536 numbers.',
     },
     {
       at: 'doc_vectors = embed(documents)',
       trig: 'embed-docs',
       set: { doc_vectors: `[${numStrip(RAG_DOCS[0].nums)}, … 5 lists of 1,536 numbers]` },
-      exp: 'Now embed() runs: all 5 documents go in ONE embedding call (API call 1 of 3). We do this once and keep the numbers in doc_vectors.',
+      exp: 'Now embed() really runs: all 5 documents go in ONE call (API call 1 of 3). We keep their number lists in doc_vectors. A "vector" is just a list of numbers.',
     },
     {
       at: 'question = "',
@@ -279,7 +284,7 @@ function ragSteps(s: RagStory): TraceStep[] {
       at: 'system_prompt = """',
       trig: 'rule',
       set: { system_prompt: str(SYSTEM_PROMPT) },
-      exp: "The rule for the AI: answer ONLY from the context, and say you don't know if the answer isn't there. This stops it from guessing.",
+      exp: "The rule for the AI: answer ONLY from the context, and say you don't know if the answer isn't there. This tells it not to guess.",
     },
     {
       at: 'user_message = f"',

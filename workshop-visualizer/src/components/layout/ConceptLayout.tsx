@@ -1,6 +1,6 @@
 'use client';
 import { ReactNode, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import LessonBadge from '@/components/ui/LessonBadge';
 import JourneyStrip from '@/components/ui/JourneyStrip';
@@ -8,6 +8,11 @@ import ConceptStepControls from './ConceptStepControls';
 import { useConceptStore, ConceptStep } from '@/stores/conceptStore';
 import { useProgressStore } from '@/stores/progressStore';
 import { useFullscreen } from '@/hooks/useFullscreen';
+import { useUIStore } from '@/stores/uiStore';
+
+// On small screens (e.g. 1280×720 projectors) the sidebar starts collapsed so the
+// animation isn't shrunk; only the first time, so a student who re-opens it keeps it.
+let sidebarAutoCollapsed = false;
 
 interface ConceptLayoutProps {
   title: string;
@@ -27,6 +32,14 @@ export default function ConceptLayout({
   const { setSteps, currentStep, steps: currentSteps } = useConceptStore();
   const updateStep = useProgressStore((s) => s.updateStep);
   const { isFullscreen, toggleFullscreen, containerRef } = useFullscreen();
+  const setSidebarCollapsed = useUIStore((s) => s.setSidebarCollapsed);
+
+  useEffect(() => {
+    if (!sidebarAutoCollapsed && window.innerWidth < 1400) {
+      setSidebarCollapsed(true);
+    }
+    sidebarAutoCollapsed = true;
+  }, [setSidebarCollapsed]);
 
   useEffect(() => {
     setSteps(steps);
@@ -48,13 +61,12 @@ export default function ConceptLayout({
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header — compact in fullscreen */}
         {isFullscreen ? (
-          <AnimatePresence mode="wait">
+          <>
             {currentConceptStep && (
               <motion.header
                 key={currentStep}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
                 className="px-6 py-2 border-b border-white/5 bg-navy-900/80 backdrop-blur-sm flex-shrink-0 flex items-center gap-4"
               >
@@ -75,7 +87,7 @@ export default function ConceptLayout({
                 </button>
               </motion.header>
             )}
-          </AnimatePresence>
+          </>
         ) : (
           <header className="px-6 py-3 border-b border-white/10 bg-navy-800/50 flex-shrink-0">
             <div className="flex items-center justify-between">
@@ -93,13 +105,11 @@ export default function ConceptLayout({
               </button>
             </div>
             {currentStep === 0 && <JourneyStrip lessonId={lessonId} />}
-            <AnimatePresence mode="wait">
-              {currentConceptStep && (
+            {currentConceptStep && (
                 <motion.div
                   key={currentStep}
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
                   transition={{ duration: 0.2 }}
                   className="mt-2 px-4 py-2 rounded-lg bg-accent-blue/10 border border-accent-blue/20 text-[15px] leading-relaxed text-blue-100"
                 >
@@ -111,12 +121,15 @@ export default function ConceptLayout({
                   )}
                 </motion.div>
               )}
-            </AnimatePresence>
           </header>
         )}
 
         {/* Animation Panel — takes full space in fullscreen */}
-        <div className={isFullscreen ? 'flex-1 overflow-hidden min-h-0' : 'flex-1 p-3 overflow-hidden min-h-0'}>
+        {/* Clicking into the animation (e.g. a playground) pauses auto-play. */}
+        <div
+          className={isFullscreen ? 'flex-1 overflow-hidden min-h-0' : 'flex-1 p-3 overflow-hidden min-h-0'}
+          onPointerDown={() => useConceptStore.getState().setPlaying(false)}
+        >
           <div className={`h-full overflow-hidden ${isFullscreen ? '' : 'rounded-xl border border-white/10 bg-navy-800/30'}`}>
             {animationPanel}
           </div>

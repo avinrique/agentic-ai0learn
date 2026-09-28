@@ -14,6 +14,18 @@ export interface LessonGuide {
   quiz: QuizQuestion[]; // exactly 3 questions
 }
 
+// Guides for lessons added later live in their own files (src/data/guides/<id>.ts).
+import { guide as promptWritingGuide } from './guides/prompt-writing';
+import { guide as setupGuide } from './guides/setup';
+import { guide as streamingGuide } from './guides/streaming';
+import { guide as tokensCostGuide } from './guides/tokens-cost';
+import { guide as errorsRetriesGuide } from './guides/errors-retries';
+import { guide as ragCodeGuide } from './guides/rag-code';
+import { guide as testingAgentsGuide } from './guides/testing-agents';
+import { guide as parallelAgentsGuide } from './guides/parallel-agents';
+import { guide as sharedMemoryGuide } from './guides/shared-memory';
+import { guide as guardrailsGuide } from './guides/guardrails';
+
 export const lessonGuides: Record<string, LessonGuide> = {
   // ===== PART 0: Foundations =====
   'what-is-llm': {
@@ -853,4 +865,16 @@ export const lessonGuides: Record<string, LessonGuide> = {
       },
     ],
   },
+
+  // ===== Lessons added later (see src/data/guides/) =====
+  'prompt-writing': promptWritingGuide,
+  'setup': setupGuide,
+  'streaming': streamingGuide,
+  'tokens-cost': tokensCostGuide,
+  'errors-retries': errorsRetriesGuide,
+  'rag-code': ragCodeGuide,
+  'testing-agents': testingAgentsGuide,
+  'parallel-agents': parallelAgentsGuide,
+  'shared-memory': sharedMemoryGuide,
+  'guardrails': guardrailsGuide,
 };

@@ -72,11 +72,12 @@ export function DocChip({ i, glow, dim, color = GREEN }: { i: number; glow?: boo
 // ─── The meaning map ────────────────────────────────────────────────────────
 /** An illustrative 2D "meaning map": the question pin lands near the documents that mean something similar. */
 export function MeaningMap({ story }: { story: RagStory }) {
-  const top2 = rankedIdx(story).slice(0, 2);
+  // Only the single best match is drawn as "near"; keeping the top 2 is taught later, on the ranked[:2] step.
+  const best = story.found ? rankedIdx(story)[0] : -1;
   const [px, py] = story.pin;
 
   return (
-    <div className="relative w-full h-[420px] rounded-xl border border-white/10 overflow-hidden"
+    <div className="relative w-full h-full max-h-[420px] min-h-[260px] rounded-xl border border-white/10 overflow-hidden"
       style={{
         background: 'rgba(255,255,255,0.02)',
         backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
@@ -95,7 +96,7 @@ export function MeaningMap({ story }: { story: RagStory }) {
       {/* Distance lines from the question to every document */}
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
         {RAG_DOCS.map((d, i) => {
-          const near = story.found && top2.includes(i);
+          const near = i === best;
           return (
             <motion.line
               key={`${story.id}-${d.key}`}
@@ -116,18 +117,15 @@ export function MeaningMap({ story }: { story: RagStory }) {
       </svg>
 
       {/* Document chips */}
-      {RAG_DOCS.map((d, i) => {
-        const best = story.found && rankedIdx(story)[0] === i;
-        return (
-          <div
-            key={d.key}
-            className="absolute -translate-x-1/2 -translate-y-1/2"
-            style={{ left: `${d.pos[0] * 100}%`, top: `${d.pos[1] * 100}%` }}
-          >
-            <DocChip i={i} glow={best} dim={story.found && !top2.includes(i)} />
-          </div>
-        );
-      })}
+      {RAG_DOCS.map((d, i) => (
+        <div
+          key={d.key}
+          className="absolute -translate-x-1/2 -translate-y-1/2"
+          style={{ left: `${d.pos[0] * 100}%`, top: `${d.pos[1] * 100}%` }}
+        >
+          <DocChip i={i} glow={i === best} dim={story.found && i !== best} />
+        </div>
+      ))}
 
       {/* "Nothing close" ring for a question that matches nothing */}
       {!story.found && (
@@ -168,9 +166,10 @@ export function MeaningMap({ story }: { story: RagStory }) {
 }
 
 // ─── Score bars ─────────────────────────────────────────────────────────────
-export type BarMode = 'scores' | 'rank' | 'top2';
+export type BarMode = 'scores' | 'rank' | 'print' | 'top2';
 
-/** One bar per document. 'scores' = code order; 'rank' = best first; 'top2' = best first with the top 2 kept. */
+/** One bar per document. 'scores' = code order; 'rank' = best first; 'print' = ranked, bars dimmed, pointing at
+ * the Output panel; 'top2' = best first with the top 2 kept. */
 export function ScoreBars({ story, mode }: { story: RagStory; mode: BarMode }) {
   const ranked = rankedIdx(story);
   const order = mode === 'scores' ? RAG_DOCS.map((_, i) => i) : ranked;
@@ -210,7 +209,7 @@ export function ScoreBars({ story, mode }: { story: RagStory; mode: BarMode }) {
                 <motion.div
                   className="h-full rounded-md"
                   initial={{ width: 0 }}
-                  animate={{ width: `${score * 100}%`, backgroundColor: colorOf(i) }}
+                  animate={{ width: `${score * 100}%`, backgroundColor: colorOf(i), opacity: mode === 'print' ? 0.3 : 1 }}
                   transition={{ duration: 0.6, delay: mode === 'scores' ? 0.1 + i * 0.12 : 0 }}
                 />
               </div>
@@ -233,6 +232,17 @@ export function ScoreBars({ story, mode }: { story: RagStory; mode: BarMode }) {
           </div>
         );
       })}
+      {mode === 'print' && (
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="self-end mt-1 rounded-full px-3 py-1 text-[15px] font-semibold"
+          style={{ color: GOLD, background: `${GOLD}18`, border: `1.5px solid ${GOLD}88` }}
+        >
+          🖨️ printed → see Output
+        </motion.div>
+      )}
     </div>
   );
 }
@@ -257,7 +267,7 @@ function ArrowPair({ id, a, b, labelA, labelB, score, color, verdict }: {
   const arc = (r: number) => {
     const [x1, y1] = [ox + r * Math.cos((a * Math.PI) / 180), oy - r * Math.sin((a * Math.PI) / 180)];
     const [x2, y2] = [ox + r * Math.cos((b * Math.PI) / 180), oy - r * Math.sin((b * Math.PI) / 180)];
-    return `M ${x1} ${y1} A ${r} ${r} 0 0 0 ${x2} ${y2}`;
+    return `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`;
   };
   return (
     <div className="flex flex-col items-center gap-2">
@@ -269,7 +279,7 @@ function ArrowPair({ id, a, b, labelA, labelB, score, color, verdict }: {
             </marker>
           ))}
         </defs>
-        <path d={arc(55)} fill="none" stroke={color} strokeWidth={2} strokeDasharray="4 4" />
+        <path d={arc(90)} fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" />
         {[
           [ax, ay, BLUE],
           [bx, by, GOLD],
@@ -306,7 +316,7 @@ export function SimilarityArrows() {
   // cos(25°) ≈ 0.91, cos(84°) ≈ 0.10
   return (
     <div className="flex items-end justify-center gap-10">
-      <ArrowPair id="alike" a={55} b={30} labelA="take out books" labelB="borrow books" score="≈ 0.9" color={GREEN} verdict="same direction" />
+      <ArrowPair id="alike" a={55} b={30} labelA="borrow books" labelB="take out books" score="≈ 0.9" color={GREEN} verdict="same direction" />
       <ArrowPair id="apart" a={89} b={5} labelA="borrow books" labelB="lunch times" score="≈ 0.1" color={RED} verdict="far apart" />
     </div>
   );
@@ -316,19 +326,21 @@ export function SimilarityArrows() {
 const A = [1, 2, 2];
 const B = [2, 1, 2];
 
-export function WorkedExample({ part }: { part: 'dot' | 'length' }) {
+export function WorkedExample({ part }: { part: 'dot' | 'length' | 'divide' }) {
   const products = A.map((x, i) => x * B[i]);
   const dot = products.reduce((s, x) => s + x, 0); // 8
+  const sq = (v: number[]) => v.map((x) => x * x).join('+'); // "1+4+4"
+  const chip = 'rounded-full px-3 py-1 text-[14px] bg-white/5 text-white/60 font-mono';
   return (
     <div className="flex flex-col items-center gap-5">
       <div className="text-[13px] text-white/45">tiny example: 3 numbers instead of 1,536</div>
-      <div className="flex gap-8 font-mono text-[20px]">
+      <div className={`flex gap-8 font-mono ${part === 'dot' ? 'text-[20px]' : 'text-[16px] text-white/60'}`}>
         <span><span style={{ color: BLUE }}>a</span> = [{A.join(', ')}]</span>
         <span><span style={{ color: GOLD }}>b</span> = [{B.join(', ')}]</span>
       </div>
 
-      {part === 'dot' ? (
-        <div className="flex flex-col items-center gap-4">
+      {part === 'dot' && (
+        <div className="flex flex-col items-center gap-3">
           {/* zip pairs up matching numbers */}
           <div className="flex items-center gap-3">
             {A.map((x, i) => (
@@ -359,25 +371,51 @@ export function WorkedExample({ part }: { part: 'dot' | 'length' }) {
               {dot}
             </motion.span>
           </div>
-          <div className="text-[14px] text-white/55">zip pairs them up · multiply · add = dot product</div>
+          <div className="font-mono text-[15px] font-semibold" style={{ color: GREEN }}>dot</div>
         </div>
-      ) : (
+      )}
+
+      {part === 'length' && (
+        <div className="flex flex-col items-center gap-3">
+          <div className={chip}>✓ dot = {dot}</div>
+          {[
+            { name: 'length_a', v: A, color: BLUE },
+            { name: 'length_b', v: B, color: GOLD },
+          ].map((r, n) => (
+            <motion.div
+              key={r.name}
+              initial={{ x: -16, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.2 + n * 0.35 }}
+              className="flex items-center gap-2 rounded-xl border-2 px-5 py-2.5 font-mono text-[20px]"
+              style={{ borderColor: `${r.color}88`, background: `${r.color}12` }}
+            >
+              <span style={{ color: r.color }}>{r.name}</span>
+              <span className="text-white/50">=</span>
+              <span className="text-white">({sq(r.v)})</span>
+              <b style={{ color: GREEN }}>** 0.5</b>
+              <span className="text-white/50">= √9 =</span>
+              <b className="text-[24px] text-white">3</b>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {part === 'divide' && (
         <div className="flex flex-col items-center gap-4">
-          <div className="rounded-full px-3 py-1 text-[13px] bg-white/5 text-white/60 font-mono">✓ dot = {dot}</div>
-          <div className="flex gap-6 font-mono text-[17px]">
-            <span><span style={{ color: BLUE }}>length_a</span> = √(1+4+4) = 3</span>
-            <span><span style={{ color: GOLD }}>length_b</span> = √(4+1+4) = 3</span>
+          <div className="flex gap-2">
+            <span className={chip}>✓ dot = {dot}</span>
+            <span className={chip}>✓ lengths = 3, 3</span>
           </div>
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="rounded-xl px-6 py-3 border-2 font-mono text-[28px] font-bold"
+            transition={{ delay: 0.3 }}
+            className="rounded-xl px-6 py-3 border-2 font-mono text-[30px] font-bold"
             style={{ borderColor: GREEN, background: `${GREEN}14`, color: GREEN }}
           >
             {dot} ÷ (3 × 3) = {(dot / 9).toFixed(2)}
           </motion.div>
-          <div className="text-[15px] font-semibold" style={{ color: GREEN }}>very alike</div>
         </div>
       )}
     </div>

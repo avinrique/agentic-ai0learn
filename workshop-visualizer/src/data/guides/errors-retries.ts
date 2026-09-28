@@ -2,7 +2,7 @@ import type { LessonGuide } from '@/data/lessonGuides';
 
 export const guide: LessonGuide = {
   lastTime: 'A few example user/assistant pairs (few-shot) taught the AI a new task and answer style.',
-  today: 'Our program learns to catch errors, wait, retry the right ones, and never crash.',
+  today: 'Our program learns to catch errors, wait, retry the right ones, and give friendly messages.',
   quiz: [
     {
       q: 'What does try/except do when the API call fails?',
@@ -25,7 +25,7 @@ export const guide: LessonGuide = {
       why: 'A busy server frees up in a moment. A wrong key or an empty account stays that way, so retrying those only wastes time.',
     },
     {
-      q: 'Why wait 1s, then 2s, then 4s instead of retrying instantly?',
+      q: 'Why wait 1s, then 2s, instead of retrying instantly?',
       options: [
         'It gives the busy server more room each time',
         'Python needs a rest between loops',

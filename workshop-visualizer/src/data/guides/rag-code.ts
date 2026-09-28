@@ -9,7 +9,7 @@ export const guide: LessonGuide = {
       options: [
         'The handbook has no fact about books',
         'Questions must be shorter than 5 words',
-        'The handbook says "borrow", not "take out", so no words match',
+        'The handbook says "borrow", so searching "take out" finds nothing',
       ],
       answer: 2,
       why: 'Word search needs the same letters. Embeddings compare meaning instead, so "take out books" and "borrow books" land close together even though the words differ.',
