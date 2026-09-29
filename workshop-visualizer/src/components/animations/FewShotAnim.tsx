@@ -87,6 +87,8 @@ export default function FewShotAnim({ zeroShotReplies = {} }: Props) {
     { l: 7, code: 'messages', plain: 'the made-up conversation', on: lineReached(7) },
   ];
   const setupPhase = !sys;
+  // First step (line 1, the file-name comment): nothing has run yet, so show the goal instead of empty chips.
+  const intro = setupPhase && line === 1;
 
   const renderRow = (r: Row, i: number) => {
     const isReal = r.kind === 'real';
@@ -172,8 +174,32 @@ export default function FewShotAnim({ zeroShotReplies = {} }: Props) {
 
   return (
     <div className="h-full flex flex-col justify-center px-5 py-4 gap-4 overflow-hidden">
+      {/* Goal: a sentence goes in, one of three labels comes out */}
+      {intro && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={spring}
+          className="self-center flex items-center gap-5"
+        >
+          <div className="rounded-xl bg-accent-blue/10 px-5 py-4 text-[18px] text-white/90">💬 any sentence</div>
+          <div className="text-2xl text-accent-gold">➜</div>
+          <div className="flex flex-col gap-2">
+            {['Positive', 'Negative', 'Neutral'].map((l) => (
+              <div
+                key={l}
+                className="w-[130px] rounded-xl border-2 px-2 py-1.5 text-center text-[17px] font-bold"
+                style={{ color: labelColor(l), borderColor: `${labelColor(l)}88`, backgroundColor: `${labelColor(l)}1f` }}
+              >
+                {l}
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       {/* Setup checklist: only while setting up */}
-      {setupPhase && (
+      {setupPhase && !intro && (
         <div className="flex flex-wrap justify-center gap-2">
           {chips.map((c) => {
             const current = line === c.l;

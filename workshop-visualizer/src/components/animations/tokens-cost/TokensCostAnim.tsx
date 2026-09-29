@@ -60,6 +60,19 @@ function CountUp({ to, from = 0, run, duration = 1.2 }: { to: number; from?: num
   return <>{num(Math.round(n))}</>;
 }
 
+/** The first `keep` parts (lines or paragraphs) of a long text, and how many words are left out. */
+function preview(text: string, sep: string, keep: number) {
+  const parts = text.split(sep);
+  const words = (s: string) => s.split(/\s+/).filter(Boolean).length;
+  return { shown: parts.slice(0, keep).join(sep), more: words(parts.slice(keep).join(' ')) };
+}
+
+/** Footer on a shortened card: says plainly that the text goes on. */
+function MoreWords({ n }: { n: number }) {
+  if (n <= 0) return null;
+  return <div className="mt-2 text-[13px] font-bold text-slate-500">… +{num(n)} more words</div>;
+}
+
 function Chip({ children, color }: { children: ReactNode; color: string }) {
   return (
     <motion.span
@@ -83,25 +96,19 @@ function Slip({ text, compact, long }: { text: string; compact?: boolean; long: 
       </div>
     );
   }
+  // A long question shows its first 12 lines (whole lines, so it fits at every panel size).
+  const { shown, more } = long ? preview(text, '\n', 12) : { shown: text, more: 0 };
   return (
     <motion.div
       layout
-      className="relative rounded-lg bg-white text-slate-800 shadow-xl overflow-hidden"
+      className="rounded-lg bg-white text-slate-800 shadow-xl"
       style={{ width: long ? '82%' : '78%', padding: '16px 20px' }}
     >
       <div className="text-[13px] font-bold text-slate-500 mb-1">📄 question</div>
-      <div
-        className="leading-snug whitespace-pre-line"
-        style={{ fontSize: long ? 15 : 22, maxHeight: long ? 250 : undefined, overflow: 'hidden' }}
-      >
-        {text}
+      <div className="leading-snug whitespace-pre-line" style={{ fontSize: long ? 15 : 22 }}>
+        {shown}
       </div>
-      {long && (
-        <div
-          className="absolute inset-x-0 bottom-0 h-12 pointer-events-none"
-          style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0), #fff)' }}
-        />
-      )}
+      <MoreWords n={more} />
     </motion.div>
   );
 }
@@ -354,21 +361,21 @@ function Meter({ scene, phase }: { scene: TokensCostScene; phase: 'send' | 'writ
 }
 
 function Answer({ scene, long }: { scene: TokensCostScene; long: boolean }) {
+  // A long answer shows its first 3 paragraphs (whole paragraphs, so no line is cut in half).
+  const { shown, more } = long ? preview(scene.answer, '\n\n', 3) : { shown: scene.answer, more: 0 };
   return (
     <div className="w-full flex flex-col items-center gap-3">
       <motion.div
         initial={{ y: 16, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={spring}
-        className="relative w-[84%] rounded-lg bg-white text-slate-800 shadow-xl overflow-hidden px-5 py-4"
+        className="w-[84%] rounded-lg bg-white text-slate-800 shadow-xl px-5 py-4"
       >
         <div className="text-[13px] font-bold text-slate-500 mb-1.5">🤖 answer</div>
-        <div className="leading-snug whitespace-pre-line" style={{ fontSize: long ? 15 : 19, maxHeight: long ? 300 : undefined, overflow: 'hidden' }}>
-          {scene.answer}
+        <div className="leading-snug whitespace-pre-line" style={{ fontSize: long ? 15 : 19 }}>
+          {shown}
         </div>
-        {long && (
-          <div className="absolute inset-x-0 bottom-0 h-14 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0), #fff)' }} />
-        )}
+        <MoreWords n={more} />
       </motion.div>
     </div>
   );

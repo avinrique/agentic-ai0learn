@@ -97,7 +97,8 @@ export default function ToolSelectionAnim({
                 }}
               />
             )}
-            <div className="flex items-center gap-2 min-w-0">
+            {/* The picked card never shortens its name: it wraps instead (e.g. simple_interest in a 3-column grid). */}
+            <div className={`flex items-center gap-2 min-w-0 ${isChosen ? 'flex-wrap' : ''}`}>
               <span
                 className={`flex-shrink-0 ${many ? 'w-6 h-6 text-[14px]' : 'w-8 h-8 text-[17px]'} rounded-md flex items-center justify-center font-bold`}
                 style={{
@@ -108,7 +109,7 @@ export default function ToolSelectionAnim({
                 {tool.icon}
               </span>
               <span
-                className={`min-w-0 truncate font-mono ${many ? 'text-[15px]' : 'text-[18px]'} font-semibold rounded px-1 ${hl('name')}`}
+                className={`min-w-0 ${isChosen ? 'break-all' : 'truncate'} font-mono ${many ? 'text-[15px]' : 'text-[18px]'} font-semibold rounded px-1 ${hl('name')}`}
                 style={{ color: isChosen ? '#fff' : tool.color }}
               >
                 {tool.name}

@@ -190,7 +190,14 @@ export default function ConversationLoopAnim() {
                     {st.label}
                     <span className="ml-1.5 font-mono font-normal text-white/35">[{i}]</span>
                   </div>
-                  <div className="text-[14px] text-white/80 truncate">{m.content}</div>
+                  {/* The latest message is the one the step talks about: let it wrap. Older ones stay one line. */}
+                  <div
+                    className={`text-[14px] text-white/80 ${
+                      i === s.messages.length - 1 ? 'line-clamp-3' : 'truncate'
+                    }`}
+                  >
+                    {m.content}
+                  </div>
                 </motion.div>
               );
             })}

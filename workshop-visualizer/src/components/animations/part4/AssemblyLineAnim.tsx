@@ -132,11 +132,14 @@ export default function AssemblyLineAnim() {
   const botSize = short ? 64 : 84;
   // The big sticky note: wider on short (narrow) screens so the three facts fit in a few lines.
   const noteW = short ? 46 : 36;
-  // A step that prints: one quiet console line under the scene (unless it prints the paragraph that the
-  // article panel already shows in full, e.g. the heading "Wally's paragraph:" still gets its line).
-  const printOneLine = printed.replace(/\s*\n+\s*/g, ' ').trim();
+  // A step that prints: one quiet console line under the scene, unless it prints text the focal element
+  // already shows in full (Rita's facts on the big sticky note, Wally's paragraph in the article panel), so
+  // no cut-off duplicate. The headings ("Rita's facts:", "Wally's paragraph:") still get their line.
+  const oneLine = (s: string) => s.replace(/\s*\n+\s*/g, ' ').trim();
+  const printOneLine = oneLine(printed);
+  const shownInFull = [noteBig ? facts : undefined, bottom === 'article' ? article : undefined];
   const printLine =
-    printOneLine && bottom !== 'recap' && !(bottom === 'article' && article && article.includes(printOneLine.slice(0, 40)))
+    printOneLine && bottom !== 'recap' && !shownInFull.some((t) => t && oneLine(t).includes(printOneLine.slice(0, 40)))
       ? printOneLine
       : '';
 

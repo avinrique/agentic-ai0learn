@@ -195,8 +195,20 @@ export function Scene({ id, children, className = '', fit = true }: { id: string
 /**
  * Fills its (absolutely positioned) parent. Below minW x minH it lays the children out at a bigger virtual size
  * and scales them down, so a flexible layout never has to squeeze under its minimum.
+ * With `compact`, a parent shorter than minH first gets the children's compact layout (children(true)), with its
+ * own minimum, so a short panel (1280x720 laptops) rearranges instead of shrinking the text below 13px.
  */
-export function FitFill({ minW, minH, children }: { minW: number; minH: number; children: ReactNode }) {
+export function FitFill({
+  minW,
+  minH,
+  compact,
+  children,
+}: {
+  minW: number;
+  minH: number;
+  compact?: { minW: number; minH: number };
+  children: ReactNode | ((compact: boolean) => ReactNode);
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
   useLayoutEffect(() => {
@@ -208,11 +220,14 @@ export function FitFill({ minW, minH, children }: { minW: number; minH: number; 
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const s = box && box.w > 0 && box.h > 0 ? Math.min(1, box.w / minW, box.h / minH) : 1;
+  const isCompact = !!compact && !!box && box.h > 0 && box.h < minH;
+  const min = isCompact ? compact : { minW, minH };
+  const s = box && box.w > 0 && box.h > 0 ? Math.min(1, box.w / min.minW, box.h / min.minH) : 1;
   return (
     <div ref={ref} className="absolute inset-0 overflow-hidden">
       <div
         data-fit={s.toFixed(3)}
+        data-compact={isCompact || undefined}
         style={{
           width: box && s < 1 ? box.w / s : '100%',
           height: box && s < 1 ? box.h / s : '100%',
@@ -220,7 +235,7 @@ export function FitFill({ minW, minH, children }: { minW: number; minH: number; 
           transformOrigin: '0 0',
         }}
       >
-        {children}
+        {typeof children === 'function' ? children(isCompact) : children}
       </div>
     </div>
   );

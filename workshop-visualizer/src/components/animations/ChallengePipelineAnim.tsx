@@ -474,16 +474,23 @@ function LoadsView({ s }: { s: S }) {
       <div className="w-full">
         {s.line >= 33 && s.pretty ? (
           <Card label="pretty_json" color="#22d3ee" glow>
-            {/* One JSON line per row (long ones end in "…"), so the indents stay easy to see. */}
+            {/* One JSON line per row. A long one wraps under itself (hanging indent), so the indents stay easy to see. */}
             <div className="font-mono text-[14px] leading-relaxed text-white/80">
               {s.pretty
                 .split('\n')
                 .slice(0, 7)
-                .map((ln, i) => (
-                  <div key={i} className="whitespace-pre overflow-hidden text-ellipsis">
-                    {ln}
-                  </div>
-                ))}
+                .map((ln, i) => {
+                  const indent = ln.length - ln.trimStart().length;
+                  return (
+                    <div
+                      key={i}
+                      className="whitespace-pre-wrap break-words"
+                      style={{ paddingLeft: `${indent + 2}ch`, textIndent: '-2ch' }}
+                    >
+                      {ln.trimStart()}
+                    </div>
+                  );
+                })}
               <div className="whitespace-pre text-white/45">{'  …'}</div>
             </div>
           </Card>

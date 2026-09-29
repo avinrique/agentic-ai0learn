@@ -159,8 +159,9 @@ export default function WriterCriticAnim() {
     : draft || writing || (task && trig === 'task') ? 'paper'
     : null;
   const showHistory = history.length > 0 && !['recap', 'intro'].includes(trig);
-  // A step that prints: one quiet console line (what it printed, on one line) under the table.
-  const printLine = printed ? printed.replace(/\s*\n+\s*/g, ' ') : '';
+  // A step that prints: one quiet console line under the table. Its printed lines sit side by side and
+  // only wrap at their own line breaks when they don't fit, so a long print (the final slogan) is never cut off.
+  const printParts = printed ? printed.split(/\s*\n+\s*/).filter(Boolean) : [];
   // The setup steps: the one new line of code, big, in the middle of the table.
   const setupLine = v('run_agent')
     ? { code: 'run_agent(system_prompt, task)', note: '📋 job card + 📝 task ➜ 💬 reply' }
@@ -348,15 +349,20 @@ export default function WriterCriticAnim() {
         </div>
       </div>
 
-      {printLine && (
+      {printParts.length > 0 && (
         <motion.div
           key={`print-${index}`}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex-shrink-0 rounded-xl bg-black/50 border border-white/10 px-4 py-2 font-mono text-[14px] text-white/80 truncate"
+          className="flex-shrink-0 rounded-xl bg-black/50 border border-white/10 px-4 py-2 font-mono text-[14px] leading-snug text-white/80 break-words"
         >
           <span className="text-white/40">🖨 </span>
-          {printLine}
+          {printParts.map((part, i) => (
+            <span key={i}>
+              {i > 0 && ' '}
+              <span className="inline-block max-w-full">{part}</span>
+            </span>
+          ))}
         </motion.div>
       )}
 

@@ -95,7 +95,7 @@ function SlipChip({ slip, active }: { slip: OrderSlip; active: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: faded ? 0.5 : 1, scale: active ? 1.03 : 1 }}
+      animate={{ opacity: faded ? 0.5 : 1, scale: 1 }}
       className="rounded-md px-3 py-1.5 text-[14px] leading-snug"
       style={{ background: '#fef3c7', color: '#1c1c44', boxShadow: active ? `0 0 0 2px ${ACCENT}` : 'none' }}
     >
@@ -331,7 +331,7 @@ export default function BossAgentAnim() {
             >
               {inboxShown && (
                 <div
-                  className={`rounded-lg px-3 ${inboxBig ? 'py-2.5 text-[16px]' : 'py-1 text-[13px] truncate'} leading-snug`}
+                  className={`rounded-lg px-3 ${inboxBig ? 'py-2.5 text-[16px]' : 'py-1 text-[13px]'} leading-snug`}
                   style={{
                     background: inboxBig ? `${ACCENT}1a` : 'rgba(255,255,255,0.05)',
                     boxShadow: inboxBig ? `inset 0 0 0 1.5px ${ACCENT}` : 'none',
@@ -365,7 +365,7 @@ export default function BossAgentAnim() {
               </div>
 
               {showSlips && (
-                <div className="flex flex-col gap-1.5 min-h-0 overflow-hidden">
+                <div className="flex flex-col gap-1.5 min-h-0 overflow-hidden p-1 -m-1">
                   {s.slips.length === 0 ? (
                     <div className="text-[14px] text-white/60">📝 no order slips → final answer</div>
                   ) : (

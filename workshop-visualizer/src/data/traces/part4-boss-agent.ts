@@ -348,7 +348,7 @@ function buildBoss(run: BossRun): { steps: TraceStep[]; scenes: BossScene[] } {
             s.phase = 'noteBack';
             s.focus = sl.to;
           },
-          say: `${info.name}'s answer comes back to Max as a result note: "${clip(sl.result, 90)}"`,
+          say: `${info.name}'s answer comes back to Max as a result note: "${clip(sl.result, 120)}"`,
         });
         pad.push({ role: 'tool', text: clip(sl.result, 26), id: sl.id, by: sl.to });
         const padTool = pad.map((n) => ({ ...n }));
