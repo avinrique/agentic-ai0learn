@@ -156,7 +156,7 @@ export const SCENARIOS: Scenario[] = [
       role: 'You are a friendly librarian.',
       context: "It's for my book report. My classmates are 10.",
       format: 'Answer in 3 bullet points: Who, Problem, Ending.',
-      example: 'Write each bullet like: "Who: a shy dragon who can\'t breathe fire"',
+      example: 'Write each bullet like: "Who: a shy dragon who can\'t roar"',
       limits: 'Under 60 words. Include the lesson of the story.',
       fence: 'The story is between the """ marks.',
     },
@@ -202,7 +202,7 @@ export const SCENARIOS: Scenario[] = [
         L.push({ by: 'base', kind: 'muted', text: '…and it retells every detail 📏' });
       }
       if (f.limits) L.push({ by: 'limits', text: '**Lesson:** be proud of what you are good at.' });
-      if (f.context) L.push({ by: 'context', text: f.limits ? 'Book report tip: say which part you liked best.' : 'For your book report, you could add which part you liked best!' });
+      if (f.context) L.push({ by: 'context', text: f.limits ? 'Book report tip: say which part you liked best.' : 'For your book report, add which part you liked best!' });
       if (!f.fence) L.push({ by: 'base', kind: 'warn', text: 'And what happens next: Pip teaches the seagulls to swim! 🌊' });
       return L;
     },

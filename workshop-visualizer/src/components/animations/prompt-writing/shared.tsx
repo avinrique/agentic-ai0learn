@@ -86,7 +86,7 @@ export function Rich({ text }: { text: string }) {
       );
     } else if (m[5]) {
       parts.push(
-        <span key={k++} className="rounded px-1 font-mono text-[0.9em] bg-red-100 text-red-700 border border-dashed border-red-300">
+        <span key={k++} className="rounded px-1 font-mono text-[length:max(13px,0.9em)] bg-red-100 text-red-700 border border-dashed border-red-300">
           [{m[5]}]
         </span>,
       );
@@ -99,7 +99,21 @@ export function Rich({ text }: { text: string }) {
 
 // ---------- one coloured part of a prompt ----------
 
-export function Seg({ id, children, glow = false, dim = false, className = '' }: { id: IngId; children: ReactNode; glow?: boolean; dim?: boolean; className?: string }) {
+export function Seg({
+  id,
+  children,
+  glow = false,
+  dim = false,
+  tight = false,
+  className = '',
+}: {
+  id: IngId;
+  children: ReactNode;
+  glow?: boolean;
+  dim?: boolean;
+  tight?: boolean; // less padding, for a short panel
+  className?: string;
+}) {
   const c = ING[id].color;
   return (
     <motion.div
@@ -111,7 +125,7 @@ export function Seg({ id, children, glow = false, dim = false, className = '' }:
         boxShadow: glow ? [`0 0 0px ${c}00`, `0 0 14px ${c}aa`, `0 0 0px ${c}00`] : `0 0 0px ${c}00`,
       }}
       transition={{ ...spring, boxShadow: glow ? { duration: 1.8, repeat: Infinity } : { duration: 0.3 } }}
-      className={`rounded-md pl-2.5 pr-2 py-1 border-l-4 ${className}`}
+      className={`rounded-md pl-2.5 pr-2 ${tight ? 'py-0.5' : 'py-1'} border-l-4 ${className}`}
       style={{ borderColor: c, backgroundColor: `${c}${glow ? '38' : '22'}` }}
     >
       {children}
@@ -192,21 +206,22 @@ export function Scene({ id, children, className = '', fit = true }: { id: string
   );
 }
 
+type MinSize = { minW: number; minH: number };
+
 /**
- * Fills its (absolutely positioned) parent. Below minW x minH it lays the children out at a bigger virtual size
- * and scales them down, so a flexible layout never has to squeeze under its minimum.
- * With `compact`, a parent shorter than minH first gets the children's compact layout (children(true)), with its
- * own minimum, so a short panel (1280x720 laptops) rearranges instead of shrinking the text below 13px.
+ * Fills its (absolutely positioned) parent. The children fit any parent at least as big as one of the sizes in
+ * `fits` (a narrower panel may need more height, so there can be several). On a smaller parent it lays the
+ * children out at a bigger virtual size and scales them down, so a flexible layout never squeezes under its minimum.
+ * With `compact`, a parent shorter than `compact.below` gets the children's compact layout (children(true)) with
+ * its own `fits`, so a short panel (1280x720 laptops) rearranges instead of shrinking the text below 13px.
  */
 export function FitFill({
-  minW,
-  minH,
+  fits,
   compact,
   children,
 }: {
-  minW: number;
-  minH: number;
-  compact?: { minW: number; minH: number };
+  fits: MinSize[];
+  compact?: { below: number; fits: MinSize[] };
   children: ReactNode | ((compact: boolean) => ReactNode);
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -220,9 +235,10 @@ export function FitFill({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const isCompact = !!compact && !!box && box.h > 0 && box.h < minH;
-  const min = isCompact ? compact : { minW, minH };
-  const s = box && box.w > 0 && box.h > 0 ? Math.min(1, box.w / min.minW, box.h / min.minH) : 1;
+  const isCompact = !!compact && !!box && box.h > 0 && box.h < compact.below;
+  const mins = isCompact ? compact.fits : fits;
+  // the size that needs the least shrinking wins (1 = one of them fits as is)
+  const s = box && box.w > 0 && box.h > 0 ? Math.max(...mins.map((m) => Math.min(1, box.w / m.minW, box.h / m.minH))) : 1;
   return (
     <div ref={ref} className="absolute inset-0 overflow-hidden">
       <div
